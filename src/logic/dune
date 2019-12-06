@@ -1,0 +1,51 @@
+(executable
+  (name frontend)
+  (libraries logic js_of_ocaml-lwt)
+  (preprocess (pps js_of_ocaml-ppx))
+  (modules frontend))
+
+(executable
+  (name backend)
+  (libraries logic base stdio docker-api lwt)
+  (modules backend))
+
+(library
+  (name logic)
+  (libraries base atdgen)
+  (modes byte native)
+  (preprocess (pps lwt_ppx ppx_jane))
+  (modules :standard \ frontend backend))
+
+(rule
+  (targets frontend.js)
+  (action
+    (run %{bin:js_of_ocaml} +base/runtime.js --noruntime %{lib:js_of_ocaml-compiler:runtime.js}
+         --source-map %{dep:frontend.bc} -o %{targets} --pretty)))
+
+(alias
+  (name frontend)
+  (deps frontend.js))
+
+(alias
+  (name backend)
+  (deps backend.exe))
+
+(alias
+  (name logic)
+  (deps logic.a))
+
+(alias
+  (name atd)
+  (deps logic_j.ml logic_j.mli logic_t.ml logic_t.mli))
+
+(rule
+ (targets logic_j.ml
+          logic_j.mli)
+ (deps    logic.atd)
+ (action  (run atdgen -j -j-std %{deps})))
+
+(rule
+ (targets logic_t.ml
+          logic_t.mli)
+ (deps    logic.atd)
+ (action  (run atdgen -t %{deps})))
