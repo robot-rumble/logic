@@ -152,7 +152,7 @@ let rec run_turn run1 run2 turn_callback max_turn turn objs
   let state_list = state :: state_list in
   if turn = max_turn then Lwt.return state_list
   else
-    let _ = turn_callback state.turn in
+    let (_ : unit) = turn_callback state.turn  in
     let input_teams = create_teams objs team_names in
     let input_map = create_array_map map map_size in
     let input_state =
