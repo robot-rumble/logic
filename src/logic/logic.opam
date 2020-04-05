@@ -1,6 +1,0 @@
-opam-version: "2.0"
-depends: [
-    "dune"
-    "atdgen" "base" "docker-api" "lwt" "lwt_ppx" "ppx_jane" "stdio"
-    "atdgen" "base" "js_of_ocaml-compiler" "js_of_ocaml-lwt" "js_of_ocaml-ppx" "lwt_ppx" "ppx_jane"
-]
