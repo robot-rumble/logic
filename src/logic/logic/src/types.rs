@@ -1,8 +1,14 @@
 use std::collections::HashMap;
+use std::ops::{Add, Mul};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub enum MapType {
+    Rect
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Team {
     Red,
     Blue,
@@ -13,75 +19,114 @@ pub struct MainOutput {
     pub winner: Team,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-pub struct Id(pub String);
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+pub struct Id(pub usize);
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TurnState {
     pub turn: usize,
-    pub objs: HashMap<Id, Obj>,
+    pub state: State,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AdditionalState {
-    pub teams: HashMap<Team, Vec<Id>>,
-    pub map: Vec<Vec<Id>>,
+pub type ObjMap = HashMap<Id, Obj>;
+pub type GridMap = HashMap<Coords, Id>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct State {
+    pub objs: ObjMap,
+    pub grid: GridMap,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RobotInputState {
-    pub basic: TurnState,
-    pub additional: AdditionalState,
+pub type TeamMap = HashMap<Team, Vec<Id>>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct StateForRobotInput {
+    pub objs: ObjMap,
+    pub grid: GridMap,
+    pub teams: TeamMap,
+    pub turn: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RobotInput {
-    pub state: RobotInputState,
+    pub state: StateForRobotInput,
+    pub grid_size: usize,
     pub team: Team,
 }
 
+pub type ActionMap = HashMap<Id, Action>;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RobotOutput {
-    pub actions: HashMap<Id, Action>,
+    pub actions: ActionMap,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub struct Coords(pub usize, pub usize);
 
-#[derive(Serialize, Deserialize, Debug)]
+impl Add for Coords {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl Add<Direction> for Coords {
+    type Output = Self;
+
+    fn add(self, rhs: Direction) -> Self {
+        let (dir_x, dir_y) = rhs.to_tuple();
+        Self(
+            if dir_x < 0 { self.0.saturating_sub(dir_x as usize) } else { self.0 + dir_x as usize },
+            if dir_y < 0 { self.1.saturating_sub(dir_y as usize) } else { self.1 + dir_y as usize },
+        )
+    }
+}
+
+impl Mul<usize> for Coords {
+    type Output = Self;
+
+    fn mul(self, rhs: usize) -> Self {
+        Self(self.0 * rhs, self.1 * rhs)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Obj(pub BasicObj, pub ObjDetails);
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BasicObj {
     pub id: Id,
     pub coords: Coords,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ObjDetails {
     Terrain(Terrain),
     Unit(Unit),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Terrain {
     pub type_: TerrainType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum TerrainType {
     Wall,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Unit {
     pub type_: UnitType,
     pub team: Team,
     pub health: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum UnitType {
     Soldier,
 }
@@ -92,16 +137,28 @@ pub struct Action {
     pub direction: Direction,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum ActionType {
     Move,
     Attack,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum Direction {
-    Left,
-    Right,
-    Up,
-    Down,
+    North,
+    South,
+    East,
+    West,
+}
+
+impl Direction {
+    fn to_tuple(self) -> (isize, isize) {
+        use Direction::*;
+        match self {
+            West => (-1, 0),
+            North => (0, -1),
+            East => (1, 0),
+            South => (0, 1),
+        }
+    }
 }
