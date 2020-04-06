@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum MapType {
-    Rect
+    Rect,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -78,8 +78,16 @@ impl Add<Direction> for Coords {
     fn add(self, rhs: Direction) -> Self {
         let (dir_x, dir_y) = rhs.to_tuple();
         Self(
-            if dir_x < 0 { self.0.saturating_sub(dir_x as usize) } else { self.0 + dir_x as usize },
-            if dir_y < 0 { self.1.saturating_sub(dir_y as usize) } else { self.1 + dir_y as usize },
+            if dir_x < 0 {
+                self.0.saturating_sub(dir_x as usize)
+            } else {
+                self.0 + dir_x as usize
+            },
+            if dir_y < 0 {
+                self.1.saturating_sub(dir_y as usize)
+            } else {
+                self.1 + dir_y as usize
+            },
         )
     }
 }
@@ -112,7 +120,6 @@ pub enum ObjDetails {
 pub struct Terrain {
     pub type_: TerrainType,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum TerrainType {

@@ -32,12 +32,19 @@ impl Obj {
     pub fn new_unit(type_: UnitType, coords: Coords, team: Team) -> Self {
         Self(
             Self::new_basic_obj(coords),
-            ObjDetails::Unit(Unit { type_, team, health: Self::UNIT_HEALTH }),
+            ObjDetails::Unit(Unit {
+                type_,
+                team,
+                health: Self::UNIT_HEALTH,
+            }),
         )
     }
 
     fn new_basic_obj(coords: Coords) -> BasicObj {
-        BasicObj { coords, id: new_id() }
+        BasicObj {
+            coords,
+            id: new_id(),
+        }
     }
 }
 
@@ -50,9 +57,11 @@ impl State {
         let mut grid = Self::create_grid_map(&terrain_objs);
 
         // use the map to create the units
-        let mut objs: ObjMap = TEAMS.iter().map(|team|
-            Self::create_unit_objs(&grid, grid_size, *team)
-        ).flatten().collect();
+        let mut objs: ObjMap = TEAMS
+            .iter()
+            .map(|team| Self::create_unit_objs(&grid, grid_size, *team))
+            .flatten()
+            .collect();
         objs.extend(terrain_objs);
 
         // update the map with the units
@@ -62,14 +71,17 @@ impl State {
     }
 
     fn create_raw_grid(size: usize) -> Vec<Coords> {
-        (0..size).map(|x| (0..size).map(move |y| Coords(x, y))).flatten().collect()
+        (0..size)
+            .map(|x| (0..size).map(move |y| Coords(x, y)))
+            .flatten()
+            .collect()
     }
 
     fn create_obj_map(type_: MapType, size: usize) -> ObjMap {
         Self::create_raw_grid(size)
             .iter()
             .filter(|Coords(x, y)| match type_ {
-                MapType::Rect => *x == 0 || *x == size - 1 || *y == 0 || *y == size - 1
+                MapType::Rect => *x == 0 || *x == size - 1 || *y == 0 || *y == size - 1,
             })
             .map(|coords| {
                 let obj = Obj::new_terrain(TerrainType::Wall, *coords);
@@ -79,7 +91,9 @@ impl State {
     }
 
     fn create_grid_map(objs: &ObjMap) -> GridMap {
-        objs.values().map(|Obj(basic, _)| (basic.coords, basic.id)).collect()
+        objs.values()
+            .map(|Obj(basic, _)| (basic.coords, basic.id))
+            .collect()
     }
 
     fn update_grid_map(grid: &mut GridMap, objs: &ObjMap) {
@@ -107,20 +121,28 @@ impl State {
         let random_coords = Coords(randrange(0, grid_size), randrange(0, grid_size));
         match grid.get(&random_coords) {
             Some(_) => Self::random_grid_loc(grid, grid_size),
-            None => random_coords
+            None => random_coords,
         }
     }
 
     fn create_team_map(objs: &ObjMap) -> TeamMap {
-        objs.values().filter_map(|Obj(basic, details)| match details {
-            ObjDetails::Unit(unit) => Some((unit.team, basic.id)),
-            _ => None
-        }).collect::<MultiMap<Team, Id>>().into_iter().collect()
+        objs.values()
+            .filter_map(|Obj(basic, details)| match details {
+                ObjDetails::Unit(unit) => Some((unit.team, basic.id)),
+                _ => None,
+            })
+            .collect::<MultiMap<Team, Id>>()
+            .into_iter()
+            .collect()
     }
 
     fn determine_winner(self) -> Team {
         let teams = Self::create_team_map(&self.objs);
-        teams.into_iter().max_by_key(|(_, ids)| ids.len()).unwrap().0
+        teams
+            .into_iter()
+            .max_by_key(|(_, ids)| ids.len())
+            .unwrap()
+            .0
     }
 }
 
@@ -144,13 +166,12 @@ impl RobotInput {
 impl RobotOutput {
     pub fn verify(&self, team: Team, objs: &ObjMap) {
         self.actions.keys().for_each(|id| match objs.get(id) {
-            Some(Obj(_, ObjDetails::Unit(unit))) if unit.team != team =>
-                panic!("Action ID points to unit on other team"),
-            Some(Obj(_, ObjDetails::Terrain(_))) =>
-                panic!("Action ID points to terrain"),
-            None =>
-                panic!("Action ID points to nonexistent object"),
-            _ => ()
+            Some(Obj(_, ObjDetails::Unit(unit))) if unit.team != team => {
+                panic!("Action ID points to unit on other team")
+            }
+            Some(Obj(_, ObjDetails::Terrain(_))) => panic!("Action ID points to terrain"),
+            None => panic!("Action ID points to nonexistent object"),
+            _ => (),
         })
     }
 }
@@ -170,7 +191,9 @@ pub fn run<RunF, TurnCb, FinishCb>(
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     run_turn(run_team_f, turn_cb, max_turn, &mut turn_state);
-    finish_cb(MainOutput { winner: turn_state.state.determine_winner() })
+    finish_cb(MainOutput {
+        winner: turn_state.state.determine_winner(),
+    })
 }
 
 pub fn run_turn<RunF, TurnCb>(
@@ -182,34 +205,59 @@ pub fn run_turn<RunF, TurnCb>(
     RunF: Fn(Team, RobotInput) -> RobotOutput,
     TurnCb: Fn(TurnState) -> (),
 {
-    let team_outputs = TEAMS.iter().map(|team|
-        (
-            *team,
-            run_team_f(*team, RobotInput::new(turn_state.clone(), *team, GRID_SIZE))
-        )
-    ).collect::<HashMap<Team, RobotOutput>>();
+    let team_outputs = TEAMS
+        .iter()
+        .map(|team| {
+            (
+                *team,
+                run_team_f(*team, RobotInput::new(turn_state.clone(), *team, GRID_SIZE)),
+            )
+        })
+        .collect::<HashMap<Team, RobotOutput>>();
 
-    team_outputs.iter()
+    team_outputs
+        .iter()
         .for_each(|(team, output)| output.verify(*team, &turn_state.state.objs));
 
-    let all_actions = team_outputs.into_iter().map(|(_, output)| output.actions).flatten().collect::<ActionMap>();
-    let (move_actions, attack_actions) = all_actions.into_iter()
+    let all_actions = team_outputs
+        .into_iter()
+        .map(|(_, output)| output.actions)
+        .flatten()
+        .collect::<ActionMap>();
+    let (move_actions, attack_actions) = all_actions
+        .into_iter()
         .partition::<ActionMap, _>(|(_, action)| action.type_ == ActionType::Move);
 
     let movement_map = get_multimap_from_action_map(&turn_state.state.objs, move_actions);
-    let movement_grid = movement_map.iter()
-        .filter_map(|(coords, id)| if movement_map.is_vec(coords) { None } else { Some((*coords, *id)) })
+    let movement_grid = movement_map
+        .iter()
+        .filter_map(|(coords, id)| {
+            if movement_map.is_vec(coords) {
+                None
+            } else {
+                Some((*coords, *id))
+            }
+        })
         .collect::<GridMap>();
 
-    turn_state.state.grid.retain(|coords, _| !movement_grid.contains_key(coords));
-    update_grid_with_movement(&turn_state.state.objs, &mut turn_state.state.grid, movement_grid);
+    turn_state
+        .state
+        .grid
+        .retain(|coords, _| !movement_grid.contains_key(coords));
+    update_grid_with_movement(
+        &turn_state.state.objs,
+        &mut turn_state.state.grid,
+        movement_grid,
+    );
 
     get_multimap_from_action_map(&turn_state.state.objs, attack_actions)
         .iter_all()
         .for_each(|(coords, attacks)| {
             let attack_power = attacks.len() * Obj::ATTACK_POWER;
             let id = turn_state.state.grid.get(coords).unwrap();
-            if let Obj(_, ObjDetails::Unit(ref mut unit)) = turn_state.state.objs.get_mut(id).unwrap() {
+            if let Obj(_, ObjDetails::Unit(ref mut unit)) =
+                turn_state.state.objs.get_mut(id).unwrap()
+            {
                 unit.health = unit.health.saturating_sub(attack_power);
                 if unit.health == 0 {
                     turn_state.state.objs.remove(id);
@@ -217,7 +265,6 @@ pub fn run_turn<RunF, TurnCb>(
                 }
             }
         });
-
 
     turn_state.turn += 1;
     turn_cb(turn_state.clone());
@@ -228,14 +275,18 @@ pub fn run_turn<RunF, TurnCb>(
 }
 
 pub fn get_multimap_from_action_map(objs: &ObjMap, actions: ActionMap) -> MultiMap<Coords, Id> {
-    actions.into_iter().map(|(id, action)| {
-        let Obj(basic, _) = objs.get(&id).unwrap();
-        (basic.coords + action.direction, id)
-    }).collect()
+    actions
+        .into_iter()
+        .map(|(id, action)| {
+            let Obj(basic, _) = objs.get(&id).unwrap();
+            (basic.coords + action.direction, id)
+        })
+        .collect()
 }
 
 pub fn update_grid_with_movement(objs: &ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
-    let (illegal_moves, legal_moves): (GridMap, GridMap) = movement_grid.into_iter()
+    let (illegal_moves, legal_moves): (GridMap, GridMap) = movement_grid
+        .into_iter()
         .partition(|(coords, _)| grid.contains_key(coords));
 
     if illegal_moves.is_empty() {
