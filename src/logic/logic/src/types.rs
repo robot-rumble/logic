@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Add, Mul};
+use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
 
@@ -82,24 +82,16 @@ impl Add<Direction> for Coords {
         let (dir_x, dir_y) = rhs.to_tuple();
         Self(
             if dir_x < 0 {
-                self.0.saturating_sub(dir_x as usize)
+                self.0.saturating_sub(dir_x.abs() as usize)
             } else {
                 self.0 + dir_x as usize
             },
             if dir_y < 0 {
-                self.1.saturating_sub(dir_y as usize)
+                self.1.saturating_sub(dir_y.abs() as usize)
             } else {
                 self.1 + dir_y as usize
             },
         )
-    }
-}
-
-impl Mul<usize> for Coords {
-    type Output = Self;
-
-    fn mul(self, rhs: usize) -> Self {
-        Self(self.0 * rhs, self.1 * rhs)
     }
 }
 

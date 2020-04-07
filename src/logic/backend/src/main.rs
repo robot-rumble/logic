@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 use thiserror::Error;
 
 fn main() {
-    let mut path = path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("robot.py");
 
     let mut child = Command::new("python")

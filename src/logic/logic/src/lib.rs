@@ -190,7 +190,7 @@ where
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
-    while turn_state.turn != max_turn {
+    while turn_state.turn < max_turn {
         let team_outputs = TEAMS
             .iter()
             .map(|team| {
@@ -240,7 +240,7 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
         .grid
         .retain(|coords, _| !movement_grid.contains_key(coords));
     update_grid_with_movement(
-        &turn_state.state.objs,
+        &mut turn_state.state.objs,
         &mut turn_state.state.grid,
         movement_grid,
     );
@@ -274,12 +274,15 @@ pub fn get_multimap_from_action_map(objs: &ObjMap, actions: ActionMap) -> MultiM
         .collect()
 }
 
-pub fn update_grid_with_movement(objs: &ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
+pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
     let (illegal_moves, legal_moves): (GridMap, GridMap) = movement_grid
         .into_iter()
         .partition(|(coords, _)| grid.contains_key(coords));
 
     if illegal_moves.is_empty() {
+        for (&coords, id) in legal_moves.iter() {
+            objs.get_mut(id).unwrap().0.coords = coords
+        }
         grid.extend(legal_moves)
     } else {
         // insert the units with illegal moves back in their original location
