@@ -1,9 +1,9 @@
 use multimap::MultiMap;
 use rand::Rng;
+use std::collections::HashMap;
 
-pub mod types;
-
-include!("./types.rs");
+mod types;
+pub use types::*;
 
 const TEAMS: [Team; 2] = [Team::Red, Team::Blue];
 
