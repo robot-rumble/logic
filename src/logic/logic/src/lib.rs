@@ -179,43 +179,41 @@ impl RobotOutput {
 
 const GRID_SIZE: usize = 19;
 
-pub fn run<RunF, TurnCb, FinishCb>(
+pub fn run<Err, RunF, TurnCb, FinishCb>(
     run_team_f: RunF,
     turn_cb: TurnCb,
     finish_cb: FinishCb,
     max_turn: usize,
-) where
-    RunF: Fn(Team, RobotInput) -> RobotOutput,
-    TurnCb: Fn(TurnState) -> (),
+) -> Result<(), Err>
+where
+    RunF: Fn(Team, RobotInput) -> Result<RobotOutput, Err>,
+    TurnCb: Fn(&TurnState) -> (),
     FinishCb: Fn(MainOutput) -> (),
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
-    run_turn(run_team_f, turn_cb, max_turn, &mut turn_state);
+    while turn_state.turn != max_turn {
+        let team_outputs = TEAMS
+            .iter()
+            .map(|team| {
+                Ok((
+                    *team,
+                    run_team_f(*team, RobotInput::new(turn_state.clone(), *team, GRID_SIZE))?,
+                ))
+            })
+            .collect::<Result<HashMap<Team, RobotOutput>, _>>()?;
+
+        run_turn(team_outputs, &mut turn_state);
+
+        turn_cb(&turn_state);
+    }
     finish_cb(MainOutput {
         winner: turn_state.state.determine_winner(),
-    })
+    });
+    Ok(())
 }
 
-pub fn run_turn<RunF, TurnCb>(
-    run_team_f: RunF,
-    turn_cb: TurnCb,
-    max_turn: usize,
-    turn_state: &mut TurnState,
-) where
-    RunF: Fn(Team, RobotInput) -> RobotOutput,
-    TurnCb: Fn(TurnState) -> (),
-{
-    let team_outputs = TEAMS
-        .iter()
-        .map(|team| {
-            (
-                *team,
-                run_team_f(*team, RobotInput::new(turn_state.clone(), *team, GRID_SIZE)),
-            )
-        })
-        .collect::<HashMap<Team, RobotOutput>>();
-
+fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState) {
     team_outputs
         .iter()
         .for_each(|(team, output)| output.verify(*team, &turn_state.state.objs));
@@ -268,11 +266,6 @@ pub fn run_turn<RunF, TurnCb>(
         });
 
     turn_state.turn += 1;
-    turn_cb(turn_state.clone());
-
-    if turn_state.turn != max_turn {
-        run_turn(run_team_f, turn_cb, max_turn, turn_state)
-    }
 }
 
 pub fn get_multimap_from_action_map(objs: &ObjMap, actions: ActionMap) -> MultiMap<Coords, Id> {

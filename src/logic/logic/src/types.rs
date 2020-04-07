@@ -25,6 +25,7 @@ pub struct Id(pub usize);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TurnState {
     pub turn: usize,
+    #[serde(flatten)]
     pub state: State,
 }
 
@@ -120,6 +121,7 @@ pub enum ObjDetails {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Terrain {
+    #[serde(rename = "type")]
     pub type_: TerrainType,
 }
 
@@ -130,6 +132,7 @@ pub enum TerrainType {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Unit {
+    #[serde(rename = "type")]
     pub type_: UnitType,
     pub team: Team,
     pub health: usize,
@@ -142,6 +145,7 @@ pub enum UnitType {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Action {
+    #[serde(rename = "type")]
     pub type_: ActionType,
     pub direction: Direction,
 }
