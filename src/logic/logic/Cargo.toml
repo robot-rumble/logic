@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-rand = { git = "https://github.com/rust-random/rand" }
+rand = { version = "0.7", features = ["wasm-bindgen"] }
 multimap = "0.8"

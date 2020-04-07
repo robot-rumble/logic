@@ -119,9 +119,10 @@ impl State {
 
     fn random_grid_loc(grid: &GridMap, grid_size: usize) -> Coords {
         let random_coords = Coords(randrange(0, grid_size), randrange(0, grid_size));
-        match grid.get(&random_coords) {
-            Some(_) => Self::random_grid_loc(grid, grid_size),
-            None => random_coords,
+        if grid.contains_key(&random_coords) {
+            Self::random_grid_loc(grid, grid_size)
+        } else {
+            random_coords
         }
     }
 

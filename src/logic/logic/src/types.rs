@@ -29,7 +29,9 @@ pub struct TurnState {
 }
 
 pub type ObjMap = HashMap<Id, Obj>;
-pub type GridMap = HashMap<Coords, Id>;
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct GridMap(#[serde(with = "GridMapDef")] HashMap<Coords, Id>);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
@@ -168,4 +170,61 @@ impl Direction {
             South => (0, 1),
         }
     }
+}
+
+impl std::ops::Deref for GridMap {
+    type Target = HashMap<Coords, Id>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for GridMap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl std::iter::FromIterator<(Coords, Id)> for GridMap {
+    fn from_iter<T: IntoIterator<Item = (Coords, Id)>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+impl Extend<(Coords, Id)> for GridMap {
+    fn extend<T: IntoIterator<Item = (Coords, Id)>>(&mut self, iter: T) {
+        self.0.extend(iter);
+    }
+}
+impl IntoIterator for GridMap {
+    type Item = (Coords, Id);
+    type IntoIter = <HashMap<Coords, Id> as IntoIterator>::IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "HashMap<Coords, Id>")]
+struct GridMapDef(#[serde(getter = "map2vec")] Vec<Vec<Option<Id>>>);
+impl From<GridMapDef> for HashMap<Coords, Id> {
+    fn from(map: GridMapDef) -> Self {
+        map.0
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| {
+                v.into_iter()
+                    .enumerate()
+                    .filter_map(move |(j, elem)| elem.map(|elem| (Coords(i, j), elem)))
+            })
+            .flatten()
+            .collect()
+    }
+}
+fn map2vec(map: &HashMap<Coords, Id>) -> Vec<Vec<Option<Id>>> {
+    use crate::GRID_SIZE;
+    (0..GRID_SIZE)
+        .map(|i| {
+            (0..GRID_SIZE)
+                .map(|j| map.get(&Coords(j, i)).copied())
+                .collect()
+        })
+        .collect()
 }
