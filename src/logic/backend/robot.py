@@ -1,8 +1,8 @@
 import json, sys
 
-while True:
-    print("asdf", input())
-    robot_input = json.load(sys.stdin)
+for inp in sys.stdin:
+    robot_input = json.loads(inp)
     action = {"type": "Move", "direction": "North"}
     json.dump(action, sys.stdout)
+    sys.stdout.flush()
 

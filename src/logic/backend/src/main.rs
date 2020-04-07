@@ -1,6 +1,8 @@
-use std::io::Write;
+use std::io::{self, prelude::*};
 use std::path;
 use std::process::{Command, Stdio};
+
+use thiserror::Error;
 
 fn main() {
     let mut path = path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -13,8 +15,11 @@ fn main() {
         .spawn()
         .expect("Failed to spawn child process");
 
+    let mut stdin = io::BufWriter::new(child.stdin.take().unwrap());
+    let mut stdout = io::BufReader::new(child.stdout.take().unwrap());
+
     match logic::run(
-        |team, robot_input| run(&mut child, team, robot_input),
+        |team, robot_input| run(&mut stdin, &mut stdout, team, robot_input),
         |turn_state| {
             println!("{:?}", turn_state);
         },
@@ -28,22 +33,32 @@ fn main() {
     };
 }
 
+#[derive(Error, Debug)]
+enum Error {
+    #[error("serde error")]
+    Serde(#[from] serde_json::Error),
+    #[error("io error")]
+    Io(#[from] io::Error),
+    #[error("process closed before printing an action")]
+    NoAction,
+}
+
 fn run(
-    child: &mut std::process::Child,
+    mut stdin: impl Write,
+    mut stdout: impl Read,
     team: logic::Team,
     input: logic::RobotInput,
-) -> serde_json::Result<logic::RobotOutput> {
+) -> Result<logic::RobotOutput, Error> {
     let actions = input.state.teams[&team]
         .iter()
-        .map(|id| {
-            // serde_json::to_writer(child.stdin.as_mut().expect("Failed to open stdin"), &input)?;
-            child
-                .stdin
-                .as_mut()
-                .expect("Failed to open stdin")
-                .write(&serde_json::to_vec(&input)?)
-                .unwrap();
-            let action = serde_json::from_reader(child.stdout.as_mut().unwrap())?;
+        .map(|id| -> Result<_, Error> {
+            serde_json::to_writer(&mut stdin, &input)?;
+            stdin.write(b"\n")?;
+            stdin.flush()?;
+            let action = serde_json::Deserializer::from_reader(&mut stdout)
+                .into_iter()
+                .next()
+                .ok_or(Error::NoAction)??;
             Ok((*id, action))
         })
         .collect::<Result<_, _>>()?;
