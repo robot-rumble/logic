@@ -180,13 +180,13 @@ impl RobotOutput {
 const GRID_SIZE: usize = 19;
 
 pub fn run<Err, RunF, TurnCb, FinishCb>(
-    run_team_f: RunF,
+    mut run_team_f: RunF,
     turn_cb: TurnCb,
     finish_cb: FinishCb,
     max_turn: usize,
 ) -> Result<(), Err>
 where
-    RunF: Fn(Team, RobotInput) -> Result<RobotOutput, Err>,
+    RunF: FnMut(Team, RobotInput) -> Result<RobotOutput, Err>,
     TurnCb: Fn(&TurnState) -> (),
     FinishCb: Fn(MainOutput) -> (),
 {
