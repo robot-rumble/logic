@@ -23,12 +23,9 @@ fn main() {
         |turn_state| {
             println!("{:?}", turn_state);
         },
-        |final_state| {
-            println!("{:?}", final_state);
-        },
         10,
     ) {
-        Ok(_) => println!("Completed successfully."),
+        Ok(output) => println!("Completed successfully, {:?} won", output.winner),
         Err(e) => eprintln!("Error: {}", e),
     };
 }

@@ -14,12 +14,11 @@ mod pyconvert;
 pub fn run_logic(
     run_team: &JsFunction,
     turn_callback: &JsFunction,
-    finish_callback: &JsFunction,
     turn_num: usize,
-) -> Result<(), JsValue> {
+) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
 
-    let run_team = move |team, robot_state| {
+    let run_team = move |team, robot_state| -> Result<_, JsValue> {
         run_team
             .call2(
                 &JsValue::NULL,
@@ -30,20 +29,17 @@ pub fn run_logic(
             .map_err(|e| TypeError::new(&format!("runner returned invalid object: {}", e)).into())
     };
 
-    logic::run(
+    let output = logic::run(
         run_team,
         |turn_state| {
             turn_callback
                 .call1(&JsValue::NULL, &JsValue::from_serde(&turn_state).unwrap())
                 .expect("Turn callback function failed");
         },
-        |final_state| {
-            finish_callback
-                .call1(&JsValue::NULL, &JsValue::from_serde(&final_state).unwrap())
-                .expect("Final callback function failed");
-        },
         turn_num,
-    )
+    )?;
+
+    Ok(JsValue::from_serde(&output).unwrap())
 }
 
 #[wasm_bindgen]
@@ -51,9 +47,8 @@ pub fn run_rustpython(
     code1: &str,
     code2: &str,
     turn_callback: &JsFunction,
-    finish_callback: &JsFunction,
     turn_num: usize,
-) -> Result<(), JsValue> {
+) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
 
     let vm = &vm::VirtualMachine::new(vm::PySettings {
@@ -97,7 +92,6 @@ pub fn run_rustpython(
             .unwrap()
             .downcast()
             .unwrap();
-
         if code.arg_names.len() != 2 {
             let msg =
                 "Your 'robot' function must accept two values: the current turn and robot details.";
@@ -110,7 +104,7 @@ pub fn run_rustpython(
     let red = create_robot_fn(code1)?;
     let blue = create_robot_fn(code2)?;
 
-    let run_team = |team, input: logic::RobotInput| {
+    let run_team = |team, input: logic::RobotInput| -> Result<_, JsValue> {
         let robot = match team {
             logic::Team::Red => &red,
             logic::Team::Blue => &blue,
@@ -140,18 +134,15 @@ pub fn run_rustpython(
         Ok(logic::RobotOutput { actions })
     };
 
-    logic::run(
+    let output = logic::run(
         run_team,
         |turn_state| {
             turn_callback
                 .call1(&JsValue::NULL, &JsValue::from_serde(&turn_state).unwrap())
                 .expect("Turn callback function failed");
         },
-        |final_state| {
-            finish_callback
-                .call1(&JsValue::NULL, &JsValue::from_serde(&final_state).unwrap())
-                .expect("Final callback function failed");
-        },
         turn_num,
-    )
+    )?;
+
+    Ok(JsValue::from_serde(&output).unwrap())
 }

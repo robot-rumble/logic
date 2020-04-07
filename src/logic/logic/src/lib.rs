@@ -179,16 +179,14 @@ impl RobotOutput {
 
 const GRID_SIZE: usize = 19;
 
-pub fn run<Err, RunF, TurnCb, FinishCb>(
+pub fn run<Err, RunF, TurnCb>(
     mut run_team_f: RunF,
     turn_cb: TurnCb,
-    finish_cb: FinishCb,
     max_turn: usize,
-) -> Result<(), Err>
+) -> Result<MainOutput, Err>
 where
     RunF: FnMut(Team, RobotInput) -> Result<RobotOutput, Err>,
     TurnCb: Fn(&TurnState) -> (),
-    FinishCb: Fn(MainOutput) -> (),
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
@@ -207,10 +205,8 @@ where
 
         turn_cb(&turn_state);
     }
-    finish_cb(MainOutput {
-        winner: turn_state.state.determine_winner(),
-    });
-    Ok(())
+    let winner = turn_state.state.determine_winner();
+    Ok(MainOutput { winner })
 }
 
 fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState) {
