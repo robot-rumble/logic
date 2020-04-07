@@ -10,14 +10,17 @@ use pyconvert::PyResultExt;
 
 mod pyconvert;
 
+#[wasm_bindgen(start)]
+pub fn main() {
+    console_error_panic_hook::set_once();
+}
+
 #[wasm_bindgen]
 pub fn run_logic(
     run_team: &JsFunction,
     turn_callback: &JsFunction,
     turn_num: usize,
 ) -> Result<JsValue, JsValue> {
-    console_error_panic_hook::set_once();
-
     let run_team = move |team, robot_state| -> Result<_, JsValue> {
         run_team
             .call2(
