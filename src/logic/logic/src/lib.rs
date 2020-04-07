@@ -19,7 +19,7 @@ pub fn new_id() -> Id {
 }
 
 impl Obj {
-    const UNIT_HEALTH: usize = 10;
+    const UNIT_HEALTH: usize = 5;
     const ATTACK_POWER: usize = 1;
 
     pub fn new_terrain(type_: TerrainType, coords: Coords) -> Self {
