@@ -1,13 +1,14 @@
 extern crate rustpython_vm as vm;
+
+use js_sys::{Function as JsFunction, TypeError};
 use vm::obj::objcode::PyCodeRef;
 use vm::obj::objfunction::PyFunctionRef;
 use vm::pyobject::ItemProtocol;
-
-use js_sys::{Function as JsFunction, TypeError};
 use wasm_bindgen::prelude::*;
 
-mod pyconvert;
 use pyconvert::PyResultExt;
+
+mod pyconvert;
 
 #[wasm_bindgen]
 pub fn run_logic(
@@ -53,6 +54,8 @@ pub fn run_rustpython(
     finish_callback: &JsFunction,
     turn_num: usize,
 ) -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+
     let vm = &vm::VirtualMachine::new(vm::PySettings {
         initialization_parameter: vm::InitParameter::InitializeInternal,
         ..Default::default()
