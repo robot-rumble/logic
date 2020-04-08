@@ -13,7 +13,7 @@ logic = { path = "../logic" }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 js-sys = "0.3"
 
-rustpython-vm = { git = "https://github.com/RustPython/RustPython" }
+rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
 rustpython-parser = { git = "https://github.com/RustPython/RustPython" }
 rustpython-compiler = { git = "https://github.com/RustPython/RustPython" }
 
