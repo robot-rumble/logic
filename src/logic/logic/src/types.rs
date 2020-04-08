@@ -10,7 +10,17 @@ pub enum MapType {
 }
 
 #[derive(
-    Serialize, Deserialize, EnumString, IntoStaticStr, Debug, PartialEq, Eq, Hash, Copy, Clone,
+    Serialize,
+    Deserialize,
+    EnumIter,
+    EnumString,
+    IntoStaticStr,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    Copy,
+    Clone,
 )]
 pub enum Team {
     Red,

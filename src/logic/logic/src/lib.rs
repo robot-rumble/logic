@@ -1,11 +1,10 @@
 use multimap::MultiMap;
 use rand::Rng;
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
 
 mod types;
 pub use types::*;
-
-const TEAMS: [Team; 2] = [Team::Red, Team::Blue];
 
 pub fn randrange(low: usize, high: usize) -> usize {
     let mut rng = rand::thread_rng();
@@ -57,9 +56,8 @@ impl State {
         let mut grid = Self::create_grid_map(&terrain_objs);
 
         // use the map to create the units
-        let mut objs: ObjMap = TEAMS
-            .iter()
-            .map(|team| Self::create_unit_objs(&grid, grid_size, *team))
+        let mut objs: ObjMap = Team::iter()
+            .map(|team| Self::create_unit_objs(&grid, grid_size, team))
             .flatten()
             .collect();
         objs.extend(terrain_objs);
@@ -98,9 +96,7 @@ impl State {
 
     fn update_grid_map(grid: &mut GridMap, objs: &ObjMap) {
         objs.values().for_each(|Obj(basic, _)| {
-            if !grid.contains_key(&basic.coords) {
-                grid.insert(basic.coords, basic.id);
-            }
+            grid.entry(basic.coords).or_insert(basic.id);
         })
     }
 
@@ -191,12 +187,11 @@ where
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
-        let team_outputs = TEAMS
-            .iter()
+        let team_outputs = Team::iter()
             .map(|team| {
                 Ok((
-                    *team,
-                    run_team_f(*team, RobotInput::new(turn_state.clone(), *team, GRID_SIZE))?,
+                    team,
+                    run_team_f(team, RobotInput::new(turn_state.clone(), team, GRID_SIZE))?,
                 ))
             })
             .collect::<Result<HashMap<Team, RobotOutput>, _>>()?;
