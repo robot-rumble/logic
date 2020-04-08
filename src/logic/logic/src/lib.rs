@@ -249,14 +249,17 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
         .iter_all()
         .for_each(|(coords, attacks)| {
             let attack_power = attacks.len() * Obj::ATTACK_POWER;
-            let id = turn_state.state.grid.get(coords).unwrap();
+            let id = match turn_state.state.grid.get(coords) {
+                Some(id) => id,
+                None => return,
+            };
             if let Obj(_, ObjDetails::Unit(ref mut unit)) =
                 turn_state.state.objs.get_mut(id).unwrap()
             {
                 unit.health = unit.health.saturating_sub(attack_power);
                 if unit.health == 0 {
-                    turn_state.state.objs.remove(id);
-                    turn_state.state.grid.remove(coords);
+                    turn_state.state.objs.remove(id).unwrap();
+                    turn_state.state.grid.remove(coords).unwrap();
                 }
             }
         });

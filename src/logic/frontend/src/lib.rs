@@ -53,6 +53,7 @@ pub fn run_rustpython(
     code1: &str,
     code2: &str,
     turn_callback: &JsFunction,
+    log_callback: &JsFunction,
     turn_num: usize,
 ) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
@@ -86,7 +87,7 @@ pub fn run_rustpython(
         )
         .to_js(vm)?;
 
-        stdlib::add(&py_state, &py_cur_team, vm);
+        stdlib::add(&py_state, &py_cur_team, log_callback, vm);
 
         let robot = attrs
             .get_item_option("robot", vm)

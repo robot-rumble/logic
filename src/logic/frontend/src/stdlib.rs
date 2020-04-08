@@ -10,7 +10,7 @@ use vm::obj::objstr::PyStringRef;
 use vm::obj::objtype::PyClassRef;
 use vm::pyobject::{ItemProtocol, PyClassImpl, PyContext, PyObjectRef, PyRef, PyResult, PyValue};
 use vm::VirtualMachine;
-use vm::{extend_module, pyclass, pyimpl};
+use vm::{extend_module, py_compile_bytecode, pyclass, pyimpl};
 
 fn parse_enum<T: std::str::FromStr>(
     name: &str,
@@ -109,7 +109,12 @@ fn make_action_func(ty: &'static str, ctx: &PyContext) -> PyObjectRef {
     })
 }
 
-pub fn add(state_ref: &Rc<RefCell<State>>, cur_team_ref: &Rc<Cell<Team>>, vm: &VirtualMachine) {
+pub fn add(
+    state_ref: &Rc<RefCell<State>>,
+    cur_team_ref: &Rc<Cell<Team>>,
+    log: &js_sys::Function,
+    vm: &VirtualMachine,
+) {
     let ctx = &vm.ctx;
 
     let state = state_ref.clone();
@@ -183,5 +188,50 @@ pub fn add(state_ref: &Rc<RefCell<State>>, cur_team_ref: &Rc<Cell<Team>>, vm: &V
         "obj_by_loc" => ctx.new_function(obj_by_loc),
         "id_by_loc" => ctx.new_function(id_by_loc),
         "other_team" => ctx.new_function(other_team),
-    })
+    });
+
+    let stdio = {
+        let (_, frozen): (String, _) = py_compile_bytecode!(
+            source = "
+import io
+class RobotRumbleLoggingIO(io.TextIOBase):
+    def write(self, s):
+        _log(s)
+        return len(s)
+    def flush(self):
+        pass
+",
+            module_name = "__debugoutput"
+        )
+        .into_iter()
+        .next()
+        .unwrap();
+
+        let attrs = vm.ctx.new_dict();
+        let log = log.clone();
+        attrs
+            .set_item(
+                "_log",
+                ctx.new_function(move |s: PyStringRef| {
+                    log.call1(&wasm_bindgen::JsValue::UNDEFINED, &s.as_str().into())
+                        .expect("log callback failed");
+                }),
+                vm,
+            )
+            .unwrap();
+        vm.run_code_obj(
+            vm.ctx.new_code_object(frozen.code),
+            vm::scope::Scope::with_builtins(None, attrs.clone(), vm),
+        )
+        .expect("debugoutput should not fail");
+        let cls = attrs.get_item("RobotRumbleLoggingIO", vm).unwrap();
+        vm.invoke(&cls, vec![]).unwrap()
+    };
+
+    extend_module!(vm, &vm.sys_module, {
+        "__stdout__" => stdio.clone(),
+        "stdout" => stdio.clone(),
+        "__stderr__" => stdio.clone(),
+        "stderr" => stdio,
+    });
 }
