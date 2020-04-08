@@ -1,14 +1,17 @@
-extern crate rustpython_vm as vm;
-
 use js_sys::{Function as JsFunction, TypeError};
+use rustpython_vm as vm;
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 use vm::obj::objcode::PyCodeRef;
 use vm::obj::objfunction::PyFunctionRef;
 use vm::pyobject::ItemProtocol;
 use wasm_bindgen::prelude::*;
 
-use pyconvert::PyResultExt;
-
 mod pyconvert;
+mod stdlib;
+use pyconvert::PyResultExt;
 
 #[wasm_bindgen(start)]
 pub fn main() {
@@ -59,6 +62,9 @@ pub fn run_rustpython(
         ..Default::default()
     });
 
+    let py_state: Rc<RefCell<logic::StateForRobotInput>> = Rc::default();
+    let py_cur_team = Rc::new(Cell::new(logic::Team::Red));
+
     let create_robot_fn = |code| -> Result<PyFunctionRef, JsValue> {
         let code = vm
             .compile(
@@ -79,6 +85,8 @@ pub fn run_rustpython(
             vm::scope::Scope::with_builtins(None, attrs.clone(), vm),
         )
         .to_js(vm)?;
+
+        stdlib::add(&py_state, &py_cur_team, vm);
 
         let robot = attrs
             .get_item_option("robot", vm)
@@ -108,18 +116,22 @@ pub fn run_rustpython(
     let blue = create_robot_fn(code2)?;
 
     let run_team = |team, input: logic::RobotInput| -> Result<_, JsValue> {
+        py_cur_team.set(team);
+        *py_state.borrow_mut() = input.state;
+        let state = py_state.borrow();
+
         let robot = match team {
             logic::Team::Red => &red,
             logic::Team::Blue => &blue,
         };
 
-        let turn = vm.new_int(input.state.turn);
+        let turn = vm.new_int(state.turn);
 
-        let actions = input.state.teams[&team]
+        let actions = state.teams[&team]
             .iter()
             .map(|id| {
                 // TODO(noah): fix rustpython so we don't have to do this dance of struct <> serde json value <> pyobject
-                let obj = serde_json::to_value(&input.state.objs[id]).unwrap();
+                let obj = serde_json::to_value(&state.objs[id]).unwrap();
                 let args = vec![turn.clone(), vm::py_serde::deserialize(vm, obj).unwrap()];
                 let ret = robot.invoke(args.into(), vm).to_js(vm)?;
                 if vm.is_none(&ret) {

@@ -2,13 +2,16 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
+use strum::*;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum MapType {
     Rect,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(
+    Serialize, Deserialize, EnumString, IntoStaticStr, Debug, PartialEq, Eq, Hash, Copy, Clone,
+)]
 pub enum Team {
     Red,
     Blue,
@@ -42,7 +45,7 @@ pub struct State {
 
 pub type TeamMap = HashMap<Team, Vec<Id>>;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct StateForRobotInput {
     pub objs: ObjMap,
     pub grid: GridMap,
@@ -104,7 +107,7 @@ pub struct BasicObj {
     pub coords: Coords,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, IntoStaticStr, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ObjDetails {
     Terrain(Terrain),
@@ -117,7 +120,7 @@ pub struct Terrain {
     pub type_: TerrainType,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
+#[derive(Serialize, Deserialize, IntoStaticStr, Debug, PartialEq, Copy, Clone)]
 pub enum TerrainType {
     Wall,
 }
@@ -130,7 +133,7 @@ pub struct Unit {
     pub health: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
+#[derive(Serialize, Deserialize, IntoStaticStr, Debug, PartialEq, Copy, Clone)]
 pub enum UnitType {
     Soldier,
 }
@@ -148,7 +151,7 @@ pub enum ActionType {
     Attack,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
+#[derive(Serialize, Deserialize, EnumString, Debug, PartialEq, Copy, Clone)]
 pub enum Direction {
     North,
     South,
