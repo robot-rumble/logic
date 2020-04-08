@@ -214,16 +214,22 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
         .iter()
         .for_each(|(team, output)| output.verify(*team, &turn_state.state.objs));
 
-    let all_actions = team_outputs
+    let mut movement_map = MultiMap::new();
+    let mut attack_map = MultiMap::new();
+
+    team_outputs
         .into_iter()
         .map(|(_, output)| output.actions)
         .flatten()
-        .collect::<ActionMap>();
-    let (move_actions, attack_actions) = all_actions
-        .into_iter()
-        .partition::<ActionMap, _>(|(_, action)| action.type_ == ActionType::Move);
+        .for_each(|(id, action)| {
+            let map = match action.type_ {
+                ActionType::Move => &mut movement_map,
+                ActionType::Attack => &mut attack_map,
+            };
+            let Obj(basic, _) = turn_state.state.objs.get(&id).unwrap();
+            map.insert(basic.coords + action.direction, id);
+        });
 
-    let movement_map = get_multimap_from_action_map(&turn_state.state.objs, move_actions);
     let movement_grid = movement_map
         .iter()
         .filter_map(|(coords, id)| {
@@ -245,36 +251,22 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
         movement_grid,
     );
 
-    get_multimap_from_action_map(&turn_state.state.objs, attack_actions)
-        .iter_all()
-        .for_each(|(coords, attacks)| {
-            let attack_power = attacks.len() * Obj::ATTACK_POWER;
-            let id = match turn_state.state.grid.get(coords) {
-                Some(id) => id,
-                None => return,
-            };
-            if let Obj(_, ObjDetails::Unit(ref mut unit)) =
-                turn_state.state.objs.get_mut(id).unwrap()
-            {
-                unit.health = unit.health.saturating_sub(attack_power);
-                if unit.health == 0 {
-                    turn_state.state.objs.remove(id).unwrap();
-                    turn_state.state.grid.remove(coords).unwrap();
-                }
+    attack_map.iter_all().for_each(|(coords, attacks)| {
+        let attack_power = attacks.len() * Obj::ATTACK_POWER;
+        let id = match turn_state.state.grid.get(coords) {
+            Some(id) => id,
+            None => return,
+        };
+        if let Some(Obj(_, ObjDetails::Unit(ref mut unit))) = turn_state.state.objs.get_mut(id) {
+            unit.health = unit.health.saturating_sub(attack_power);
+            if unit.health == 0 {
+                turn_state.state.objs.remove(id).unwrap();
+                turn_state.state.grid.remove(coords).unwrap();
             }
-        });
+        }
+    });
 
     turn_state.turn += 1;
-}
-
-pub fn get_multimap_from_action_map(objs: &ObjMap, actions: ActionMap) -> MultiMap<Coords, Id> {
-    actions
-        .into_iter()
-        .map(|(id, action)| {
-            let Obj(basic, _) = objs.get(&id).unwrap();
-            (basic.coords + action.direction, id)
-        })
-        .collect()
 }
 
 pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
