@@ -7,7 +7,6 @@ use rustpython_compiler::error::{CompileError, CompileErrorType};
 use rustpython_parser::error::ParseErrorType;
 use rustpython_vm::exceptions;
 use rustpython_vm::exceptions::PyBaseExceptionRef;
-use rustpython_vm::pyobject::PyResult;
 use rustpython_vm::VirtualMachine;
 
 #[wasm_bindgen(inline_js = r"
@@ -51,13 +50,4 @@ pub fn syntax_err(err: CompileError) -> SyntaxError {
     };
     let _ = Reflect::set(&js_err, &"canContinue".into(), &can_continue.into());
     js_err
-}
-
-pub trait PyResultExt<T> {
-    fn to_js(self, vm: &VirtualMachine) -> Result<T, JsValue>;
-}
-impl<T> PyResultExt<T> for PyResult<T> {
-    fn to_js(self, vm: &VirtualMachine) -> Result<T, JsValue> {
-        self.map_err(|err| py_err_to_js_err(vm, &err))
-    }
 }

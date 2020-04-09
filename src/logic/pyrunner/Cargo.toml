@@ -1,0 +1,10 @@
+[package]
+name = "pyrunner"
+version = "0.1.0"
+authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+logic = { path = "../logic" }
+
+rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }

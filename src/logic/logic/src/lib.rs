@@ -172,12 +172,12 @@ const GRID_SIZE: usize = 19;
 
 pub fn run<Err, RunF, TurnCb>(
     mut run_team_f: RunF,
-    turn_cb: TurnCb,
+    mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> Result<MainOutput, Err>
 where
     RunF: FnMut(Team, RobotInput) -> Result<RobotOutput, Err>,
-    TurnCb: Fn(&TurnState) -> (),
+    TurnCb: FnMut(&TurnState) -> (),
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };

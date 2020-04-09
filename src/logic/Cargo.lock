@@ -544,11 +544,11 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "logic",
+ "pyrunner",
  "rustpython-compiler",
  "rustpython-parser",
  "rustpython-vm",
  "serde",
- "serde_json",
  "wasm-bindgen",
 ]
 
@@ -1126,6 +1126,14 @@ checksum = "5dd32d8bece608e144ca20251e714ed107cdecdabb20c2d383cfc687825106a5"
 dependencies = [
  "failure",
  "libc",
+]
+
+[[package]]
+name = "pyrunner"
+version = "0.1.0"
+dependencies = [
+ "logic",
+ "rustpython-vm",
 ]
 
 [[package]]

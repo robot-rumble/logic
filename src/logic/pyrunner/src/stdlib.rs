@@ -141,7 +141,7 @@ fn make_action_func(type_: logic::ActionType, ctx: &PyContext) -> PyObjectRef {
 pub fn add(
     state_ref: &Rc<RefCell<State>>,
     cur_team_ref: &Rc<Cell<Team>>,
-    log: &js_sys::Function,
+    log: impl Fn(&str) + 'static,
     vm: &VirtualMachine,
 ) {
     let ctx = &vm.ctx;
@@ -238,14 +238,10 @@ class RobotRumbleLoggingIO(io.TextIOBase):
         .unwrap();
 
         let attrs = vm.ctx.new_dict();
-        let log = log.clone();
         attrs
             .set_item(
                 "_log",
-                ctx.new_function(move |s: PyStringRef| {
-                    log.call1(&wasm_bindgen::JsValue::UNDEFINED, &s.as_str().into())
-                        .expect("log callback failed");
-                }),
+                ctx.new_function(move |s: PyStringRef| log(s.as_str())),
                 vm,
             )
             .unwrap();
