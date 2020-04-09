@@ -21,7 +21,7 @@ fn main() {
     match logic::run(
         |team, robot_input| run(&mut stdin, &mut stdout, team, robot_input),
         |turn_state| {
-            println!("{:?}", turn_state);
+            println!("{}", turn_state.state);
         },
         10,
     ) {

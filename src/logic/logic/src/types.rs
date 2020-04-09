@@ -45,8 +45,10 @@ pub struct TurnState {
 
 pub type ObjMap = HashMap<Id, Obj>;
 
+type GridMapType = HashMap<Coords, Id>;
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
-pub struct GridMap(#[serde(with = "GridMapDef")] HashMap<Coords, Id>);
+pub struct GridMap(#[serde(with = "GridMapDef")] GridMapType);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
@@ -208,7 +210,7 @@ impl Direction {
 }
 
 impl std::ops::Deref for GridMap {
-    type Target = HashMap<Coords, Id>;
+    type Target = GridMapType;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -228,18 +230,22 @@ impl Extend<(Coords, Id)> for GridMap {
         self.0.extend(iter);
     }
 }
+
 impl IntoIterator for GridMap {
     type Item = (Coords, Id);
-    type IntoIter = <HashMap<Coords, Id> as IntoIterator>::IntoIter;
+    type IntoIter = <GridMapType as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
+type GridMapType2D = Vec<Vec<Option<Id>>>;
+
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "HashMap<Coords, Id>")]
-struct GridMapDef(#[serde(getter = "map2vec")] Vec<Vec<Option<Id>>>);
-impl From<GridMapDef> for HashMap<Coords, Id> {
+#[serde(remote = "GridMapType")]
+struct GridMapDef(#[serde(getter = "map2vec")] GridMapType2D);
+
+impl From<GridMapDef> for GridMapType {
     fn from(map: GridMapDef) -> Self {
         map.0
             .into_iter()
@@ -253,7 +259,8 @@ impl From<GridMapDef> for HashMap<Coords, Id> {
             .collect()
     }
 }
-fn map2vec(map: &HashMap<Coords, Id>) -> Vec<Vec<Option<Id>>> {
+
+fn map2vec(map: &GridMapType) -> GridMapType2D {
     use crate::GRID_SIZE;
     (0..GRID_SIZE)
         .map(|i| {
