@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
 use multimap::MultiMap;
 use rand::Rng;
-use std::collections::HashMap;
 use strum::IntoEnumIterator;
 
-mod types;
 pub use types::*;
+
+mod types;
 
 pub fn randrange(low: usize, high: usize) -> usize {
     let mut rng = rand::thread_rng();
@@ -239,7 +241,7 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
     turn_state
         .state
         .grid
-        .retain(|coords, _| !movement_grid.contains_key(coords));
+        .retain(|_, id| !movement_grid.values().any(|movement_id| id == movement_id));
     update_grid_with_movement(
         &mut turn_state.state.objs,
         &mut turn_state.state.grid,
