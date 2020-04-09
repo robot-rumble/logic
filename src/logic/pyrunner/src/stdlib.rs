@@ -68,6 +68,11 @@ impl Obj {
     fn tp_new(_args: PyFuncArgs, vm: &VirtualMachine) -> PyResult<PyRef<Self>> {
         Err(vm.new_type_error("cannot create 'Obj' instances".to_owned()))
     }
+    #[pymethod(magic)]
+    fn repr(&self) -> String {
+        let logic::Obj(basic, details) = &self.0;
+        format!("<Obj #{} at {:?}: {:?}>", basic.id.0, basic.coords, details)
+    }
 
     fn terrain(&self, op: &str, vm: &VirtualMachine) -> PyResult<&logic::Terrain> {
         match (self.0).1 {
