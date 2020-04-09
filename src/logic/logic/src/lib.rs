@@ -59,13 +59,10 @@ impl State {
 
         // use the map to create the units
         let mut objs: ObjMap = Team::iter()
-            .map(|team| Self::create_unit_objs(&grid, grid_size, team))
+            .map(|team| Self::create_unit_objs(&mut grid, grid_size, team))
             .flatten()
             .collect();
         objs.extend(terrain_objs);
-
-        // update the map with the units
-        Self::update_grid_map(&mut grid, &objs);
 
         Self { objs, grid }
     }
@@ -96,13 +93,7 @@ impl State {
             .collect()
     }
 
-    fn update_grid_map(grid: &mut GridMap, objs: &ObjMap) {
-        objs.values().for_each(|Obj(basic, _)| {
-            grid.entry(basic.coords).or_insert(basic.id);
-        })
-    }
-
-    fn create_unit_objs(grid: &GridMap, grid_size: usize, team: Team) -> ObjMap {
+    fn create_unit_objs(grid: &mut GridMap, grid_size: usize, team: Team) -> ObjMap {
         (0..Self::TEAM_UNIT_NUM)
             .map(|_| {
                 let obj = Obj::new_unit(
@@ -110,6 +101,8 @@ impl State {
                     Self::random_grid_loc(grid, grid_size),
                     team,
                 );
+                // update the grid continuously so random_grid_loc can account for new units
+                grid.insert(obj.0.coords, obj.0.id);
                 (obj.0.id, obj)
             })
             .collect()
