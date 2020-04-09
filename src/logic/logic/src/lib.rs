@@ -198,7 +198,8 @@ where
             })
             .collect::<Result<HashMap<Team, RobotOutput>, _>>()?;
 
-        run_turn(team_outputs, &mut turn_state);
+        run_turn(team_outputs, &mut turn_state.state);
+        turn_state.turn += 1;
 
         turn_cb(&turn_state);
     }
@@ -206,10 +207,10 @@ where
     Ok(MainOutput { winner })
 }
 
-fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState) {
+fn run_turn(team_outputs: HashMap<Team, RobotOutput>, state: &mut State) {
     team_outputs
         .iter()
-        .for_each(|(team, output)| output.verify(*team, &turn_state.state.objs));
+        .for_each(|(team, output)| output.verify(*team, &state.objs));
 
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
@@ -223,7 +224,7 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
                 ActionType::Move => &mut movement_map,
                 ActionType::Attack => &mut attack_map,
             };
-            let Obj(basic, _) = turn_state.state.objs.get(&id).unwrap();
+            let Obj(basic, _) = state.objs.get(&id).unwrap();
             map.insert(basic.coords + action.direction, id);
         });
 
@@ -238,32 +239,25 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, turn_state: &mut TurnState
         })
         .collect::<GridMap>();
 
-    turn_state
-        .state
+    state
         .grid
         .retain(|_, id| !movement_grid.values().any(|movement_id| id == movement_id));
-    update_grid_with_movement(
-        &mut turn_state.state.objs,
-        &mut turn_state.state.grid,
-        movement_grid,
-    );
+    update_grid_with_movement(&mut state.objs, &mut state.grid, movement_grid);
 
     attack_map.iter_all().for_each(|(coords, attacks)| {
         let attack_power = attacks.len() * Obj::ATTACK_POWER;
-        let id = match turn_state.state.grid.get(coords) {
+        let id = match state.grid.get(coords) {
             Some(id) => id,
             None => return,
         };
-        if let Some(Obj(_, ObjDetails::Unit(ref mut unit))) = turn_state.state.objs.get_mut(id) {
+        if let Some(Obj(_, ObjDetails::Unit(ref mut unit))) = state.objs.get_mut(id) {
             unit.health = unit.health.saturating_sub(attack_power);
             if unit.health == 0 {
-                turn_state.state.objs.remove(id).unwrap();
-                turn_state.state.grid.remove(coords).unwrap();
+                state.objs.remove(id).unwrap();
+                state.grid.remove(coords).unwrap();
             }
         }
     });
-
-    turn_state.turn += 1;
 }
 
 pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
