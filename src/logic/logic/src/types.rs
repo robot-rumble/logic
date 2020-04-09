@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 use std::ops::Add;
 
@@ -51,6 +52,31 @@ pub struct GridMap(#[serde(with = "GridMapDef")] HashMap<Coords, Id>);
 pub struct State {
     pub objs: ObjMap,
     pub grid: GridMap,
+}
+
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for row in map2vec(&self.grid) {
+            for col in row {
+                let char = match col {
+                    Some(id) => {
+                        let obj = self.objs.get(&id).unwrap();
+                        match &obj.1 {
+                            ObjDetails::Terrain(_) => '■',
+                            ObjDetails::Unit(unit) => match unit.team {
+                                Team::Red => 'r',
+                                Team::Blue => 'b',
+                            },
+                        }
+                    }
+                    None => ' ',
+                };
+                write!(f, " {}", char)?;
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
+    }
 }
 
 pub type TeamMap = HashMap<Team, Vec<Id>>;
