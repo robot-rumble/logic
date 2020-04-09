@@ -1,19 +1,17 @@
-use tokio_postgres::NoTls;
+use sqlx::PgPool;
 
 #[tokio::main]
-async fn main() {
-    let (client, connection) = tokio_postgres::connect("host=localhost user=robot", NoTls)
-        .await
-        .unwrap();
+async fn main() -> Result<(), anyhow::Error> {
+    let pool = PgPool::builder()
+        .max_size(5)
+        .build(&dotenv::var("DATABASE_URL")?)
+        .await?;
 
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e)
-        }
-    });
+    let users = sqlx::query!("SELECT * FROM users;")
+        .fetch_all(&pool)
+        .await?;
 
-    let rows = client.query("SELECT * FROM users;", &[]).await.unwrap();
+    println!("{:?}", users);
 
-    let name: &str = rows[0].get(1);
-    println!("{}", name);
+    Ok(())
 }
