@@ -6,7 +6,7 @@ use std::{
 };
 use vm::obj::objcode::PyCodeRef;
 use vm::obj::objfunction::PyFunctionRef;
-use vm::pyobject::ItemProtocol;
+use vm::pyobject::{ItemProtocol, PyValue};
 use wasm_bindgen::prelude::*;
 
 mod pyconvert;
@@ -130,20 +130,15 @@ pub fn run_rustpython(
 
         let actions = state.teams[&team]
             .iter()
-            .map(|id| {
-                // TODO(noah): fix rustpython so we don't have to do this dance of struct <> serde json value <> pyobject
-                let obj = serde_json::to_value(&state.objs[id]).unwrap();
-                let args = vec![turn.clone(), vm::py_serde::deserialize(vm, obj).unwrap()];
-                let ret = robot.invoke(args.into(), vm).to_js(vm)?;
-                if vm.is_none(&ret) {
-                    return Err(TypeError::new("Robot did not return an action!"));
-                }
-                let ret = vm::py_serde::serialize(vm, &ret, serde_json::value::Serializer)
-                    .map_err(|e| TypeError::new(&e.to_string()))?;
-                let action = serde_json::from_value(ret).map_err(|e| {
-                    TypeError::new(&format!("invalid action returned from robot: {}", e))
-                })?;
-                Ok((*id, action))
+            .map(|id| -> Result<_, JsValue> {
+                let obj = stdlib::Obj(state.objs[id].clone())
+                    .into_ref(vm)
+                    .into_object();
+                let ret = robot.invoke(vec![turn.clone(), obj].into(), vm).to_js(vm)?;
+                let action = ret
+                    .payload::<stdlib::Action>()
+                    .ok_or_else(|| TypeError::new("Robot did not return an action!"))?;
+                Ok((*id, action.0))
             })
             .collect::<Result<_, _>>()?;
 

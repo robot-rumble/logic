@@ -148,14 +148,14 @@ pub enum UnitType {
     Soldier,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct Action {
     #[serde(rename = "type")]
     pub type_: ActionType,
     pub direction: Direction,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
+#[derive(Serialize, Deserialize, EnumString, Debug, PartialEq, Copy, Clone)]
 pub enum ActionType {
     Move,
     Attack,

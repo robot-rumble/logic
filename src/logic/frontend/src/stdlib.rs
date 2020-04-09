@@ -6,6 +6,7 @@ use std::{
 use logic::{StateForRobotInput as State, Team};
 
 use rustpython_vm as vm;
+use vm::function::PyFuncArgs;
 use vm::obj::objstr::PyStringRef;
 use vm::obj::objtype::PyClassRef;
 use vm::pyobject::{ItemProtocol, PyClassImpl, PyContext, PyObjectRef, PyRef, PyResult, PyValue};
@@ -55,7 +56,7 @@ impl Coords {
 
 #[pyclass]
 #[derive(Debug)]
-struct Obj(logic::Obj);
+pub struct Obj(pub logic::Obj);
 impl PyValue for Obj {
     fn class(vm: &VirtualMachine) -> PyClassRef {
         vm.class("builtins", "Obj")
@@ -63,6 +64,11 @@ impl PyValue for Obj {
 }
 #[pyimpl]
 impl Obj {
+    #[pyslot]
+    fn tp_new(_args: PyFuncArgs, vm: &VirtualMachine) -> PyResult<PyRef<Self>> {
+        Err(vm.new_type_error("cannot create 'Obj' instances".to_owned()))
+    }
+
     fn terrain(&self, op: &str, vm: &VirtualMachine) -> PyResult<&logic::Terrain> {
         match (self.0).1 {
             logic::ObjDetails::Terrain(ref t) => Ok(t),
@@ -98,14 +104,37 @@ impl Obj {
     }
 }
 
-fn make_action_func(ty: &'static str, ctx: &PyContext) -> PyObjectRef {
-    let ty = ctx.new_str(ty.to_owned());
+#[pyclass]
+#[derive(Debug)]
+pub struct Action(pub logic::Action);
+impl PyValue for Action {
+    fn class(vm: &VirtualMachine) -> PyClassRef {
+        vm.class("builtins", "Action")
+    }
+}
+#[pyimpl]
+impl Action {
+    #[pyslot]
+    fn tp_new(
+        cls: PyClassRef,
+        ty: PyStringRef,
+        dir: PyStringRef,
+        vm: &VirtualMachine,
+    ) -> PyResult<PyRef<Self>> {
+        let type_ = parse_enum("action type", "Move", ty.as_str(), vm)?;
+        let direction = parse_enum("direction", "North", dir.as_str(), vm)?;
+        Self(logic::Action { type_, direction }).into_ref_with_type(vm, cls)
+    }
+    #[pymethod(magic)]
+    fn repr(&self) -> String {
+        format!("<Action: {:?} {:?}>", self.0.type_, self.0.direction)
+    }
+}
+
+fn make_action_func(type_: logic::ActionType, ctx: &PyContext) -> PyObjectRef {
     ctx.new_function(move |dir: PyStringRef, vm: &VirtualMachine| {
-        parse_enum::<logic::Direction>("direction", "North", dir.as_str(), vm)?;
-        let d = vm.ctx.new_dict();
-        d.set_item("type", ty.clone(), vm)?;
-        d.set_item("direction", dir.into_object(), vm)?;
-        Ok(d)
+        let direction = parse_enum("direction", "North", dir.as_str(), vm)?;
+        Ok(Action(logic::Action { type_, direction }))
     })
 }
 
@@ -180,8 +209,9 @@ pub fn add(
     extend_module!(vm, &vm.builtins, {
         "Coords" => Coords::make_class(ctx),
         "Obj" => Obj::make_class(ctx),
-        "move" => make_action_func("Move", ctx),
-        "attack" => make_action_func("Attack", ctx),
+        "Action" => Action::make_class(ctx),
+        "move" => make_action_func(logic::ActionType::Move, ctx),
+        "attack" => make_action_func(logic::ActionType::Attack, ctx),
         "obj_by_id" => ctx.new_function(obj_by_id),
         "objs_by_team" => ctx.new_function(objs_by_team),
         "ids_by_team" => ctx.new_function(ids_by_team),
