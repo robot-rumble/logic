@@ -186,7 +186,7 @@ pub fn run<Err, RunF, TurnCb>(
     max_turn: usize,
 ) -> Result<MainOutput, Err>
 where
-    RunF: FnMut(Team, RobotInput) -> Result<RobotOutput, Err>,
+    RunF: FnMut(RobotInput) -> Result<RobotOutput, Err>,
     TurnCb: FnMut(&TurnState) -> (),
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
@@ -196,7 +196,7 @@ where
             .map(|team| {
                 Ok((
                     team,
-                    run_team_f(team, RobotInput::new(turn_state.clone(), team, GRID_SIZE))?,
+                    run_team_f(RobotInput::new(turn_state.clone(), team, GRID_SIZE))?,
                 ))
             })
             .collect::<Result<HashMap<Team, RobotOutput>, _>>()?;

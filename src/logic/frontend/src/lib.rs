@@ -15,11 +15,10 @@ pub fn run_logic(
     turn_callback: &JsFunction,
     turn_num: usize,
 ) -> Result<JsValue, JsValue> {
-    let run_team = move |team, robot_state| -> Result<_, JsValue> {
+    let run_team = move |robot_state| -> Result<_, JsValue> {
         run_team
-            .call2(
+            .call1(
                 &JsValue::UNDEFINED,
-                &JsValue::from_serde(&team).unwrap(),
                 &JsValue::from_serde(&robot_state).unwrap(),
             )?
             .into_serde()
@@ -62,7 +61,7 @@ pub fn run_rustpython(
         )
         .map_err(pyconvert::syntax_err)
     };
-    pyrunner::run_python(
+    pyrunner::run_python_insecure(
         compile(code1)?,
         compile(code2)?,
         |turn_state| {

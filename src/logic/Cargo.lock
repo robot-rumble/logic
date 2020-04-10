@@ -1138,6 +1138,7 @@ name = "pyrunner"
 version = "0.1.0"
 dependencies = [
  "logic",
+ "once_cell",
  "rustpython-vm",
  "serde_cbor",
 ]

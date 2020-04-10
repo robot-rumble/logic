@@ -10,3 +10,5 @@ logic = { path = "../logic" }
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
 
 serde_cbor = "0.11"
+
+once_cell = "1.3"

@@ -19,7 +19,7 @@ fn main() {
     let mut stdout = io::BufReader::new(child.stdout.take().unwrap());
 
     match logic::run(
-        |team, robot_input| run(&mut stdin, &mut stdout, team, robot_input),
+        |robot_input| run(&mut stdin, &mut stdout, robot_input),
         |turn_state| {
             println!("{}", turn_state.state);
         },
@@ -43,10 +43,9 @@ enum Error {
 fn run(
     mut stdin: impl Write,
     mut stdout: impl Read,
-    team: logic::Team,
     input: logic::RobotInput,
 ) -> Result<logic::RobotOutput, Error> {
-    let actions = input.state.teams[&team]
+    let actions = input.state.teams[&input.team]
         .iter()
         .map(|id| -> Result<_, Error> {
             serde_json::to_writer(&mut stdin, &input)?;

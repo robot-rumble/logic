@@ -39,6 +39,11 @@ async fn automatchmake(pool: &PgPool) -> sqlx::Result<(Robot, Robot)> {
     Ok(output)
 }
 
+struct MatchResult {
+    winner: Option<logic::Team>,
+    errored: bool,
+}
+
 fn run_python(red: Robot, blue: Robot) -> Robot {
     let vm = &rustpython_vm::VirtualMachine::new(rustpython_vm::PySettings {
         initialization_parameter: rustpython_vm::InitParameter::InitializeInternal,
