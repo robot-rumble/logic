@@ -30,7 +30,7 @@ pub enum Team {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MainOutput {
-    pub winner: Team,
+    pub winner: Option<Team>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]

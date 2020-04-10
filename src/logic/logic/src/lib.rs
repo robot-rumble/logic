@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use multimap::MultiMap;
@@ -128,13 +129,22 @@ impl State {
             .collect()
     }
 
-    fn determine_winner(self) -> Team {
-        let teams = Self::create_team_map(&self.objs);
-        teams
-            .into_iter()
-            .max_by_key(|(_, ids)| ids.len())
-            .unwrap()
-            .0
+    fn determine_winner(self) -> Option<Team> {
+        let mut reds = 0;
+        let mut blues = 0;
+        for (_, Obj(_, details)) in self.objs {
+            if let ObjDetails::Unit(u) = details {
+                match u.team {
+                    Team::Red => reds += 1,
+                    Team::Blue => blues += 1,
+                }
+            }
+        }
+        match reds.cmp(&blues) {
+            Ordering::Less => Some(Team::Blue),
+            Ordering::Greater => Some(Team::Red),
+            Ordering::Equal => None,
+        }
     }
 }
 
