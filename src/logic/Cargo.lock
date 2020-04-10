@@ -274,12 +274,11 @@ checksum = "b486ce3ccf7ffd79fdeb678eac06a9e6c09fc88d33836340becb8fffe87c5e33"
 
 [[package]]
 name = "chrono"
-version = "0.4.9"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8493056968583b0193c1bb04d6f7684586f3726992d6c573261941a895dbd68"
+checksum = "80094f509cf8b5ae86a4966a39b3ff66cd7e2a3e594accec3743ff3fabeab5b2"
 dependencies = [
  "js-sys",
- "libc",
  "num-integer",
  "num-traits",
  "time",
@@ -1407,7 +1406,7 @@ dependencies = [
 [[package]]
 name = "rustpython-bytecode"
 version = "0.1.1"
-source = "git+https://github.com/RustPython/RustPython#3eb687d97685d34c2f427ac193a4dfedee3e4ac1"
+source = "git+https://github.com/RustPython/RustPython#9420622d6d2cb3dc147976f335027c4148a9a3ac"
 dependencies = [
  "bincode",
  "bitflags",
@@ -1421,7 +1420,7 @@ dependencies = [
 [[package]]
 name = "rustpython-compiler"
 version = "0.1.1"
-source = "git+https://github.com/RustPython/RustPython#3eb687d97685d34c2f427ac193a4dfedee3e4ac1"
+source = "git+https://github.com/RustPython/RustPython#9420622d6d2cb3dc147976f335027c4148a9a3ac"
 dependencies = [
  "arrayvec 0.5.1",
  "indexmap",
@@ -1435,7 +1434,7 @@ dependencies = [
 [[package]]
 name = "rustpython-derive"
 version = "0.1.1"
-source = "git+https://github.com/RustPython/RustPython#3eb687d97685d34c2f427ac193a4dfedee3e4ac1"
+source = "git+https://github.com/RustPython/RustPython#9420622d6d2cb3dc147976f335027c4148a9a3ac"
 dependencies = [
  "maplit",
  "once_cell",
@@ -1449,7 +1448,7 @@ dependencies = [
 [[package]]
 name = "rustpython-parser"
 version = "0.1.1"
-source = "git+https://github.com/RustPython/RustPython#3eb687d97685d34c2f427ac193a4dfedee3e4ac1"
+source = "git+https://github.com/RustPython/RustPython#9420622d6d2cb3dc147976f335027c4148a9a3ac"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -1463,7 +1462,7 @@ dependencies = [
 [[package]]
 name = "rustpython-vm"
 version = "0.1.1"
-source = "git+https://github.com/RustPython/RustPython#3eb687d97685d34c2f427ac193a4dfedee3e4ac1"
+source = "git+https://github.com/RustPython/RustPython#9420622d6d2cb3dc147976f335027c4148a9a3ac"
 dependencies = [
  "adler32",
  "arr_macro",
@@ -1681,9 +1680,9 @@ checksum = "aa0eec6425219a55511a35afac416a2eecc62f5fa1bec14f9b97de0caa7daebe"
 
 [[package]]
 name = "smallvec"
-version = "1.2.0"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c2fb2ec9bcd216a5b0d0ccf31ab17b5ed1d627960edff65bbe95d3ce221cefc"
+checksum = "05720e22615919e4734f6a99ceae50d00226c3c5aca406e102ebc33298214e0a"
 
 [[package]]
 name = "socket2"
