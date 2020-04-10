@@ -4,10 +4,21 @@ import enum
 from random import randrange
 
 
-class Coord:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+class Coords(tuple):
+    def __new__(cls, x, y):
+        self = super().__new__(cls, [x, y])
+        return self
+
+    def __repr__(self):
+        return "Coords(x={self.x}, y={self.y})"
+
+    @property
+    def x(self):
+        return self[0]
+
+    @property
+    def y(self):
+        return self[1]
 
     def distance(self, other):
         return math.sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
@@ -28,16 +39,20 @@ class Team(enum.Enum):
 
 
 class Obj:
-    def __init__(self, objdict):
-        self.__obj = objdict
+    def __init__(self, objdata):
+        self.__obj = objdata # [basic, details]
+
+    @property
+    def coords(self):
+        return Coords(*self.__obj[0]["coords"])
 
 
 class State:
     def __init__(self, statedict):
         self.__state = statedict
         self.turn = statedict["turn"]
-        self.team = Team(statedict["team"])
-        if self.team == Team.Red:
+        team = self.our_team = Team(statedict["team"])
+        if team == Team.Red:
             self.other_team = Team.Blue
         else:
             self.other_team = Team.Red
@@ -133,7 +148,7 @@ def _main(state, log=None):
             "and the details for the unit"
         )
     output = {}
-    for id in state.ids_by_team(state.team):
+    for id in state.ids_by_team(state.our_team):
         action = robot(state, state.obj_by_id(id))
         if not isinstance(action, Action):
             raise TypeError("your robot function must return an Action")
