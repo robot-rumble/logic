@@ -8,3 +8,5 @@ edition = "2018"
 logic = { path = "../logic" }
 
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
+
+serde_cbor = "0.11"

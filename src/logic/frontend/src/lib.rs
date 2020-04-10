@@ -73,11 +73,11 @@ pub fn run_rustpython(
                 )
                 .expect("Turn callback function failed");
         },
-        move |s| {
+        Some(move |s: &str| {
             log_callback
                 .call1(&JsValue::UNDEFINED, &s.into())
                 .expect("log callback failed");
-        },
+        }),
         turn_num,
         vm,
     )

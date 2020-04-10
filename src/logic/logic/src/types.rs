@@ -34,6 +34,7 @@ pub struct MainOutput {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[serde(transparent)]
 pub struct Id(pub usize);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -48,6 +49,7 @@ pub type ObjMap = HashMap<Id, Obj>;
 type GridMapType = HashMap<Coords, Id>;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[serde(transparent)]
 pub struct GridMap(#[serde(with = "GridMapDef")] GridMapType);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -93,6 +95,7 @@ pub struct StateForRobotInput {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RobotInput {
+    #[serde(flatten)]
     pub state: StateForRobotInput,
     pub grid_size: usize,
     pub team: Team,
