@@ -5,7 +5,7 @@ authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-logic = { path = "../logic" }
+logic = { path = "../.." }
 
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
 

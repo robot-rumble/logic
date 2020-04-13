@@ -13,8 +13,8 @@ dotenv = "0.15"
 anyhow = "1.0"
 itertools = "0.9"
 
-pyrunner = { path = "../logic/pyrunner" }
-logic = { path = "../logic/logic" }
+pyrunner = { path = "../logic/langs/python" }
+logic = { path = "../logic" }
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
 rustpython-compiler = { git = "https://github.com/RustPython/RustPython" }
 

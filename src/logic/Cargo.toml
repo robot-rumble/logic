@@ -1,5 +1,0 @@
-[profile.release]
-lto = true
-
-[workspace]
-members = ["frontend", "backend", "logic", "pyrunner"]

@@ -1,0 +1,5 @@
+[profile.release]
+lto = true
+
+[workspace]
+members = ["yente", "logic", "logic/entrypoints/cli", "logic/entrypoints/webapp", "logic/langs/python"]
