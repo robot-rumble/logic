@@ -2,4 +2,4 @@
 lto = true
 
 [workspace]
-members = ["yente", "logic", "logic/entrypoints/cli", "logic/entrypoints/webapp", "logic/langs/python"]
+members = ["logic", "runners/cli", "runners/webapp", "runners/lambda", "langs/python"]

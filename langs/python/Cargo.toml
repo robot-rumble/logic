@@ -5,10 +5,8 @@ authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-logic = { path = "../.." }
+logic = { path = "../../logic" }
 
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
-
-serde_cbor = "0.11"
 
 once_cell = "1.3"

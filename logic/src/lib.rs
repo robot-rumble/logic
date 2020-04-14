@@ -5,6 +5,8 @@ use multimap::MultiMap;
 use rand::Rng;
 use strum::IntoEnumIterator;
 
+use thiserror::Error;
+
 pub use types::*;
 
 mod types;
@@ -48,6 +50,16 @@ impl Obj {
             id: new_id(),
         }
     }
+
+    fn id(&self) -> Id {
+        self.0.id
+    }
+    fn coords(&self) -> Coords {
+        self.0.coords
+    }
+    fn details(&self) -> &ObjDetails {
+        &self.1
+    }
 }
 
 impl State {
@@ -83,15 +95,13 @@ impl State {
             })
             .map(|coords| {
                 let obj = Obj::new_terrain(TerrainType::Wall, *coords);
-                (obj.0.id, obj)
+                (obj.id(), obj)
             })
             .collect()
     }
 
     fn create_grid_map(objs: &ObjMap) -> GridMap {
-        objs.values()
-            .map(|Obj(basic, _)| (basic.coords, basic.id))
-            .collect()
+        objs.values().map(|obj| (obj.coords(), obj.id())).collect()
     }
 
     fn create_unit_objs(grid: &mut GridMap, grid_size: usize, team: Team) -> ObjMap {
@@ -103,8 +113,8 @@ impl State {
                     team,
                 );
                 // update the grid continuously so random_grid_loc can account for new units
-                grid.insert(obj.0.coords, obj.0.id);
-                (obj.0.id, obj)
+                grid.insert(obj.coords(), obj.id());
+                (obj.id(), obj)
             })
             .collect()
     }
@@ -120,8 +130,8 @@ impl State {
 
     fn create_team_map(objs: &ObjMap) -> TeamMap {
         objs.values()
-            .filter_map(|Obj(basic, details)| match details {
-                ObjDetails::Unit(unit) => Some((unit.team, basic.id)),
+            .filter_map(|obj| match obj.details() {
+                ObjDetails::Unit(unit) => Some((unit.team, obj.id())),
                 _ => None,
             })
             .collect::<MultiMap<Team, Id>>()
@@ -132,9 +142,9 @@ impl State {
     fn determine_winner(self) -> Option<Team> {
         let mut reds = 0;
         let mut blues = 0;
-        for (_, Obj(_, details)) in self.objs {
-            if let ObjDetails::Unit(u) = details {
-                match u.team {
+        for (_, obj) in self.objs {
+            if let ObjDetails::Unit(unit) = obj.details() {
+                match unit.team {
                     Team::Red => reds += 1,
                     Team::Blue => blues += 1,
                 }
@@ -148,12 +158,12 @@ impl State {
     }
 }
 
-impl RobotInput {
+impl ProgramInput {
     pub fn new(turn_state: TurnState, team: Team, grid_size: usize) -> Self {
         let TurnState { turn, state } = turn_state;
         let teams = State::create_team_map(&state.objs);
         Self {
-            state: StateForRobotInput {
+            state: StateForProgramInput {
                 turn,
                 objs: state.objs,
                 grid: state.grid,
@@ -165,71 +175,106 @@ impl RobotInput {
     }
 }
 
-impl RobotOutput {
-    pub fn verify(&self, team: Team, objs: &ObjMap) {
-        self.actions.keys().for_each(|id| match objs.get(id) {
-            Some(Obj(_, ObjDetails::Unit(unit))) if unit.team != team => {
-                panic!("Action ID points to unit on other team")
+fn validate_robot_output(map: &mut RobotOutputMap, team: Team, objs: &ObjMap) {
+    for (id, output) in map.iter_mut() {
+        output.action = output.action.and_then(|action| {
+            match objs.get(id).map(|obj| obj.details()) {
+                Some(ObjDetails::Unit(unit)) if unit.team != team => {
+                    ActionError("Action ID points to unit on other team".into())
+                }
+                Some(ObjDetails::Terrain(_)) => ActionError("Action ID points to terrain".into()),
+                None => ActionError("Action ID points to nonexistent object".into()),
+                _ => Ok(action),
             }
-            Some(Obj(_, ObjDetails::Terrain(_))) => panic!("Action ID points to terrain"),
-            None => panic!("Action ID points to nonexistent object"),
-            _ => (),
-        })
+        });
     }
 }
 
 const GRID_SIZE: usize = 19;
 
-pub fn run<Err, RunF, TurnCb>(
-    mut run_team_f: RunF,
+pub fn run<RunF, TurnCb>(
+    mut run_team_f: HashMap<Team, RunF>,
     mut turn_cb: TurnCb,
     max_turn: usize,
-) -> Result<MainOutput, Err>
-where
-    RunF: FnMut(RobotInput) -> Result<RobotOutput, Err>,
-    TurnCb: FnMut(&TurnState) -> (),
+) -> MainOutput
+    where
+        RunF: FnMut(ProgramInput) -> ProgramOutput,
+        TurnCb: FnMut(&CallbackInput) -> (),
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
-        let team_outputs = Team::iter()
-            .map(|team| {
-                Ok((
-                    team,
-                    run_team_f(RobotInput::new(turn_state.clone(), team, GRID_SIZE))?,
-                ))
-            })
-            .collect::<Result<HashMap<Team, RobotOutput>, _>>()?;
+        let (robot_outputs, logs) = Team::iter().map(|team| {
+            let program_output = run_team_f[team](ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
+            ((team, program_output.robot_outputs), (team, program_output.logs))
+        }).unzip();
 
-        run_turn(team_outputs, &mut turn_state.state);
+        let logs = logs.collect::<HashMap<Team, Logs>>();
+
         turn_state.turn += 1;
 
-        turn_cb(&turn_state);
+        match (robot_outputs[0], robot_outputs[1]) {
+            ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {
+                let mut team_outputs = HashMap::new();
+                team_outputs.insert(t1, output_map1);
+                team_outputs.insert(t2, output_map2);
+
+                for (team, ref mut program_output) in team_outputs.iter_mut() {
+                    validate_robot_output(program_output, team, &state.objs);
+                }
+
+                let flattened_outputs = team_outputs
+                    .into_iter()
+                    .map(|(_, output)| output.actions)
+                    .flatten()
+                    .collect::<HashMap<Id, ValidatedRobotOutput>>();
+
+                run_turn(&flattened_outputs, &mut turn_state.state);
+
+                turn_cb(&CallbackInput {
+                    state: turn_state.clone(),
+                    logs,
+                    robot_outputs: flattened_outputs,
+                });
+            },
+            errored @ ((_, Err(_)), _) | errored @ (_, (_, Err(_))) => {
+                let mut errors = HashMap::new();
+                let winner = match errored {
+                    ((t1, Err(e1)), (t2, Err(e2))) => {
+                        errors.insert(t1, e1);
+                        errors.insert(t2, e2);
+                        None
+                    },
+                    ((t1, Err(e1)), (t2, Ok(_))) => {
+                        errors.insert(t1, e1);
+                        Some(t2)
+                    },
+                    ((t1, Ok(_)), (t2, Err(e2))) => {
+                        errors.insert(t2, e2);
+                        Some(t1)
+                    },
+                };
+                turn_cb(&CallbackInput { state: turn_state.clone(), logs, ..Default::default() });
+                return MainOutput { winner, errors }
+            }
+        }
     }
     let winner = turn_state.state.determine_winner();
-    Ok(MainOutput { winner })
+    MainOutput { winner, errors: HashMap::new() }
 }
 
-fn run_turn(team_outputs: HashMap<Team, RobotOutput>, state: &mut State) {
-    team_outputs
-        .iter()
-        .for_each(|(team, output)| output.verify(*team, &state.objs));
-
+fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State) {
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
 
-    team_outputs
-        .into_iter()
-        .map(|(_, output)| output.actions)
-        .flatten()
-        .for_each(|(id, action)| {
-            let map = match action.type_ {
-                ActionType::Move => &mut movement_map,
-                ActionType::Attack => &mut attack_map,
-            };
-            let Obj(basic, _) = state.objs.get(&id).unwrap();
-            map.insert(basic.coords + action.direction, id);
-        });
+    for (id, action) in robot_outputs.iter() {
+        let map = match action.type_ {
+            ActionType::Move => &mut movement_map,
+            ActionType::Attack => &mut attack_map,
+        };
+        let obj = state.objs.get(&id).unwrap();
+        map.insert(obj.coords() + action.direction, id);
+    }
 
     let movement_grid = movement_map
         .iter()
@@ -247,20 +292,23 @@ fn run_turn(team_outputs: HashMap<Team, RobotOutput>, state: &mut State) {
         .retain(|_, id| !movement_grid.values().any(|movement_id| id == movement_id));
     update_grid_with_movement(&mut state.objs, &mut state.grid, movement_grid);
 
-    attack_map.iter_all().for_each(|(coords, attacks)| {
+    for (coords, attacks) in attack_map.iter_all() {
         let attack_power = attacks.len() * Obj::ATTACK_POWER;
-        let id = match state.grid.get(coords) {
-            Some(id) => id,
-            None => return,
-        };
-        if let Some(Obj(_, ObjDetails::Unit(ref mut unit))) = state.objs.get_mut(id) {
-            unit.health = unit.health.saturating_sub(attack_power);
-            if unit.health == 0 {
-                state.objs.remove(id).unwrap();
-                state.grid.remove(coords).unwrap();
+        match state.grid.get(coords) {
+            Some(id) => {
+                if let Some(ObjDetails::Unit(ref mut unit)) =
+                state.objs.get_mut(id).map(|obj| obj.details())
+                {
+                    unit.health = unit.health.saturating_sub(attack_power);
+                    if unit.health == 0 {
+                        state.objs.remove(id).unwrap();
+                        state.grid.remove(coords).unwrap();
+                    }
+                }
             }
-        }
-    });
+            None => (),
+        };
+    }
 }
 
 pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
@@ -275,9 +323,9 @@ pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement
         grid.extend(legal_moves)
     } else {
         // insert the units with illegal moves back in their original location
-        illegal_moves.into_iter().for_each(|(_, id)| {
+        for (_, id) in illegal_moves.into_iter() {
             grid.insert(objs.get(&id).unwrap().0.coords, id);
-        });
+        }
         update_grid_with_movement(objs, grid, legal_moves);
     }
 }

@@ -5,7 +5,7 @@ authors = ["Anton <antonoutkine@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-logic = { path = "../.." }
+logic = { path = "../../logic" }
 
 serde = { version = "1.0" }
 serde_json = "1.0"

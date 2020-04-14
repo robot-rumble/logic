@@ -43,8 +43,8 @@ enum Error {
 fn run(
     mut stdin: impl Write,
     mut stdout: impl Read,
-    input: logic::RobotInput,
-) -> Result<logic::RobotOutput, Error> {
+    input: logic::ProgramInput,
+) -> Result<logic::ProgramOutput, Error> {
     let actions = input.state.teams[&input.team]
         .iter()
         .map(|id| -> Result<_, Error> {
@@ -59,5 +59,5 @@ fn run(
         })
         .collect::<Result<_, _>>()?;
 
-    Ok(logic::RobotOutput { actions })
+    Ok(logic::ProgramOutput { actions })
 }

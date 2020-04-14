@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use strum::*;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -31,6 +32,7 @@ pub enum Team {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MainOutput {
     pub winner: Option<Team>,
+    pub errors: HashMap<Team, ProgramError>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -44,13 +46,36 @@ pub struct TurnState {
     pub state: State,
 }
 
+#[derive(Error, Debug)]
+enum RobotErrorAfterValidation {
+    #[error("Robot function error")]
+    RobotError(RobotError),
+    #[error("Invalid action")]
+    ActionValidationError(String),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ValidatedRobotOutput {
+    pub debug_table: HashMap<Id, DebugTable>,
+    pub action: Result<Action, RobotErrorAfterValidation>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CallbackInput {
+    pub state: TurnState,
+    // logs are on the level of the team
+    pub logs: HashMap<Team, Logs>,
+    // debug_tables are on the level of the individual robots
+    pub robot_outputs: HashMap<Id, ValidatedRobotOutput>,
+}
+
 pub type ObjMap = HashMap<Id, Obj>;
 
 type GridMapType = HashMap<Coords, Id>;
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
-#[serde(transparent)]
-pub struct GridMap(#[serde(with = "GridMapDef")] GridMapType);
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(from = "SerdeGridMap", into = "SerdeGridMap")]
+pub struct GridMap(GridMapType);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
@@ -60,7 +85,7 @@ pub struct State {
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in map2vec(&self.grid) {
+        for row in SerdeGridMap::from(self.grid.clone()) {
             for col in row {
                 let char = match col {
                     Some(id) => {
@@ -86,7 +111,7 @@ impl fmt::Display for State {
 pub type TeamMap = HashMap<Team, Vec<Id>>;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
-pub struct StateForRobotInput {
+pub struct StateForProgramInput {
     pub objs: ObjMap,
     pub grid: GridMap,
     pub teams: TeamMap,
@@ -94,18 +119,47 @@ pub struct StateForRobotInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RobotInput {
+pub struct ProgramInput {
     #[serde(flatten)]
-    pub state: StateForRobotInput,
+    pub state: StateForProgramInput,
     pub grid_size: usize,
     pub team: Team,
 }
 
-pub type ActionMap = HashMap<Id, Action>;
+pub type ErrorLoc = (usize, usize);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RobotError {
+    pub start: ErrorLoc,
+    pub end: ErrorLoc,
+    pub message: String
+}
+
+pub type DebugTable = HashMap<String, String>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RobotOutput {
-    pub actions: ActionMap,
+    pub action: Result<Action, RobotError>,
+    pub debug_table: DebugTable
+}
+
+pub type RobotOutputMap = HashMap<Id, RobotOutput>;
+
+#[derive(Error, Debug)]
+pub enum ProgramError {
+    #[error("Unhandled program error")]
+    InternalError,
+    #[error("Program returned invalid data")]
+    DataError(#[from] dyn serde::de::Error)
+}
+
+pub type ProgramResult = Result<RobotOutputMap, ProgramError>;
+pub type Logs = Vec<String>;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ProgramOutput {
+    pub robot_outputs: ProgramResult,
+    pub logs: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -140,6 +194,7 @@ impl Add<Direction> for Coords {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(from = "SerdeObj", into = "SerdeObj")]
 pub struct Obj(pub BasicObj, pub ObjDetails);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -149,7 +204,7 @@ pub struct BasicObj {
 }
 
 #[derive(Serialize, Deserialize, IntoStaticStr, Debug, Clone)]
-#[serde(tag = "type")]
+#[serde(untagged)]
 pub enum ObjDetails {
     Terrain(Terrain),
     Unit(Unit),
@@ -212,6 +267,53 @@ impl Direction {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct SerdeObj {
+    #[serde(flatten)]
+    basic: BasicObj,
+    #[serde(flatten)]
+    details: ObjDetails
+}
+
+impl From<Obj> for SerdeObj {
+    fn from((basic, details): Obj) -> Self { Self { basic, details } }
+}
+impl Into<Obj> for SerdeObj {
+    fn into(self) -> Obj { Obj(self.basic, self.details) }
+}
+
+type SerdeGridMapType = Vec<Vec<Option<Id>>>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct SerdeGridMap(SerdeGridMapType);
+
+impl From<GridMap> for SerdeGridMap {
+    fn from(map: GridMap) -> Self {
+        (0..crate::GRID_SIZE)
+            .map(|i| {
+                (0..crate::GRID_SIZE)
+                    .map(|j| map.0.get(&Coords(j, i)).copied())
+                    .collect()
+            })
+            .collect()
+    }
+}
+
+impl Into<GridMap> for SerdeGridMap {
+    fn into(self) -> GridMap {
+        map.0
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| {
+                v.into_iter()
+                    .enumerate()
+                    .filter_map(move |(j, elem)| elem.map(|elem| (Coords(i, j), elem)))
+            })
+            .flatten()
+            .collect()
+    }
+}
+
 impl std::ops::Deref for GridMap {
     type Target = GridMapType;
     fn deref(&self) -> &Self::Target {
@@ -233,43 +335,10 @@ impl Extend<(Coords, Id)> for GridMap {
         self.0.extend(iter);
     }
 }
-
 impl IntoIterator for GridMap {
     type Item = (Coords, Id);
     type IntoIter = <GridMapType as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
-}
-
-type GridMapType2D = Vec<Vec<Option<Id>>>;
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "GridMapType")]
-struct GridMapDef(#[serde(getter = "map2vec")] GridMapType2D);
-
-impl From<GridMapDef> for GridMapType {
-    fn from(map: GridMapDef) -> Self {
-        map.0
-            .into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                v.into_iter()
-                    .enumerate()
-                    .filter_map(move |(j, elem)| elem.map(|elem| (Coords(i, j), elem)))
-            })
-            .flatten()
-            .collect()
-    }
-}
-
-fn map2vec(map: &GridMapType) -> GridMapType2D {
-    use crate::GRID_SIZE;
-    (0..GRID_SIZE)
-        .map(|i| {
-            (0..GRID_SIZE)
-                .map(|j| map.get(&Coords(j, i)).copied())
-                .collect()
-        })
-        .collect()
 }

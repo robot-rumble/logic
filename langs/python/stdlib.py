@@ -1,8 +1,6 @@
 import math
 import enum
 
-from random import randrange
-
 
 class Coords(tuple):
     def __new__(cls, x, y):
@@ -10,7 +8,7 @@ class Coords(tuple):
         return self
 
     def __repr__(self):
-        return "Coords(x={self.x}, y={self.y})"
+        return "({self.x}, {self.y})"
 
     @property
     def x(self):
@@ -39,41 +37,45 @@ class Team(enum.Enum):
 
 
 class Obj:
-    def __init__(self, objdata):
-        self.__obj = objdata # [basic, details]
+    def __init__(self, obj):
+        self.__data = obj
 
     @property
     def coords(self):
-        return Coords(*self.__obj[0]["coords"])
+        return Coords(*self.__data["coords"])
+
+    @property
+    def id(self):
+        return Coords(*self.__data["id"])
 
 
 class State:
-    def __init__(self, statedict):
-        self.__state = statedict
-        self.turn = statedict["turn"]
-        team = self.our_team = Team(statedict["team"])
+    def __init__(self, state_dict):
+        self.__data = state_dict
+        self.turn = state_dict["turn"]
+        team = self.our_team = Team(state_dict["team"])
         if team == Team.Red:
             self.other_team = Team.Blue
         else:
             self.other_team = Team.Red
 
     def obj_by_id(self, id):
-        return Obj(self.__state["objs"][id])
+        return Obj(self.__data["objs"][id])
 
     def objs_by_team(self, team):
         return [self.obj_by_id(id) for id in self.ids_by_team(team)]
 
     def ids_by_team(self, team):
         if not isinstance(team, Team):
-            raise TypeError("team must be a Team")
-        return self.__state["teams"][team.value]
+            raise TypeError("Team must be a Team")
+        return self.__data["teams"][team.value]
 
     def obj_by_loc(self, coord):
         id = self.id_by_loc(coord)
         return id and self.obj_by_id(id)
 
     def id_by_loc(self, coord):
-        xs = self.__state["grid"][coord.x]
+        xs = self.__data["grid"][coord.x]
         return xs and xs[coord.y]
 
 
@@ -92,9 +94,9 @@ class Direction(enum.Enum):
 class Action:
     def __init__(self, type, direction):
         if not isinstance(type, ActionType):
-            raise TypeError("type must be an ActionType")
+            raise TypeError("Type must be an ActionType")
         if not isinstance(direction, Direction):
-            raise TypeError("direction must be a Direction")
+            raise TypeError("Direction must be a Direction")
         self.type = type
         self.direction = direction
 
@@ -141,16 +143,40 @@ def _main(state, log=None):
     state = State(state)
     robot = globals().get("robot")
     if not isinstance(robot, type(_main)):
-        raise TypeError("you must define a 'robot' function")
+        raise TypeError("You must define a 'robot' function")
     if robot.__code__.co_argcount != 2:
         raise TypeError(
             "your robot function must accept 2 values: the current state "
             "and the details for the unit"
         )
-    output = {}
+
+    robot_outputs = {}
     for id in state.ids_by_team(state.our_team):
-        action = robot(state, state.obj_by_id(id))
-        if not isinstance(action, Action):
-            raise TypeError("your robot function must return an Action")
-        output[id] = {"type": action.type.value, "direction": action.direction.value}
-    return output
+        debug_table = {}
+
+        def debug(key, val):
+            debug_table[key] = val
+
+        try:
+            action = robot(state, state.obj_by_id(id), debug)
+            if not isinstance(action, Action):
+                raise TypeError("Your robot function must return an Action")
+        except Exception as err:
+            result = {
+                "Err": {
+                    # TODO(noah) get exception location
+                    "start": [0, 0],
+                    "end": [0, 0],
+                    "message": str(err),
+                }
+            }
+        else:
+            result = {
+                "Ok": {"type": action.type.value, "direction": action.direction.value}
+            }
+        robot_outputs[id] = {
+            "action": result,
+            "debug_table": debug_table
+        }
+
+    return robot_outputs
