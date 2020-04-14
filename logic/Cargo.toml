@@ -13,3 +13,4 @@ rand = { version = "0.7", features = ["wasm-bindgen"] }
 multimap = "0.8"
 strum = { version = "0.18", features = ["derive"] }
 thiserror = "1.0"
+itertools = "0.9"

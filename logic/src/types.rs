@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use strum::*;
+use thiserror::Error;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum MapType {
@@ -46,8 +46,8 @@ pub struct TurnState {
     pub state: State,
 }
 
-#[derive(Error, Debug)]
-enum RobotErrorAfterValidation {
+#[derive(Serialize, Deserialize, Error, Clone, Debug)]
+pub enum RobotErrorAfterValidation {
     #[error("Robot function error")]
     RobotError(RobotError),
     #[error("Invalid action")]
@@ -56,8 +56,8 @@ enum RobotErrorAfterValidation {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValidatedRobotOutput {
-    pub debug_table: HashMap<Id, DebugTable>,
     pub action: Result<Action, RobotErrorAfterValidation>,
+    pub debug_table: DebugTable,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -73,7 +73,7 @@ pub type ObjMap = HashMap<Id, Obj>;
 
 type GridMapType = HashMap<Coords, Id>;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone)]
 #[serde(from = "SerdeGridMap", into = "SerdeGridMap")]
 pub struct GridMap(GridMapType);
 
@@ -85,7 +85,7 @@ pub struct State {
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in SerdeGridMap::from(self.grid.clone()) {
+        for row in SerdeGridMap::from(self.grid.clone()).0 {
             for col in row {
                 let char = match col {
                     Some(id) => {
@@ -128,11 +128,11 @@ pub struct ProgramInput {
 
 pub type ErrorLoc = (usize, usize);
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RobotError {
     pub start: ErrorLoc,
     pub end: ErrorLoc,
-    pub message: String
+    pub message: String,
 }
 
 pub type DebugTable = HashMap<String, String>;
@@ -140,17 +140,18 @@ pub type DebugTable = HashMap<String, String>;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RobotOutput {
     pub action: Result<Action, RobotError>,
-    pub debug_table: DebugTable
+    pub debug_table: DebugTable,
 }
 
 pub type RobotOutputMap = HashMap<Id, RobotOutput>;
 
-#[derive(Error, Debug)]
+#[derive(Serialize, Deserialize, Error, Debug)]
 pub enum ProgramError {
     #[error("Unhandled program error")]
     InternalError,
+    #[serde(skip)]
     #[error("Program returned invalid data")]
-    DataError(#[from] dyn serde::de::Error)
+    DataError(#[from] serde_json::Error),
 }
 
 pub type ProgramResult = Result<RobotOutputMap, ProgramError>;
@@ -194,7 +195,7 @@ impl Add<Direction> for Coords {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(from = "SerdeObj", into = "SerdeObj")]
+// #[serde(from = "SerdeObj", into = "SerdeObj")]
 pub struct Obj(pub BasicObj, pub ObjDetails);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -272,14 +273,18 @@ struct SerdeObj {
     #[serde(flatten)]
     basic: BasicObj,
     #[serde(flatten)]
-    details: ObjDetails
+    details: ObjDetails,
 }
 
 impl From<Obj> for SerdeObj {
-    fn from((basic, details): Obj) -> Self { Self { basic, details } }
+    fn from(Obj(basic, details): Obj) -> Self {
+        Self { basic, details }
+    }
 }
 impl Into<Obj> for SerdeObj {
-    fn into(self) -> Obj { Obj(self.basic, self.details) }
+    fn into(self) -> Obj {
+        Obj(self.basic, self.details)
+    }
 }
 
 type SerdeGridMapType = Vec<Vec<Option<Id>>>;
@@ -289,19 +294,21 @@ struct SerdeGridMap(SerdeGridMapType);
 
 impl From<GridMap> for SerdeGridMap {
     fn from(map: GridMap) -> Self {
-        (0..crate::GRID_SIZE)
+        let arr2d = (0..crate::GRID_SIZE)
             .map(|i| {
                 (0..crate::GRID_SIZE)
                     .map(|j| map.0.get(&Coords(j, i)).copied())
                     .collect()
             })
-            .collect()
+            .collect();
+        Self(arr2d)
     }
 }
 
-impl Into<GridMap> for SerdeGridMap {
-    fn into(self) -> GridMap {
-        map.0
+impl From<SerdeGridMap> for GridMap {
+    fn from(map: SerdeGridMap) -> Self {
+        let map = map
+            .0
             .into_iter()
             .enumerate()
             .map(|(i, v)| {
@@ -310,7 +317,8 @@ impl Into<GridMap> for SerdeGridMap {
                     .filter_map(move |(j, elem)| elem.map(|elem| (Coords(i, j), elem)))
             })
             .flatten()
-            .collect()
+            .collect();
+        Self(map)
     }
 }
 

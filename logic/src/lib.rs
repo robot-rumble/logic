@@ -1,11 +1,10 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use multimap::MultiMap;
 use rand::Rng;
 use strum::IntoEnumIterator;
-
-use thiserror::Error;
 
 pub use types::*;
 
@@ -175,18 +174,32 @@ impl ProgramInput {
     }
 }
 
-fn validate_robot_output(map: &mut RobotOutputMap, team: Team, objs: &ObjMap) {
-    for (id, output) in map.iter_mut() {
-        output.action = output.action.and_then(|action| {
-            match objs.get(id).map(|obj| obj.details()) {
-                Some(ObjDetails::Unit(unit)) if unit.team != team => {
-                    ActionError("Action ID points to unit on other team".into())
-                }
-                Some(ObjDetails::Terrain(_)) => ActionError("Action ID points to terrain".into()),
-                None => ActionError("Action ID points to nonexistent object".into()),
-                _ => Ok(action),
+fn validate_robot_output(
+    output: RobotOutput,
+    team: Team,
+    id: Id,
+    objs: &ObjMap,
+) -> ValidatedRobotOutput {
+    let action = output
+        .action
+        .map_err(RobotErrorAfterValidation::RobotError)
+        .and_then(|action| match objs.get(&id).map(|obj| obj.details()) {
+            Some(ObjDetails::Unit(unit)) if unit.team != team => {
+                Err(RobotErrorAfterValidation::ActionValidationError(
+                    "Action ID points to unit on other team".into(),
+                ))
             }
+            Some(ObjDetails::Terrain(_)) => Err(RobotErrorAfterValidation::ActionValidationError(
+                "Action ID points to terrain".into(),
+            )),
+            None => Err(RobotErrorAfterValidation::ActionValidationError(
+                "Action ID points to nonexistent object".into(),
+            )),
+            _ => Ok(action),
         });
+    ValidatedRobotOutput {
+        action,
+        debug_table: output.debug_table,
     }
 }
 
@@ -197,36 +210,42 @@ pub fn run<RunF, TurnCb>(
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
-    where
-        RunF: FnMut(ProgramInput) -> ProgramOutput,
-        TurnCb: FnMut(&CallbackInput) -> (),
+where
+    RunF: FnMut(ProgramInput) -> ProgramOutput,
+    TurnCb: FnMut(&CallbackInput) -> (),
 {
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
-        let (robot_outputs, logs) = Team::iter().map(|team| {
-            let program_output = run_team_f[team](ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
-            ((team, program_output.robot_outputs), (team, program_output.logs))
-        }).unzip();
-
-        let logs = logs.collect::<HashMap<Team, Logs>>();
+        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = Team::iter()
+            .map(|team| {
+                let runf = run_team_f.get_mut(&team).unwrap();
+                let program_output = runf(ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
+                (
+                    (team, program_output.robot_outputs),
+                    (team, program_output.logs),
+                )
+            })
+            .unzip();
 
         turn_state.turn += 1;
 
-        match (robot_outputs[0], robot_outputs[1]) {
+        match robot_outputs.into_iter().collect_tuple().unwrap() {
             ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {
                 let mut team_outputs = HashMap::new();
                 team_outputs.insert(t1, output_map1);
                 team_outputs.insert(t2, output_map2);
 
-                for (team, ref mut program_output) in team_outputs.iter_mut() {
-                    validate_robot_output(program_output, team, &state.objs);
-                }
-
                 let flattened_outputs = team_outputs
                     .into_iter()
-                    .map(|(_, output)| output.actions)
+                    .map(|(team, output)| output.into_iter().map(move |(k, v)| (k, v, team)))
                     .flatten()
+                    .map(|(id, output, team)| {
+                        (
+                            id,
+                            validate_robot_output(output, team, id, &turn_state.state.objs),
+                        )
+                    })
                     .collect::<HashMap<Id, ValidatedRobotOutput>>();
 
                 run_turn(&flattened_outputs, &mut turn_state.state);
@@ -236,31 +255,39 @@ pub fn run<RunF, TurnCb>(
                     logs,
                     robot_outputs: flattened_outputs,
                 });
-            },
-            errored @ ((_, Err(_)), _) | errored @ (_, (_, Err(_))) => {
+            }
+            errored => {
                 let mut errors = HashMap::new();
                 let winner = match errored {
                     ((t1, Err(e1)), (t2, Err(e2))) => {
                         errors.insert(t1, e1);
                         errors.insert(t2, e2);
                         None
-                    },
+                    }
                     ((t1, Err(e1)), (t2, Ok(_))) => {
                         errors.insert(t1, e1);
                         Some(t2)
-                    },
+                    }
                     ((t1, Ok(_)), (t2, Err(e2))) => {
                         errors.insert(t2, e2);
                         Some(t1)
-                    },
+                    }
+                    _ => unreachable!(),
                 };
-                turn_cb(&CallbackInput { state: turn_state.clone(), logs, ..Default::default() });
-                return MainOutput { winner, errors }
+                turn_cb(&CallbackInput {
+                    state: turn_state.clone(),
+                    logs,
+                    robot_outputs: HashMap::new(),
+                });
+                return MainOutput { winner, errors };
             }
         }
     }
     let winner = turn_state.state.determine_winner();
-    MainOutput { winner, errors: HashMap::new() }
+    MainOutput {
+        winner,
+        errors: HashMap::new(),
+    }
 }
 
 fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State) {
@@ -268,6 +295,10 @@ fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State
     let mut attack_map = MultiMap::new();
 
     for (id, action) in robot_outputs.iter() {
+        let action = match action.action {
+            Ok(a) => a,
+            Err(_) => continue,
+        };
         let map = match action.type_ {
             ActionType::Move => &mut movement_map,
             ActionType::Attack => &mut attack_map,
@@ -278,7 +309,7 @@ fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State
 
     let movement_grid = movement_map
         .iter()
-        .filter_map(|(coords, id)| {
+        .filter_map(|(coords, &id)| {
             if movement_map.is_vec(coords) {
                 None
             } else {
@@ -297,7 +328,7 @@ fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State
         match state.grid.get(coords) {
             Some(id) => {
                 if let Some(ObjDetails::Unit(ref mut unit)) =
-                state.objs.get_mut(id).map(|obj| obj.details())
+                    state.objs.get_mut(id).map(|obj| &mut obj.1)
                 {
                     unit.health = unit.health.saturating_sub(attack_power);
                     if unit.health == 0 {
