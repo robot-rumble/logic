@@ -67,7 +67,7 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
         })?;
 
     let attrs = setup_scope(&vm);
-    let formatexc = attrs.get_item("__format_exc", &vm).unwrap();
+    let formatexc = attrs.get_item("__format_err", &vm).unwrap();
 
     let make_main = || {
         vm.run_code_obj(code, Scope::with_builtins(None, attrs.clone(), &vm))?;

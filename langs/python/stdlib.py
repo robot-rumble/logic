@@ -110,13 +110,18 @@ def move(direction):
 def attack(direction):
     return Action(ActionType.Attack, direction)
 
-def __format_err(exc):
-    return {
-                    # TODO(noah) get exception location
-                    "start": [0, 0],
-                    "end": [0, 0],
-                    "message": str(exc),
-                }
+def __format_err(exc, json=False):
+    output = {
+        # TODO(noah) get exception location
+        "start": [0, 0],
+        "end": [0, 0],
+        "message": str(exc),
+    }
+    if json:
+        import json
+        return json.dumps(output)
+    else:
+        return output
 
 def __main(state, scope=globals()):
     import sys, io, json
