@@ -305,7 +305,6 @@ pub fn run<RunF, TurnCb>(
         }
     }
     let winner = turn_state.state.determine_winner();
-    drop(run_team_f);
     MainOutput {
         winner,
         errors: HashMap::new(),
