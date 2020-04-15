@@ -31,6 +31,9 @@ fn main() {
         Ok(make_command_f(make_cmd())),
         Ok(make_command_f(make_cmd())),
         |turn_state| {
+            println!("{}", turn_state.state.turn);
+            println!("{:?}", turn_state.logs);
+            println!("{:?}", turn_state.robot_outputs);
             println!("{}", turn_state.state.state);
         },
         10,

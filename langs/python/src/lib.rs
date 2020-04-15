@@ -71,9 +71,9 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
 
     let make_main = || {
         vm.run_code_obj(code, Scope::with_builtins(None, attrs.clone(), &vm))?;
-        attrs.get_item("_main", &vm).map_err(|_| {
+        attrs.get_item("__main", &vm).map_err(|_| {
             vm.new_type_error(
-                "you must **not** delete the `_main` function, c'mon, dude".to_owned(),
+                "you must **not** delete the `__main` function, c'mon, dude".to_owned(),
             )
         })
     };

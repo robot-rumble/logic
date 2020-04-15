@@ -118,26 +118,34 @@ def __format_err(exc):
                     "message": str(exc),
                 }
 
-def _main(state, scope=globals()):
+def __main(state, scope=globals()):
     import sys, io, json
     hadstdout, oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
     logbuf = sys.stdout = io.StringIO()
 
     state = json.loads(state)
     state = State(state)
-    robot = scope.get("robot")
+    _robot = scope.get("_robot")
+    _init_turn = scope.get("_init_turn")
     try:
-        if not isinstance(robot, type(_main)):
-            raise TypeError("You must define a 'robot' function")
-        if robot.__code__.co_argcount != 3:
+        if not callable(_robot):
+            raise TypeError("You must define a '_robot' function")
+        if _robot.__code__.co_argcount != 3:
             raise TypeError(
-                "your robot function must accept 3 values: the current state, "
-                "the details for the current unit, and a debug function"
+                "Your _robot function must accept 3 values: the current state, "
+                "the details for the current unit, and a debug function."
+            )
+        if callable(_init_turn) and _init_turn.__code__.co_argcount != 1:
+            raise TypeError(
+                "If you choose to define an _init_turn function, it must accept 1 value: the current state."
             )
     except Exception as e:
         return json.dumps({
             "robot_outputs": {"Err": {"RobotError": __format_err(e)}}
         })
+
+    if callable(_init_turn):
+        _init_turn(state)
 
     robot_outputs = {}
     for id in state.ids_by_team(state.our_team):
@@ -147,9 +155,9 @@ def _main(state, scope=globals()):
             debug_table[key] = val
 
         try:
-            action = robot(state, state.obj_by_id(id), debug)
+            action = _robot(state, state.obj_by_id(id), debug)
             if not isinstance(action, Action):
-                raise TypeError("Your robot function must return an Action")
+                raise TypeError("Your _robot function must return an Action")
         except Exception as e:
             result = {
                 "Err": __format_err(e)
