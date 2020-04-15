@@ -119,7 +119,7 @@ def __format_err(exc):
     }
 
 def __main(state, scope=globals()):
-    import sys, io, json
+    import sys, io 
     hadstdout, oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
     logbuf = sys.stdout = io.StringIO()
 
@@ -139,9 +139,9 @@ def __main(state, scope=globals()):
                 "If you choose to define an _init_turn function, it must accept 1 value: the current state."
             )
     except Exception as e:
-        return json.dumps({
+        return {
             "robot_outputs": {"Err": {"RobotError": __format_err(e)}}
-        })
+        }
 
     if callable(_init_turn):
         _init_turn(state)

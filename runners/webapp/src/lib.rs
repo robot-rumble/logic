@@ -7,21 +7,10 @@ pub fn main() {
 }
 
 #[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn info(s: &str);
-}
-
-#[wasm_bindgen]
 pub fn run(code1: &str, code2: &str, turn_callback: &JsFunction, turn_num: usize) -> JsValue {
-    info("starting");
-    let r1 = pyrunner::init(code1);
-    info("done with first");
-    let r2 = pyrunner::init(code2);
-    info("after");
     let output = logic::run(
-        r1,
-        r2,
+        pyrunner::init(code1),
+        pyrunner::init(code2),
         |turn_state| {
             turn_callback
                 .call1(
