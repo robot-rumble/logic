@@ -1,7 +1,7 @@
 use rustpython_vm::obj::objdict::PyDictRef;
-use rustpython_vm::obj::objstr::PyStringRef;
 use rustpython_vm::py_compile_bytecode;
-use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef, TryFromObject};
+use rustpython_vm::py_serde;
+use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef};
 use rustpython_vm::scope::Scope;
 use rustpython_vm::{InitParameter, PySettings, VirtualMachine};
 
@@ -30,16 +30,30 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     attrs
 }
 
+fn serde_to_py<T: serde::Serialize>(
+    s: &T,
+    vm: &VirtualMachine,
+) -> Result<PyObjectRef, ProgramError> {
+    let val = serde_json::to_value(s)?;
+    let py = py_serde::deserialize(vm, val)?;
+    Ok(py)
+}
+
+fn py_to_serde<T: serde::de::DeserializeOwned>(
+    py: &PyObjectRef,
+    vm: &VirtualMachine,
+) -> Result<T, ProgramError> {
+    let val = py_serde::serialize(vm, py, serde_json::value::Serializer)?;
+    let out = serde_json::from_value(val)?;
+    Ok(out)
+}
+
 fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) -> ProgramOutput {
     let run = || {
-        let input = vm.new_str(serde_json::to_string(input).unwrap());
-        let args = vec![input];
         let ret = vm
-            .invoke(main, args)
+            .invoke(main, vec![serde_to_py(&input, vm)?])
             .map_err(|_| ProgramError::InternalError)?;
-        let json =
-            PyStringRef::try_from_object(vm, ret).map_err(|_| ProgramError::InternalError)?;
-        Ok(serde_json::from_str(json.as_str())?)
+        py_to_serde(&ret, vm)
     };
     run().unwrap_or_else(|err| ProgramOutput {
         robot_outputs: Err(err),
@@ -83,12 +97,9 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
             // if setup errors, try to format the error, and just return an InternalError if it
             // doesn't work
             let exc = vm
-                .invoke(&formatexc, vec![exc.into_object(), vm.new_bool(true)])
+                .invoke(&formatexc, vec![exc.into_object()])
                 .map_err(|_| ProgramError::InternalError)?;
-            let json =
-                PyStringRef::try_from_object(&vm, exc).map_err(|_| ProgramError::InternalError)?;
-            let err =
-                serde_json::from_str(json.as_str()).map_err(|_| ProgramError::InternalError)?;
+            let err = py_to_serde(&exc, &vm).map_err(|_| ProgramError::InternalError)?;
             return Err(ProgramError::InitError(err));
         }
     };

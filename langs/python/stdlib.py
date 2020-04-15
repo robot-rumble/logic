@@ -110,25 +110,19 @@ def move(direction):
 def attack(direction):
     return Action(ActionType.Attack, direction)
 
-def __format_err(exc, json=False):
-    output = {
+def __format_err(exc):
+    return {
         # TODO(noah) get exception location
         "start": [0, 0],
         "end": [0, 0],
         "message": str(exc),
     }
-    if json:
-        import json
-        return json.dumps(output)
-    else:
-        return output
 
 def __main(state, scope=globals()):
     import sys, io, json
     hadstdout, oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
     logbuf = sys.stdout = io.StringIO()
 
-    state = json.loads(state)
     state = State(state)
     _robot = scope.get("_robot")
     _init_turn = scope.get("_init_turn")
@@ -185,7 +179,7 @@ def __main(state, scope=globals()):
     logs = logbuf.readlines()
     logbuf.close()
 
-    return json.dumps({
+    return {
         "robot_outputs": {"Ok": robot_outputs},
         "logs": logs
-    })
+    }
