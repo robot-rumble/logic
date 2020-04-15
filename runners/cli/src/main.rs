@@ -2,7 +2,7 @@ use std::io::{self, prelude::*};
 use std::path;
 use std::process::{Command, Stdio};
 
-use logic::{ProgramError};
+use logic::ProgramError;
 
 fn make_command_f(mut command: Command) -> impl FnMut(logic::ProgramInput) -> logic::ProgramOutput {
     let mut proc = command

@@ -1,6 +1,6 @@
+use maplit::hashmap;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use maplit::hashmap;
 
 use itertools::Itertools;
 use multimap::MultiMap;
@@ -205,7 +205,10 @@ fn validate_robot_output(
 }
 
 fn handle_program_errors<T>(
-    errored_players: ((Team, Result<T, ProgramError>), (Team, Result<T, ProgramError>))
+    errored_players: (
+        (Team, Result<T, ProgramError>),
+        (Team, Result<T, ProgramError>),
+    ),
 ) -> MainOutput {
     let mut errors = HashMap::new();
     let winner = match errored_players {
@@ -235,9 +238,9 @@ pub fn run<RunF, TurnCb>(
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
-    where
-        RunF: FnMut(ProgramInput) -> ProgramOutput,
-        TurnCb: FnMut(&CallbackInput) -> (),
+where
+    RunF: FnMut(ProgramInput) -> ProgramOutput,
+    TurnCb: FnMut(&CallbackInput) -> (),
 {
     let mut run_team_f = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
         ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
@@ -245,7 +248,7 @@ pub fn run<RunF, TurnCb>(
                 t1 => run_t1,
                 t2 => run_t2,
             }
-        },
+        }
         errored => {
             return handle_program_errors(errored);
         }
@@ -349,7 +352,7 @@ fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State
         match state.grid.get(coords) {
             Some(id) => {
                 if let Some(ObjDetails::Unit(ref mut unit)) =
-                state.objs.get_mut(id).map(|obj| &mut obj.1)
+                    state.objs.get_mut(id).map(|obj| &mut obj.1)
                 {
                     unit.health = unit.health.saturating_sub(attack_power);
                     if unit.health == 0 {
