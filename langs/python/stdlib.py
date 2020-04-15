@@ -1,7 +1,6 @@
 import math
 import enum
 
-
 class Coords(tuple):
     def __new__(cls, x, y):
         self = super().__new__(cls, [x, y])
@@ -111,44 +110,34 @@ def move(direction):
 def attack(direction):
     return Action(ActionType.Attack, direction)
 
+def __format_err(exc):
+    return {
+                    # TODO(noah) get exception location
+                    "start": [0, 0],
+                    "end": [0, 0],
+                    "message": str(exc),
+                }
 
-import io
+def _main(state, scope=globals()):
+    import sys, io, json
+    hadstdout, oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
+    logbuf = sys.stdout = io.StringIO()
 
-
-class _RobotRumbleLoggingIO(io.TextIOBase):
-    def __init__(self, log):
-        self._log = log
-
-    def write(self, s):
-        if self._log:
-            self._log(s)
-        else:
-            raise RuntimeError(
-                "unable to print; the current runner does not support logging"
-            )
-        return len(s)
-
-    def flush(self):
-        pass
-
-
-del io
-
-
-def _main(state, log=None):
-    import sys
-
-    sys.stdout = sys.stderr = _RobotRumbleLoggingIO(log)
-
+    state = json.loads(state)
     state = State(state)
-    robot = globals().get("robot")
-    if not isinstance(robot, type(_main)):
-        raise TypeError("You must define a 'robot' function")
-    if robot.__code__.co_argcount != 2:
-        raise TypeError(
-            "your robot function must accept 2 values: the current state "
-            "and the details for the unit"
-        )
+    robot = scope.get("robot")
+    try:
+        if not isinstance(robot, type(_main)):
+            raise TypeError("You must define a 'robot' function")
+        if robot.__code__.co_argcount != 3:
+            raise TypeError(
+                "your robot function must accept 3 values: the current state, "
+                "the details for the current unit, and a debug function"
+            )
+    except Exception as e:
+        return json.dumps({
+            "robot_outputs": {"Err": {"RobotError": __format_err(e)}}
+        })
 
     robot_outputs = {}
     for id in state.ids_by_team(state.our_team):
@@ -161,14 +150,9 @@ def _main(state, log=None):
             action = robot(state, state.obj_by_id(id), debug)
             if not isinstance(action, Action):
                 raise TypeError("Your robot function must return an Action")
-        except Exception as err:
+        except Exception as e:
             result = {
-                "Err": {
-                    # TODO(noah) get exception location
-                    "start": [0, 0],
-                    "end": [0, 0],
-                    "message": str(err),
-                }
+                "Err": __format_err(e)
             }
         else:
             result = {
@@ -179,4 +163,16 @@ def _main(state, log=None):
             "debug_table": debug_table
         }
 
-    return robot_outputs
+    if hadstdout:
+        sys.stdout = oldstdout
+    else:
+        del sys.stdout
+
+    logbuf.seek(0)
+    logs = logbuf.readlines()
+    logbuf.close()
+
+    return json.dumps({
+        "robot_outputs": {"Ok": robot_outputs},
+        "logs": logs
+    })

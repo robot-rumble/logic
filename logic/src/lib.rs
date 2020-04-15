@@ -217,9 +217,9 @@ where
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
-        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = Team::iter()
-            .map(|team| {
-                let runf = run_team_f.get_mut(&team).unwrap();
+        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = run_team_f
+            .iter_mut()
+            .map(|(&team, runf)| {
                 let program_output = runf(ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
                 (
                     (team, program_output.robot_outputs),
@@ -284,6 +284,7 @@ where
         }
     }
     let winner = turn_state.state.determine_winner();
+    drop(run_team_f);
     MainOutput {
         winner,
         errors: HashMap::new(),

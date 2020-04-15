@@ -37,7 +37,7 @@ pub struct MainOutput {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 #[serde(transparent)]
-pub struct Id(pub usize);
+pub struct Id(#[serde(with = "serde_with::rust::display_fromstr")] pub usize);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TurnState {
@@ -149,9 +149,14 @@ pub type RobotOutputMap = HashMap<Id, RobotOutput>;
 pub enum ProgramError {
     #[error("Unhandled program error")]
     InternalError,
+    #[error("The program exited before it returned any data")]
+    NoData,
     #[serde(skip)]
     #[error("Program returned invalid data")]
     DataError(#[from] serde_json::Error),
+    #[serde(skip)]
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
 }
 
 pub type ProgramResult = Result<RobotOutputMap, ProgramError>;
@@ -160,6 +165,7 @@ pub type Logs = Vec<String>;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProgramOutput {
     pub robot_outputs: ProgramResult,
+    #[serde(default)]
     pub logs: Vec<String>,
 }
 

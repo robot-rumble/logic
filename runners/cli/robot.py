@@ -1,9 +1,12 @@
 import json, sys
+import stdlib
+from stdlib import *
+
+
+def robot(state, unit, debug):
+    return move(Direction.East)
+
 
 for inp in sys.stdin:
-    robot_input = json.loads(inp)
-    print(inp)
-    action = {"type": "Move", "direction": "North"}
-    json.dump(action, sys.stdout)
-    sys.stdout.flush()
-
+    output = stdlib._main(inp, scope=globals())
+    print("__rr_output:", output, flush=True)
