@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use maplit::hashmap;
 
 use itertools::Itertools;
 use multimap::MultiMap;
@@ -203,24 +204,60 @@ fn validate_robot_output(
     }
 }
 
+fn handle_program_errors<T>(
+    errored_players: ((Team, Result<T, ProgramError>), (Team, Result<T, ProgramError>))
+) -> MainOutput {
+    let mut errors = HashMap::new();
+    let winner = match errored_players {
+        ((t1, Err(e1)), (t2, Err(e2))) => {
+            errors.insert(t1, e1);
+            errors.insert(t2, e2);
+            None
+        }
+        ((t1, Err(e1)), (t2, Ok(_))) => {
+            errors.insert(t1, e1);
+            Some(t2)
+        }
+        ((t1, Ok(_)), (t2, Err(e2))) => {
+            errors.insert(t2, e2);
+            Some(t1)
+        }
+        _ => unreachable!(),
+    };
+    MainOutput { winner, errors }
+}
+
 const GRID_SIZE: usize = 19;
 
 pub fn run<RunF, TurnCb>(
-    mut run_team_f: HashMap<Team, RunF>,
+    run_team1: Result<RunF, ProgramError>,
+    run_team2: Result<RunF, ProgramError>,
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
-where
-    RunF: FnMut(ProgramInput) -> ProgramOutput,
-    TurnCb: FnMut(&CallbackInput) -> (),
+    where
+        RunF: FnMut(ProgramInput) -> ProgramOutput,
+        TurnCb: FnMut(&CallbackInput) -> (),
 {
+    let mut run_team_f = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
+        ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
+            hashmap! {
+                t1 => run_t1,
+                t2 => run_t2,
+            }
+        },
+        errored => {
+            return handle_program_errors(errored);
+        }
+    };
+
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
         let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = run_team_f
             .iter_mut()
-            .map(|(&team, runf)| {
-                let program_output = runf(ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
+            .map(|(&team, run_f)| {
+                let program_output = run_f(ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
                 (
                     (team, program_output.robot_outputs),
                     (team, program_output.logs),
@@ -232,9 +269,10 @@ where
 
         match robot_outputs.into_iter().collect_tuple().unwrap() {
             ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {
-                let mut team_outputs = HashMap::new();
-                team_outputs.insert(t1, output_map1);
-                team_outputs.insert(t2, output_map2);
+                let team_outputs = hashmap! {
+                    t1 => output_map1,
+                    t2 => output_map2,
+                };
 
                 let flattened_outputs = team_outputs
                     .into_iter()
@@ -257,29 +295,12 @@ where
                 });
             }
             errored => {
-                let mut errors = HashMap::new();
-                let winner = match errored {
-                    ((t1, Err(e1)), (t2, Err(e2))) => {
-                        errors.insert(t1, e1);
-                        errors.insert(t2, e2);
-                        None
-                    }
-                    ((t1, Err(e1)), (t2, Ok(_))) => {
-                        errors.insert(t1, e1);
-                        Some(t2)
-                    }
-                    ((t1, Ok(_)), (t2, Err(e2))) => {
-                        errors.insert(t2, e2);
-                        Some(t1)
-                    }
-                    _ => unreachable!(),
-                };
                 turn_cb(&CallbackInput {
                     state: turn_state.clone(),
                     logs,
                     robot_outputs: HashMap::new(),
                 });
-                return MainOutput { winner, errors };
+                return handle_program_errors(errored);
             }
         }
     }
@@ -329,7 +350,7 @@ fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State
         match state.grid.get(coords) {
             Some(id) => {
                 if let Some(ObjDetails::Unit(ref mut unit)) =
-                    state.objs.get_mut(id).map(|obj| &mut obj.1)
+                state.objs.get_mut(id).map(|obj| &mut obj.1)
                 {
                     unit.health = unit.health.saturating_sub(attack_power);
                     if unit.health == 0 {

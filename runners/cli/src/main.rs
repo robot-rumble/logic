@@ -2,9 +2,7 @@ use std::io::{self, prelude::*};
 use std::path;
 use std::process::{Command, Stdio};
 
-use logic::{ProgramError, Team};
-
-use maplit::hashmap;
+use logic::{ProgramError};
 
 fn make_command_f(mut command: Command) -> impl FnMut(logic::ProgramInput) -> logic::ProgramOutput {
     let mut proc = command
@@ -29,13 +27,9 @@ fn main() {
         cmd
     };
 
-    let runmap = hashmap! {
-        Team::Red => make_command_f(make_cmd()),
-        Team::Blue => make_command_f(make_cmd()),
-    };
-
     let output = logic::run(
-        runmap,
+        Ok(make_command_f(make_cmd())),
+        Ok(make_command_f(make_cmd())),
         |turn_state| {
             println!("{}", turn_state.state.state);
         },
