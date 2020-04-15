@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use js_sys::Function as JsFunction;
+use maplit::hashmap;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
@@ -7,15 +8,12 @@ pub fn main() {
 }
 
 #[wasm_bindgen]
-pub fn run(
-    code1: &str,
-    code2: &str,
-    turn_callback: &JsFunction,
-    turn_num: usize,
-) -> Result<JsValue, JsValue> {
-    let mut lang_runners = HashMap::new();
-    lang_runners.insert(logic::Team::Red, pyrunner::init(code1));
-    lang_runners.insert(logic::Team::Blue, pyrunner::init(code1));
+pub fn run(code1: &str, code2: &str, turn_callback: &JsFunction, turn_num: usize) -> JsValue {
+    let lang_runners = hashmap! {
+        // TODO: what to do about this?
+        logic::Team::Red => pyrunner::init(code1).unwrap(),
+        logic::Team::Blue => pyrunner::init(code2).unwrap(),
+    };
 
     let output = logic::run(
         lang_runners,
@@ -28,7 +26,7 @@ pub fn run(
                 .expect("Turn callback function failed");
         },
         turn_num,
-    )?;
+    );
 
-    Ok(JsValue::from_serde(&output).unwrap())
+    JsValue::from_serde(&output).unwrap()
 }

@@ -126,12 +126,12 @@ pub struct ProgramInput {
     pub team: Team,
 }
 
-pub type ErrorLoc = (usize, usize);
+pub type ErrorLoc = (usize, Option<usize>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RobotError {
     pub start: ErrorLoc,
-    pub end: ErrorLoc,
+    pub end: Option<ErrorLoc>,
     pub message: String,
 }
 
@@ -151,6 +151,8 @@ pub enum ProgramError {
     InternalError,
     #[error("The program exited before it returned any data")]
     NoData,
+    #[error("The program errored while initializing")]
+    InitError(RobotError),
     #[serde(skip)]
     #[error("Program returned invalid data")]
     DataError(#[from] serde_json::Error),

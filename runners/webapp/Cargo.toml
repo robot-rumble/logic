@@ -19,6 +19,7 @@ rustpython-compiler = { git = "https://github.com/RustPython/RustPython" }
 rustpython-parser = { git = "https://github.com/RustPython/RustPython" }
 
 serde = { version = "1.0" }
+maplit = "1.0"
 
 console_error_panic_hook = { version = "0.1" }
 

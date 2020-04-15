@@ -88,3 +88,5 @@ Cargo.lock
 
 __pycache__/
 
+pkg/
+dist/

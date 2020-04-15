@@ -1,15 +1,12 @@
-use rustpython_vm::exceptions::PyBaseExceptionRef;
-use rustpython_vm::obj::objcode::PyCodeRef;
 use rustpython_vm::obj::objdict::PyDictRef;
 use rustpython_vm::obj::objstr::PyStringRef;
 use rustpython_vm::py_compile_bytecode;
-use rustpython_vm::py_serde;
-use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef, PyResult, PyValue};
+use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef, TryFromObject};
 use rustpython_vm::scope::Scope;
-use rustpython_vm::VirtualMachine;
+use rustpython_vm::{InitParameter, PySettings, VirtualMachine};
 
+use logic::{ProgramError, ProgramInput, ProgramOutput};
 use once_cell::sync::Lazy;
-use logic::ProgramOutput;
 
 fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     static CODE: Lazy<rustpython_vm::bytecode::CodeObject> = Lazy::new(|| {
@@ -33,74 +30,68 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     attrs
 }
 
-fn create_main(code: PyCodeRef, attrs: PyDictRef, vm: &VirtualMachine) -> PyResult {
-    vm.run_code_obj(code, Scope::with_builtins(None, attrs.clone(), vm))?;
-
-    let robot = attrs
-        .get_item_option("_main", vm)?
-        .ok_or_else(|| vm.new_type_error("you must define a 'robot' function".to_owned()))?;
-
-    Ok(robot)
+fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) -> ProgramOutput {
+    let run = || {
+        let input = vm.new_str(serde_json::to_string(input).unwrap());
+        let args = vec![input];
+        let ret = vm
+            .invoke(main, args)
+            .map_err(|_| ProgramError::InternalError)?;
+        let json =
+            PyStringRef::try_from_object(vm, ret).map_err(|_| ProgramError::InternalError)?;
+        Ok(serde_json::from_str(json.as_str())?)
+    };
+    run().unwrap_or_else(|err| ProgramOutput {
+        robot_outputs: Err(err),
+        logs: Vec::new(),
+    })
 }
 
-fn invoke_main(
-    main: &PyObjectRef,
-    input: &logic::ProgramInput,
-    log_func: Option<PyObjectRef>,
-    vm: &VirtualMachine,
-) -> logic::ProgramResult {
-    // TODO(noah): impl Serializer, Deserializer in py_serde so this isn't necessary
-    let state = serde_cbor::to_vec(&input).unwrap();
-    let mut state_deserializer = serde_cbor::Deserializer::from_slice(&state);
-    let state = py_serde::deserialize(vm, &mut state_deserializer).unwrap();
-
-    let args = std::iter::once(state).chain(log_func).collect::<Vec<_>>();
-    let ret = vm.invoke(main, args)?;
-
-    serde_cbor::value::to_value(&py_serde::PyObjectSerializer::new(vm, &ret)).and_then(serde_cbor::value::from_value)
-}
-
-pub fn init(code: &str) -> RunF
-where
-    RunF: FnMut(logic::ProgramInput) -> Result<logic::ProgramOutput, Err>,
-{
-    let vm = &vm::VirtualMachine::new(vm::PySettings {
-        initialization_parameter: vm::InitParameter::InitializeInternal,
+pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, ProgramError> {
+    let vm = VirtualMachine::new(PySettings {
+        initialization_parameter: InitParameter::InitializeInternal,
         ..Default::default()
     });
-    let compile = |source| {
-        vm.compile(
-            source,
+    let code = vm
+        .compile(
+            code,
             rustpython_compiler::compile::Mode::Exec,
             "<robot>".to_owned(),
         )
-        .map_err(pyconvert::syntax_err)
+        .map_err(|err| {
+            ProgramError::InitError(logic::RobotError {
+                start: (err.location.row(), Some(err.location.column())),
+                end: None,
+                message: err.to_string(),
+            })
+        })?;
+
+    let attrs = setup_scope(&vm);
+    let formatexc = attrs.get_item("__format_exc", &vm).unwrap();
+
+    let make_main = || {
+        vm.run_code_obj(code, Scope::with_builtins(None, attrs.clone(), &vm))?;
+        attrs.get_item("_main", &vm).map_err(|_| {
+            vm.new_type_error(
+                "you must **not** delete the `_main` function, c'mon, dude".to_owned(),
+            )
+        })
+    };
+    let main = match make_main() {
+        Ok(f) => f,
+        Err(exc) => {
+            // if setup errors, try to format the error, and just return an InternalError if it
+            // doesn't work
+            let exc = vm
+                .invoke(&formatexc, vec![exc.into_object(), vm.new_bool(true)])
+                .map_err(|_| ProgramError::InternalError)?;
+            let json =
+                PyStringRef::try_from_object(&vm, exc).map_err(|_| ProgramError::InternalError)?;
+            let err =
+                serde_json::from_str(json.as_str()).map_err(|_| ProgramError::InternalError)?;
+            return Err(ProgramError::InitError(err));
+        }
     };
 
-    let attrs = setup_scope(vm);
-    let main = create_main(compile(code), attrs, vm)?;
-
-    |input: logic::ProgramInput| -> logic::ProgramOutput {
-        let mut logs = Vec::new();
-        let log_func = vm.ctx.new_function(move |s: PyStringRef| logs.push(s.as_str().into()));
-        let robot_outputs = invoke_main(&main, &input, log_func, vm);
-
-        logic::ProgramOutput { robot_outputs, logs }
-    }
+    Ok(move |input| invoke_main(&main, &input, &vm))
 }
-
-// pub fn make_secure_python_runf<E>(
-//     code: PyCodeRef,
-//     vm: VirtualMachine,
-//     log_callback: Option<impl Fn(&str) + 'static>,
-//     map_error: impl Fn(PyBaseExceptionRef, &VirtualMachine) -> E,
-// ) -> PyResult<impl FnMut(logic::ProgramInput) -> Result<logic::ProgramOutput, E>> {
-//     let log_func =
-//         log_callback.map(|log| vm.ctx.new_function(move |s: PyStringRef| log(s.as_str())));
-//
-//     let main = create_main(code, setup_scope(&vm), &vm)?;
-//
-//     Ok(move |input| {
-//         invoke_main(&main, &input, log_func.clone(), &vm).map_err(|e| map_error(e, &vm))
-//     })
-// }
