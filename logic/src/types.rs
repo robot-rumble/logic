@@ -203,7 +203,7 @@ impl Add<Direction> for Coords {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-// #[serde(from = "SerdeObj", into = "SerdeObj")]
+#[serde(from = "SerdeObj", into = "SerdeObj")]
 pub struct Obj(pub BasicObj, pub ObjDetails);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -289,9 +289,9 @@ impl From<Obj> for SerdeObj {
         Self { basic, details }
     }
 }
-impl Into<Obj> for SerdeObj {
-    fn into(self) -> Obj {
-        Obj(self.basic, self.details)
+impl From<SerdeObj> for Obj {
+    fn from(SerdeObj { basic, details }: SerdeObj) -> Self {
+        Obj(basic, details)
     }
 }
 
