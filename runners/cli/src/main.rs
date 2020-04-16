@@ -2,6 +2,7 @@ use std::io::{self, prelude::*};
 use std::path;
 use std::process::{Command, Stdio};
 
+use itertools::Itertools;
 use logic::ProgramError;
 
 fn make_command_f(mut command: Command) -> impl FnMut(logic::ProgramInput) -> logic::ProgramOutput {
@@ -31,10 +32,20 @@ fn main() {
         Ok(make_command_f(make_cmd())),
         Ok(make_command_f(make_cmd())),
         |turn_state| {
-            println!("{}", turn_state.state.turn);
-            println!("{:?}", turn_state.logs);
-            println!("{:?}", turn_state.robot_outputs);
-            println!("{}", turn_state.state.state);
+            println!(
+                "State after turn {turn}:\n{logs}\nOutputs: {outputs:?}\nMap:\n{map}",
+                turn = turn_state.state.turn,
+                logs = turn_state
+                    .logs
+                    .iter()
+                    .format_with("\n", |(team, logs), f| f(&format_args!(
+                        "Logs for {:?}:\n{}",
+                        team,
+                        logs.iter().map(|s| s.trim()).format("\n"),
+                    ))),
+                outputs = turn_state.robot_outputs,
+                map = turn_state.state.state,
+            );
         },
         10,
     );

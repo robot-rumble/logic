@@ -87,20 +87,20 @@ impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for row in SerdeGridMap::from(self.grid.clone()).0 {
             for col in row {
-                let char = match col {
+                let s = match col {
                     Some(id) => {
                         let obj = self.objs.get(&id).unwrap();
                         match &obj.1 {
-                            ObjDetails::Terrain(_) => '■',
+                            ObjDetails::Terrain(_) => "■",
                             ObjDetails::Unit(unit) => match unit.team {
-                                Team::Red => 'r',
-                                Team::Blue => 'b',
+                                Team::Red => "\x1b[41;1mr\x1b[0m",
+                                Team::Blue => "\x1b[44;1mb\x1b[0m",
                             },
                         }
                     }
-                    None => ' ',
+                    None => " ",
                 };
-                write!(f, " {}", char)?;
+                write!(f, " {}", s)?;
             }
             write!(f, "\n")?;
         }
