@@ -155,18 +155,20 @@ pub enum ProgramError {
     InitError(RobotError),
     #[error("The program did not output an init status")]
     NoInitError,
-    #[serde(
-        skip_deserializing,
-        serialize_with = "serde_with::rust::display_fromstr::serialize"
-    )]
     #[error("Program returned invalid data")]
-    DataError(#[from] serde_json::Error),
-    #[serde(
-        skip_deserializing,
-        serialize_with = "serde_with::rust::display_fromstr::serialize"
-    )]
+    DataError(String),
     #[error("IO error")]
-    IO(#[from] std::io::Error),
+    IO(String),
+}
+impl From<serde_json::Error> for ProgramError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::DataError(err.to_string())
+    }
+}
+impl From<std::io::Error> for ProgramError {
+    fn from(err: std::io::Error) -> Self {
+        Self::IO(err.to_string())
+    }
 }
 
 pub type ProgramResult = Result<RobotOutputMap, ProgramError>;

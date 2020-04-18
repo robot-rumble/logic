@@ -431,6 +431,7 @@ pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement
 pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
     init: fn(&str) -> Result<F, ProgramError>,
 ) {
+    use std::io::prelude::*;
     let source_path = std::env::args_os().nth(1).unwrap();
     let source = std::fs::read_to_string(source_path).unwrap();
 
@@ -440,7 +441,6 @@ pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
     };
 
     {
-        use std::io::Write;
         let stdout = std::io::stdout();
         let mut stdout = stdout.lock();
         stdout.write(b"__rr_init:").unwrap();
@@ -452,9 +452,15 @@ pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
     let mut run_turn = run_turn.unwrap_or_else(|| std::process::exit(1));
 
     let stdin = std::io::stdin();
-    for input in serde_json::Deserializer::from_reader(stdin.lock()).into_iter() {
-        let input = input.expect("bad input given to lang runner");
+    for input in stdin.lock().lines() {
+        let input = input.expect("couldn't read input");
+        let input = serde_json::from_str(&input).expect("bad input given to lang runner");
         let output = run_turn(input);
-        serde_json::to_writer(std::io::stdout(), &output).unwrap()
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
+        stdout.write(b"__rr_output:").unwrap();
+        serde_json::to_writer(&mut stdout, &output).unwrap();
+        stdout.write(b"\n").unwrap();
+        stdout.flush().unwrap();
     }
 }
