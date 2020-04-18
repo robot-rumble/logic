@@ -1,8 +1,6 @@
 use maplit::hashmap;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
 
 use futures_util::future::{join_all, FutureExt};
 use itertools::Itertools;
@@ -235,11 +233,39 @@ fn handle_program_errors<T>(
 
 const GRID_SIZE: usize = 19;
 
-pub type BoxedFuture<T> = Pin<Box<dyn Future<Output = T>>>;
-
+pub struct RunnerError {
+    err: ProgramError,
+    logs: Vec<String>,
+}
+impl RunnerError {
+    pub fn new(err: impl Into<ProgramError>, logs: Vec<String>) -> Self {
+        Self {
+            err: err.into(),
+            logs,
+        }
+    }
+    fn into_output(self) -> ProgramOutput {
+        ProgramOutput {
+            robot_outputs: Err(self.err),
+            logs: self.logs,
+        }
+    }
+}
+impl<T> From<T> for RunnerError
+where
+    ProgramError: From<T>,
+{
+    fn from(err: T) -> Self {
+        Self {
+            logs: Vec::new(),
+            err: err.into(),
+        }
+    }
+}
+pub type RunnerResult = Result<ProgramOutput, RunnerError>;
 #[async_trait::async_trait]
 pub trait RobotRunner {
-    async fn run(&mut self, input: ProgramInput) -> ProgramOutput;
+    async fn run(&mut self, input: ProgramInput) -> RunnerResult;
 }
 
 pub async fn run<TurnCb, R>(
@@ -272,6 +298,7 @@ where
                 runner
                     .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
                     .map(move |program_output| {
+                        let program_output = program_output.unwrap_or_else(|e| e.into_output());
                         (
                             (team, program_output.robot_outputs),
                             (team, program_output.logs),

@@ -1,24 +1,66 @@
-use std::io::{self, prelude::*};
 use std::path;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
+use tokio::io;
+use tokio::prelude::*;
+use tokio::process::{ChildStdin, ChildStdout, Command};
 
 use itertools::Itertools;
-use logic::ProgramError;
+use logic::{ProgramError, RunnerError};
 
-fn make_command_f(mut command: Command) -> impl FnMut(logic::ProgramInput) -> logic::ProgramOutput {
-    let mut proc = command
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to spawn child process");
-
-    let mut stdin = io::BufWriter::new(proc.stdin.take().unwrap());
-    let mut stdout = io::BufReader::new(proc.stdout.take().unwrap());
-
-    move |inp| run_stdio(&mut stdin, &mut stdout, inp)
+struct CliRunner {
+    stdin: io::BufWriter<ChildStdin>,
+    stdout: io::BufReader<ChildStdout>,
 }
 
-fn main() {
+impl CliRunner {
+    fn new(mut command: Command) -> Self {
+        let mut proc = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed to spawn child process");
+
+        let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
+        let stdout = io::BufReader::new(proc.stdout.take().unwrap());
+
+        Self { stdin, stdout }
+    }
+}
+
+#[async_trait::async_trait]
+impl logic::RobotRunner for CliRunner {
+    async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
+        let mut input = serde_json::to_vec(&input)?;
+        input.push(b'\n');
+        self.stdin.write(&input).await?;
+        self.stdin.flush().await?;
+
+        let mut logs = Vec::new();
+        let mut lines = (&mut self.stdout).lines();
+        let mut output: logic::ProgramOutput = loop {
+            macro_rules! try_with_logs {
+                ($result:expr) => {
+                    match $result {
+                        Ok(ret) => ret,
+                        Err(e) => return Err(RunnerError::new(e, logs)),
+                    }
+                };
+            }
+            let maybe_line = try_with_logs!(lines.next_line().await);
+            let line = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
+            if let Some(output) = strip_prefix(&line, "__rr_output:") {
+                break try_with_logs!(serde_json::from_str(output));
+            } else {
+                logs.push(line)
+            }
+        };
+        output.logs.extend(logs);
+        Ok(output)
+    }
+}
+
+#[tokio::main]
+async fn main() {
     let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("robot.py");
 
@@ -29,8 +71,8 @@ fn main() {
     };
 
     let output = logic::run(
-        Ok(make_command_f(make_cmd())),
-        Ok(make_command_f(make_cmd())),
+        Ok(CliRunner::new(make_cmd())),
+        Ok(CliRunner::new(make_cmd())),
         |turn_state| {
             println!(
                 "State after turn {turn}:\n{logs}\nOutputs: {outputs:?}\nMap:\n{map}",
@@ -48,7 +90,8 @@ fn main() {
             );
         },
         10,
-    );
+    )
+    .await;
     println!("Output: {:?}", output);
 }
 
@@ -57,34 +100,5 @@ fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
         Some(&s[prefix.len()..])
     } else {
         None
-    }
-}
-
-fn run_stdio(
-    mut stdin: impl Write,
-    stdout: impl BufRead,
-    input: logic::ProgramInput,
-) -> logic::ProgramOutput {
-    let mut logs = Vec::new();
-    let run = || -> logic::ProgramResult {
-        let mut lines = stdout.lines();
-        let output: logic::ProgramOutput = loop {
-            serde_json::to_writer(&mut stdin, &input)?;
-            stdin.write(b"\n")?;
-            stdin.flush()?;
-            let line = lines.next().ok_or(ProgramError::NoData)??;
-            if let Some(output) = strip_prefix(&line, "__rr_output:") {
-                break serde_json::from_str(output)?;
-            } else {
-                logs.push(line)
-            }
-        };
-        logs.extend(output.logs);
-        output.robot_outputs
-    };
-
-    logic::ProgramOutput {
-        robot_outputs: run(),
-        logs,
     }
 }
