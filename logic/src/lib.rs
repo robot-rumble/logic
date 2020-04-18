@@ -427,3 +427,34 @@ pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement
         update_grid_with_movement(objs, grid, legal_moves);
     }
 }
+
+pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
+    init: fn(&str) -> Result<F, ProgramError>,
+) {
+    let source_path = std::env::args_os().nth(1).unwrap();
+    let source = std::fs::read_to_string(source_path).unwrap();
+
+    let (run_turn, init_result) = match init(&source) {
+        Ok(f) => (Some(f), Ok(())),
+        Err(e) => (None, Err(e)),
+    };
+
+    {
+        use std::io::Write;
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
+        stdout.write(b"__rr_init:").unwrap();
+        serde_json::to_writer(&mut stdout, &init_result).unwrap();
+        stdout.write(b"\n").unwrap();
+        stdout.flush().unwrap();
+    }
+
+    let mut run_turn = run_turn.unwrap_or_else(|| std::process::exit(1));
+
+    let stdin = std::io::stdin();
+    for input in serde_json::Deserializer::from_reader(stdin.lock()).into_iter() {
+        let input = input.expect("bad input given to lang runner");
+        let output = run_turn(input);
+        serde_json::to_writer(std::io::stdout(), &output).unwrap()
+    }
+}

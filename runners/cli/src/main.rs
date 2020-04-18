@@ -1,4 +1,3 @@
-use std::path;
 use std::process::Stdio;
 use tokio::io;
 use tokio::prelude::*;
@@ -13,7 +12,7 @@ struct CliRunner {
 }
 
 impl CliRunner {
-    fn new(mut command: Command) -> Self {
+    async fn new(mut command: Command) -> Result<Self, ProgramError> {
         let mut proc = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -21,9 +20,18 @@ impl CliRunner {
             .expect("Failed to spawn child process");
 
         let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
-        let stdout = io::BufReader::new(proc.stdout.take().unwrap());
+        let mut stdout = io::BufReader::new(proc.stdout.take().unwrap());
 
-        Self { stdin, stdout }
+        let line = (&mut stdout)
+            .lines()
+            .next_line()
+            .await?
+            .ok_or(ProgramError::NoData)?;
+        let init_result = strip_prefix(&line, "__rr_init:").ok_or(ProgramError::NoInitError)?;
+        let init_result: Result<(), ProgramError> = serde_json::from_str(init_result)?;
+        init_result?;
+
+        Ok(Self { stdin, stdout })
     }
 }
 
@@ -61,18 +69,19 @@ impl logic::RobotRunner for CliRunner {
 
 #[tokio::main]
 async fn main() {
-    let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("robot.py");
-
     let make_cmd = || {
-        let mut cmd = Command::new("python");
-        cmd.arg(&path);
+        let mut args = std::env::args_os();
+        let command = args.nth(1).expect("You must pass a command to run");
+        let mut cmd = Command::new(command);
+        for arg in args {
+            cmd.arg(arg);
+        }
         cmd
     };
 
     let output = logic::run(
-        Ok(CliRunner::new(make_cmd())),
-        Ok(CliRunner::new(make_cmd())),
+        CliRunner::new(make_cmd()).await,
+        CliRunner::new(make_cmd()).await,
         |turn_state| {
             println!(
                 "State after turn {turn}:\n{logs}\nOutputs: {outputs:?}\nMap:\n{map}",

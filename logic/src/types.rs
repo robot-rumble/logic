@@ -153,10 +153,18 @@ pub enum ProgramError {
     NoData,
     #[error("The program errored while initializing")]
     InitError(RobotError),
-    #[serde(skip)]
+    #[error("The program did not output an init status")]
+    NoInitError,
+    #[serde(
+        skip_deserializing,
+        serialize_with = "serde_with::rust::display_fromstr::serialize"
+    )]
     #[error("Program returned invalid data")]
     DataError(#[from] serde_json::Error),
-    #[serde(skip)]
+    #[serde(
+        skip_deserializing,
+        serialize_with = "serde_with::rust::display_fromstr::serialize"
+    )]
     #[error("IO error")]
     IO(#[from] std::io::Error),
 }
