@@ -1,7 +1,10 @@
 use maplit::hashmap;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
+use futures_util::future::{join_all, FutureExt};
 use itertools::Itertools;
 use multimap::MultiMap;
 use rand::Rng;
@@ -232,17 +235,24 @@ fn handle_program_errors<T>(
 
 const GRID_SIZE: usize = 19;
 
-pub fn run<RunF, TurnCb>(
-    run_team1: Result<RunF, ProgramError>,
-    run_team2: Result<RunF, ProgramError>,
+pub type BoxedFuture<T> = Pin<Box<dyn Future<Output = T>>>;
+
+#[async_trait::async_trait]
+pub trait RobotRunner {
+    async fn run(&mut self, input: ProgramInput) -> ProgramOutput;
+}
+
+pub async fn run<TurnCb, R>(
+    run_team1: Result<R, ProgramError>,
+    run_team2: Result<R, ProgramError>,
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
 where
-    RunF: FnMut(ProgramInput) -> ProgramOutput,
-    TurnCb: FnMut(&CallbackInput) -> (),
+    TurnCb: FnMut(&CallbackInput),
+    R: RobotRunner,
 {
-    let mut run_team_f = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
+    let mut run_funcs = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
         ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
             hashmap! {
                 t1 => run_t1,
@@ -257,16 +267,22 @@ where
     let state = State::new(MapType::Rect, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
-        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = run_team_f
-            .iter_mut()
-            .map(|(&team, run_f)| {
-                let program_output = run_f(ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
-                (
-                    (team, program_output.robot_outputs),
-                    (team, program_output.logs),
-                )
-            })
-            .unzip();
+        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = async {
+            join_all(run_funcs.iter_mut().map(|(&team, runner)| {
+                runner
+                    .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
+                    .map(move |program_output| {
+                        (
+                            (team, program_output.robot_outputs),
+                            (team, program_output.logs),
+                        )
+                    })
+            }))
+            .await
+            .into_iter()
+            .unzip()
+        }
+        .await;
 
         turn_state.turn += 1;
 
