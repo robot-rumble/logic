@@ -73,10 +73,12 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
             "<robot>".to_owned(),
         )
         .map_err(|err| {
-            ProgramError::InitError(logic::RobotError {
-                start: (err.location.row(), Some(err.location.column())),
-                end: None,
+            ProgramError::InitError(logic::Error {
                 message: err.to_string(),
+                loc: Some(logic::ErrorLoc {
+                    start: (err.location.row(), Some(err.location.column())),
+                    end: None,
+                }),
             })
         })?;
 
