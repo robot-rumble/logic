@@ -113,9 +113,8 @@ def attack(direction):
 def __format_err(exc):
     return {
         # TODO(noah) get exception location
-        "start": [0, 0],
-        "end": [0, 0],
         "message": str(exc),
+        "loc": None
     }
 
 def __main(state, scope=globals()):

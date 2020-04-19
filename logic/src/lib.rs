@@ -184,17 +184,17 @@ fn validate_robot_output(
 ) -> ValidatedRobotOutput {
     let action = output
         .action
-        .map_err(RobotErrorAfterValidation::RobotError)
+        .map_err(RobotErrorAfterValidation::RuntimeError)
         .and_then(|action| match objs.get(&id).map(|obj| obj.details()) {
             Some(ObjDetails::Unit(unit)) if unit.team != team => {
-                Err(RobotErrorAfterValidation::ActionValidationError(
+                Err(RobotErrorAfterValidation::InvalidAction(
                     "Action ID points to unit on other team".into(),
                 ))
             }
-            Some(ObjDetails::Terrain(_)) => Err(RobotErrorAfterValidation::ActionValidationError(
+            Some(ObjDetails::Terrain(_)) => Err(RobotErrorAfterValidation::InvalidAction(
                 "Action ID points to terrain".into(),
             )),
-            None => Err(RobotErrorAfterValidation::ActionValidationError(
+            None => Err(RobotErrorAfterValidation::InvalidAction(
                 "Action ID points to nonexistent object".into(),
             )),
             _ => Ok(action),

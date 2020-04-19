@@ -49,9 +49,9 @@ pub struct TurnState {
 #[derive(Serialize, Deserialize, Error, Clone, Debug)]
 pub enum RobotErrorAfterValidation {
     #[error("Robot function error")]
-    RobotError(RobotError),
-    #[error("Invalid action")]
-    ActionValidationError(String),
+    RuntimeError(Error),
+    #[error("Invald action")]
+    InvalidAction(String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -126,20 +126,25 @@ pub struct ProgramInput {
     pub team: Team,
 }
 
-pub type ErrorLoc = (usize, Option<usize>);
+pub type Range = (usize, Option<usize>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct RobotError {
-    pub start: ErrorLoc,
-    pub end: Option<ErrorLoc>,
+pub struct ErrorLoc {
+    pub start: Range,
+    pub end: Option<Range>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Error {
     pub message: String,
+    pub loc: Option<ErrorLoc>,
 }
 
 pub type DebugTable = HashMap<String, String>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RobotOutput {
-    pub action: Result<Action, RobotError>,
+    pub action: Result<Action, Error>,
     pub debug_table: DebugTable,
 }
 
@@ -152,7 +157,7 @@ pub enum ProgramError {
     #[error("The program exited before it returned any data")]
     NoData,
     #[error("The program errored while initializing")]
-    InitError(RobotError),
+    InitError(Error),
     #[error("The program did not output an init status")]
     NoInitError,
     #[error("Program returned invalid data")]
