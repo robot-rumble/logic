@@ -152,7 +152,7 @@ def __main(state, scope=globals()):
         debug_table = {}
 
         def debug(key, val):
-            debug_table[key] = val
+            debug_table[key] = str(val)
 
         try:
             action = _robot(state, state.obj_by_id(id), debug)
