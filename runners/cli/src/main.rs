@@ -38,7 +38,6 @@ impl CliRunner {
 #[async_trait::async_trait]
 impl logic::RobotRunner for CliRunner {
     async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
-        println!("running turn for {:?}", input.team);
         let mut input = serde_json::to_vec(&input)?;
         input.push(b'\n');
         self.stdin.write(&input).await?;
@@ -55,9 +54,7 @@ impl logic::RobotRunner for CliRunner {
                     }
                 };
             }
-            println!("before line");
             let maybe_line = try_with_logs!(lines.next_line().await);
-            println!("after line");
             let line = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
             if let Some(output) = strip_prefix(&line, "__rr_output:") {
                 break try_with_logs!(serde_json::from_str(output));
@@ -66,7 +63,6 @@ impl logic::RobotRunner for CliRunner {
             }
         };
         output.logs.extend(logs);
-        println!("done with turn");
         Ok(output)
     }
 }
