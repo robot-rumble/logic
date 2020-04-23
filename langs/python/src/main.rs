@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     static CODE: Lazy<rustpython_vm::bytecode::CodeObject> = Lazy::new(|| {
         let (_, frozen): (String, _) =
-            py_compile_bytecode!(file = "stdlib.py", module_name = "<stdlib>", a)
+            py_compile_bytecode!(file = "stdlib.py", module_name = "<stdlib>")
                 .into_iter()
                 .next()
                 .unwrap();

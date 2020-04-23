@@ -3,16 +3,15 @@ use tokio::io;
 use tokio::prelude::*;
 use tokio::process::{ChildStdin, ChildStdout, Command};
 
-use itertools::Itertools;
 use logic::{ProgramError, RunnerError};
 
-struct CliRunner {
+pub struct CliRunner {
     stdin: io::BufWriter<ChildStdin>,
     stdout: io::BufReader<ChildStdout>,
 }
 
 impl CliRunner {
-    async fn new(mut command: Command) -> Result<Self, ProgramError> {
+    pub async fn new(mut command: Command) -> Result<Self, ProgramError> {
         let mut proc = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -35,7 +34,7 @@ impl CliRunner {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl logic::RobotRunner for CliRunner {
     async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
         let mut input = serde_json::to_vec(&input)?;
@@ -65,43 +64,6 @@ impl logic::RobotRunner for CliRunner {
         output.logs.extend(logs);
         Ok(output)
     }
-}
-
-#[tokio::main]
-async fn main() {
-    let make_cmd = || {
-        let mut args = std::env::args_os();
-        let command = args.nth(1).expect("You must pass a command to run");
-        let mut cmd = Command::new(command);
-        for arg in args {
-            cmd.arg(arg);
-        }
-        cmd
-    };
-
-    let output = logic::run(
-        CliRunner::new(make_cmd()).await,
-        CliRunner::new(make_cmd()).await,
-        |turn_state| {
-            println!(
-                "State after turn {turn}:\n{logs}\nOutputs: {outputs:?}\nMap:\n{map}",
-                turn = turn_state.state.turn,
-                logs = turn_state
-                    .logs
-                    .iter()
-                    .format_with("\n", |(team, logs), f| f(&format_args!(
-                        "Logs for {:?}:\n{}",
-                        team,
-                        logs.iter().map(|s| s.trim()).format("\n"),
-                    ))),
-                outputs = turn_state.robot_outputs,
-                map = turn_state.state.state,
-            );
-        },
-        10,
-    )
-    .await;
-    println!("Output: {:?}", output);
 }
 
 fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {

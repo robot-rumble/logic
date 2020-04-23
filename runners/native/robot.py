@@ -19,7 +19,7 @@ def _robot(state, unit, debug):
 
 print('__rr_init:{"Ok":null}', flush=True)
 for inp in sys.stdin:
-    print(inp)
+    # print(inp)
     inp = json.loads(inp)
     output = stdlib.__main(inp, scope=globals())
     sys.stdout.write("__rr_output:")
