@@ -30,7 +30,7 @@ import * as std from "std";
 
   function runTurn(state) {
     const outputs = {};
-    for (const id in state.teams[state.team]) {
+    for (const id of state.teams[state.team]) {
       const unit = state.objs[id];
       const debug_table = {};
       const debug = (k, v) => {
