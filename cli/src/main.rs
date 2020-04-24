@@ -2,8 +2,8 @@ use anyhow::{anyhow, Context};
 use itertools::Itertools;
 use native_runner::TokioRunner;
 use std::fs;
-use tokio::io;
 use tokio::process::Command;
+use tokio::{io, task};
 use wasi_runner::WasiProcess;
 
 #[tokio::main]
@@ -56,6 +56,7 @@ async fn try_main() -> anyhow::Result<()> {
             let mut proc = WasiProcess::spawn(instance);
             let stdin = io::BufWriter::new(proc.take_stdin().unwrap());
             let stdout = io::BufReader::new(proc.take_stdout().unwrap());
+            task::spawn(proc);
             Ok(TokioRunner::new(stdin, stdout))
         };
         let (r1, r2) = tokio::join!(make_runner()?, make_runner()?);

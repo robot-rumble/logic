@@ -1,20 +1,14 @@
 use futures::executor::block_on;
-use futures::stream::StreamExt as _;
 use serde::{Deserialize, Serialize};
-use std::io::{prelude::*, Cursor, SeekFrom};
+use std::io::{prelude::*, SeekFrom};
 use tokio::io;
 use tokio::prelude::*;
-use tokio::stream::Stream;
 use wasmer_wasi::{
     state::{WasiFile, WasiFsError},
     types as wasi_types,
 };
 
 use super::{STDERR, STDIN, STDOUT};
-
-pub fn mpsc_reader(rx: impl Stream<Item = Vec<u8>>) -> impl AsyncRead {
-    io::stream_reader(rx.map(|b| Ok(Cursor::new(b))))
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Stdin;
