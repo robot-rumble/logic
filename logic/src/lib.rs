@@ -285,6 +285,7 @@ where
     R: RobotRunner,
 {
     let mut turns = Vec::new();
+
     let mut run_funcs = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
         ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
             hashmap! {

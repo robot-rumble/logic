@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![type_length_limit = "1526423"]
 
 use rusoto_core::Region;
 use rusoto_sqs::{SendMessageRequest, Sqs, SqsClient};
@@ -205,7 +206,6 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
             message_system_attributes: None,
         })
         .await?;
-
     Ok(())
 }
 
