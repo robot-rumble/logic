@@ -1,3 +1,4 @@
+use futures::stream::Stream;
 use pin_project_lite::pin_project;
 use std::future::Future;
 use std::io::Cursor;
@@ -6,6 +7,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::task::{Context, Poll};
 use tokio::prelude::*;
+use tokio::stream::StreamExt;
 use tokio::sync::mpsc;
 use tokio::{io, task};
 use wasmer_runtime::{error::CallError, Instance};
@@ -68,13 +70,16 @@ impl AsyncWrite for MpscWriter {
     }
 }
 
+fn mpsc_reader(rx: impl Stream<Item = Vec<u8>>) -> impl AsyncRead {
+    io::stream_reader(rx.map(|b| Ok(Cursor::new(b))))
+}
+
 pin_project! {
     pub struct WasiProcess {
         in_tx: Option<mpsc::Sender<StdinInner>>,
         out_rx: Option<mpsc::Receiver<Vec<u8>>>,
         err_rx: Option<mpsc::Receiver<Vec<u8>>>,
-        #[pin]
-        handle: task::JoinHandle<Result<(), CallError>>,
+        handle: futures::future::BoxFuture<'static, Result<(), CallError>>,
     }
 }
 
@@ -83,7 +88,7 @@ impl WasiProcess {
         let (in_tx, in_rx) = mpsc::channel(5);
         let (out_tx, out_rx) = mpsc::channel(5);
         let (err_tx, err_rx) = mpsc::channel(5);
-        let handle = task::spawn(STDIN.scope(
+        let handle = STDIN.scope(
             Arc::new(Mutex::new(io::stream_reader(in_rx))),
             STDOUT.scope(
                 Arc::new(Mutex::new(out_tx)),
@@ -91,13 +96,13 @@ impl WasiProcess {
                     task::block_in_place(|| instance.call("_start", &[]).map(drop))
                 }),
             ),
-        ));
+        );
 
         Self {
             in_tx: Some(in_tx),
             out_rx: Some(out_rx),
             err_rx: Some(err_rx),
-            handle,
+            handle: Box::pin(handle),
         }
     }
 
@@ -105,19 +110,16 @@ impl WasiProcess {
         self.in_tx.take().map(|tx| MpscWriter { tx: Some(tx) })
     }
     pub fn take_stdout(&mut self) -> Option<impl AsyncRead> {
-        self.out_rx.take().map(stdio::mpsc_reader)
+        self.out_rx.take().map(mpsc_reader)
     }
     pub fn take_stderr(&mut self) -> Option<impl AsyncRead> {
-        self.err_rx.take().map(stdio::mpsc_reader)
+        self.err_rx.take().map(mpsc_reader)
     }
 }
 
 impl Future for WasiProcess {
     type Output = Result<(), CallError>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        self.project()
-            .handle
-            .poll(cx)
-            .map(|r| r.expect("thread panicked"))
+        self.project().handle.as_mut().poll(cx)
     }
 }
