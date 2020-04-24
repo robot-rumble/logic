@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use lambda::lambda;
+use lambda::handler_fn;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -65,10 +65,14 @@ struct Output {
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-#[lambda]
 #[tokio::main]
-async fn main(data: Value) -> Result<Value, Error> {
-    let lambda_input = serde_json::from_value::<LambdaInput>(data).unwrap();
+async fn main() -> Result<(), Error> {
+    let func = handler_fn(handler);
+    lambda::run(func).await
+}
+
+async fn handler(event: Value) -> Result<Value, Error> {
+    let lambda_input = serde_json::from_value::<LambdaInput>(event).unwrap();
     let input_data = serde_json::from_str::<Input>(&lambda_input.Records[0].body).unwrap();
 
     let data = logic::MainOutput {
