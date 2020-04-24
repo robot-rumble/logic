@@ -57,7 +57,7 @@ impl<W: AsyncWrite + Unpin, R: AsyncBufRead + Unpin> logic::RobotRunner for Toki
                 };
             }
             let maybe_line = try_with_logs!(lines.next_line().await);
-            let line: String = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
+            let line = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
             if let Some(output) = strip_prefix(&line, "__rr_output:") {
                 break try_with_logs!(serde_json::from_str(output));
             } else {

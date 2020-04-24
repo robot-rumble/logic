@@ -1,8 +1,9 @@
 use pin_project_lite::pin_project;
-use std::cell::RefCell;
 use std::future::Future;
+use std::io::Cursor;
 use std::pin::Pin;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::task::{Context, Poll};
 use tokio::prelude::*;
 use tokio::sync::mpsc;
@@ -20,15 +21,17 @@ pub fn add_stdio(state: &mut WasiStateBuilder) -> &mut WasiStateBuilder {
         .stderr(Box::new(stdio::Stdout))
 }
 
+type Buf = Cursor<Vec<u8>>;
+type StdinInner = io::Result<Buf>;
 tokio::task_local! {
-    static STDIN: Rc<RefCell<mpsc::Receiver<Vec<u8>>>>;
-    static STDOUT: Rc<RefCell<mpsc::Sender<Vec<u8>>>>;
-    static STDERR: Rc<RefCell<mpsc::Sender<Vec<u8>>>>;
+    static STDIN: Arc<Mutex<io::StreamReader<mpsc::Receiver<StdinInner>, Buf>>>;
+    static STDOUT: Arc<Mutex<mpsc::Sender<Vec<u8>>>>;
+    static STDERR: Arc<Mutex<mpsc::Sender<Vec<u8>>>>;
 }
 
 pin_project! {
     struct MpscWriter {
-        tx: Option<mpsc::Sender<Vec<u8>>>,
+        tx: Option<mpsc::Sender<StdinInner>>,
     }
 }
 
@@ -48,7 +51,7 @@ impl AsyncWrite for MpscWriter {
             let kind = io::ErrorKind::BrokenPipe; // ?
             res.map_err(|e| io::Error::new(kind, e))
                 .and_then(|()| {
-                    tx.try_send(buf.to_owned())
+                    tx.try_send(Ok(Cursor::new(buf.to_owned())))
                         .map_err(|e| io::Error::new(kind, e))
                 })
                 .map(|()| buf.len())
@@ -67,10 +70,11 @@ impl AsyncWrite for MpscWriter {
 
 pin_project! {
     pub struct WasiProcess {
-        in_tx: Option<mpsc::Sender<Vec<u8>>>,
+        in_tx: Option<mpsc::Sender<StdinInner>>,
         out_rx: Option<mpsc::Receiver<Vec<u8>>>,
         err_rx: Option<mpsc::Receiver<Vec<u8>>>,
-        handle: futures::future::LocalBoxFuture<'static, Result<(), CallError>>,
+        #[pin]
+        handle: task::JoinHandle<Result<(), CallError>>,
     }
 }
 
@@ -79,21 +83,21 @@ impl WasiProcess {
         let (in_tx, in_rx) = mpsc::channel(5);
         let (out_tx, out_rx) = mpsc::channel(5);
         let (err_tx, err_rx) = mpsc::channel(5);
-        let handle = STDIN.scope(
-            Rc::new(RefCell::new(in_rx)),
+        let handle = task::spawn(STDIN.scope(
+            Arc::new(Mutex::new(io::stream_reader(in_rx))),
             STDOUT.scope(
-                Rc::new(RefCell::new(out_tx)),
-                STDERR.scope(Rc::new(RefCell::new(err_tx)), async move {
-                    task::block_in_place(move || instance.call("_start", &[]).map(drop))
+                Arc::new(Mutex::new(out_tx)),
+                STDERR.scope(Arc::new(Mutex::new(err_tx)), async move {
+                    task::block_in_place(|| instance.call("_start", &[]).map(drop))
                 }),
             ),
-        );
+        ));
 
         Self {
             in_tx: Some(in_tx),
             out_rx: Some(out_rx),
             err_rx: Some(err_rx),
-            handle: Box::pin(handle),
+            handle,
         }
     }
 
@@ -111,6 +115,9 @@ impl WasiProcess {
 impl Future for WasiProcess {
     type Output = Result<(), CallError>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        self.project().handle.as_mut().poll(cx)
+        self.project()
+            .handle
+            .poll(cx)
+            .map(|r| r.expect("thread panicked"))
     }
 }

@@ -1,10 +1,10 @@
 use futures::executor::block_on;
+use futures::stream::StreamExt as _;
 use serde::{Deserialize, Serialize};
 use std::io::{prelude::*, Cursor, SeekFrom};
-use std::pin::Pin;
 use tokio::io;
 use tokio::prelude::*;
-use tokio::stream::{Stream, StreamExt};
+use tokio::stream::Stream;
 use wasmer_wasi::{
     state::{WasiFile, WasiFsError},
     types as wasi_types,
@@ -20,10 +20,10 @@ pub fn mpsc_reader(rx: impl Stream<Item = Vec<u8>>) -> impl AsyncRead {
 pub struct Stdin;
 impl Read for Stdin {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        block_on({
+        block_on(async {
             let stdin = STDIN.with(Clone::clone);
-            let stdin = Pin::new(owning_ref::OwningHandle::new_mut(stdin));
-            mpsc_reader(stdin).read(buf)
+            let mut stdin = stdin.lock().unwrap();
+            stdin.read(buf).await
         })
     }
 }
@@ -127,7 +127,7 @@ impl Write for Stdout {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         block_on(async move {
             let stdout = STDOUT.with(Clone::clone);
-            let mut stdout = stdout.borrow_mut();
+            let mut stdout = stdout.lock().unwrap();
             stdout
                 .send(buf.to_owned())
                 .await
@@ -207,7 +207,7 @@ impl Write for Stderr {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         block_on(async move {
             let stderr = STDERR.with(Clone::clone);
-            let mut stderr = stderr.borrow_mut();
+            let mut stderr = stderr.lock().unwrap();
             stderr
                 .send(buf.to_owned())
                 .await

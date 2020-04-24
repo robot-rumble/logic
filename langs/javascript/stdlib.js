@@ -19,6 +19,7 @@ import * as std from "std";
     std.exit(1);
   }
   print("__rr_init:", JSON.stringify({ Ok: null }));
+  std.out.flush()
 
   let line;
   while ((line = std.in.getline())) {
