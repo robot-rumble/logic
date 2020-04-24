@@ -153,15 +153,25 @@ pub enum ProgramError {
     NoData,
     #[error("The program errored while initializing")]
     InitError(RobotError),
-    #[serde(skip)]
+    #[error("The program did not output an init status")]
+    NoInitError,
     #[error("Program returned invalid data")]
-    DataError(#[from] serde_json::Error),
-    #[serde(skip)]
+    DataError(String),
     #[error("IO error")]
-    IO(#[from] std::io::Error),
+    IO(String),
+}
+impl From<serde_json::Error> for ProgramError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::DataError(err.to_string())
+    }
+}
+impl From<std::io::Error> for ProgramError {
+    fn from(err: std::io::Error) -> Self {
+        Self::IO(err.to_string())
+    }
 }
 
-pub type ProgramResult = Result<RobotOutputMap, ProgramError>;
+pub type ProgramResult<T = RobotOutputMap> = Result<T, ProgramError>;
 pub type Logs = Vec<String>;
 
 #[derive(Serialize, Deserialize, Debug)]

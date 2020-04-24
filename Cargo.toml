@@ -2,4 +2,4 @@
 lto = true
 
 [workspace]
-members = ["logic", "runners/cli", "runners/webapp", "runners/lambda", "langs/python"]
+members = ["logic", "cli", "runners/native", "runners/webapp", "runners/lambda", "runners/wasi", "langs/python"]

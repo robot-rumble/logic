@@ -61,7 +61,7 @@ fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) ->
     })
 }
 
-pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, ProgramError> {
+fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, ProgramError> {
     let vm = VirtualMachine::new(PySettings {
         initialization_parameter: InitParameter::InitializeInternal,
         ..Default::default()
@@ -105,4 +105,8 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
     };
 
     Ok(move |input| invoke_main(&main, &input, &vm))
+}
+
+fn main() {
+    logic::lang_main(init)
 }

@@ -140,7 +140,7 @@ def __main(state, scope=globals()):
             )
     except Exception as e:
         return {
-            "robot_outputs": {"Err": {"RobotError": __format_err(e)}}
+            "robot_outputs": {"Err": {"InitError": __format_err(e)}}
         }
 
     if callable(_init_turn):
