@@ -30,7 +30,9 @@ async fn try_main() -> anyhow::Result<()> {
             .collect_tuple()
             .ok_or_else(|| anyhow!("you must pass a wasm file and a source code file to `wasm`"))?;
         let wasm = fs::read(wasm).context("couldn't read wasm source")?;
+        eprintln!("compiling wasm");
         let module = wasmer_runtime::compile(&wasm).context("couldn't compile wasm module")?;
+        eprintln!("done!");
         let sourcecode_path = sourcedir.path().join("sourcecode");
         fs::hard_link(&source, &sourcecode_path)
             .or_else(|_| fs::copy(source, sourcecode_path).map(drop))
