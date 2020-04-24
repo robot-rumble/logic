@@ -249,6 +249,7 @@ fn handle_program_errors<T>(
         (Team, Result<T, ProgramError>),
         (Team, Result<T, ProgramError>),
     ),
+    turns: Vec<CallbackInput>,
 ) -> MainOutput {
     let mut errors = HashMap::new();
     let winner = match errored_players {
@@ -267,7 +268,11 @@ fn handle_program_errors<T>(
         }
         _ => unreachable!(),
     };
-    MainOutput { winner, errors }
+    MainOutput {
+        winner,
+        errors,
+        turns,
+    }
 }
 
 const GRID_SIZE: usize = 19;
@@ -340,6 +345,7 @@ where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
+    let mut turns = Vec::new();
     let mut run_funcs = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
         ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
             hashmap! {
@@ -348,7 +354,7 @@ where
             }
         }
         errored => {
-            return handle_program_errors(errored);
+            return handle_program_errors(errored, turns);
         }
     };
 
@@ -402,19 +408,23 @@ where
 
                 run_turn(&flattened_outputs, &mut turn_state.state);
 
-                turn_cb(&CallbackInput {
+                let turn = CallbackInput {
                     state: turn_state.clone(),
                     logs,
                     robot_outputs: flattened_outputs,
-                });
+                };
+                turn_cb(&turn);
+                turns.push(turn);
             }
             errored => {
-                turn_cb(&CallbackInput {
+                let turn = CallbackInput {
                     state: turn_state.clone(),
                     logs,
                     robot_outputs: HashMap::new(),
-                });
-                return handle_program_errors(errored);
+                };
+                turn_cb(&turn);
+                turns.push(turn);
+                return handle_program_errors(errored, turns);
             }
         }
     }
@@ -422,6 +432,7 @@ where
     MainOutput {
         winner,
         errors: HashMap::new(),
+        turns,
     }
 }
 
