@@ -5,13 +5,13 @@ use tokio::process::{ChildStdin, ChildStdout, Command};
 
 use logic::{ProgramError, RunnerError};
 
-pub struct CliRunner {
-    stdin: io::BufWriter<ChildStdin>,
-    stdout: io::BufReader<ChildStdout>,
+pub struct TokioRunner<W: AsyncWrite, R: AsyncBufRead> {
+    stdin: W,
+    stdout: R,
 }
 
-impl CliRunner {
-    pub async fn new(mut command: Command) -> Result<Self, ProgramError> {
+impl TokioRunner<io::BufWriter<ChildStdin>, io::BufReader<ChildStdout>> {
+    pub async fn new_cmd(mut command: Command) -> Result<Self, ProgramError> {
         let mut proc = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -19,23 +19,26 @@ impl CliRunner {
             .expect("Failed to spawn child process");
 
         let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
-        let mut stdout = io::BufReader::new(proc.stdout.take().unwrap());
-
-        let line = (&mut stdout)
+        let stdout = io::BufReader::new(proc.stdout.take().unwrap());
+        Self::new(stdin, stdout).await
+    }
+}
+impl<W: AsyncWrite + Unpin, R: AsyncBufRead + Unpin> TokioRunner<W, R> {
+    pub async fn new(stdin: W, mut stdout: R) -> Result<Self, ProgramError> {
+        let line: String = (&mut stdout)
             .lines()
             .next_line()
             .await?
             .ok_or(ProgramError::NoData)?;
         let init_result = strip_prefix(&line, "__rr_init:").ok_or(ProgramError::NoInitError)?;
-        let init_result: Result<(), ProgramError> = serde_json::from_str(init_result)?;
-        init_result?;
+        serde_json::from_str::<Result<(), ProgramError>>(init_result)??;
 
         Ok(Self { stdin, stdout })
     }
 }
 
 #[async_trait::async_trait(?Send)]
-impl logic::RobotRunner for CliRunner {
+impl<W: AsyncWrite + Unpin, R: AsyncBufRead + Unpin> logic::RobotRunner for TokioRunner<W, R> {
     async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
         let mut input = serde_json::to_vec(&input)?;
         input.push(b'\n');
@@ -54,7 +57,7 @@ impl logic::RobotRunner for CliRunner {
                 };
             }
             let maybe_line = try_with_logs!(lines.next_line().await);
-            let line = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
+            let line: String = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
             if let Some(output) = strip_prefix(&line, "__rr_output:") {
                 break try_with_logs!(serde_json::from_str(output));
             } else {

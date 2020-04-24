@@ -171,7 +171,7 @@ impl From<std::io::Error> for ProgramError {
     }
 }
 
-pub type ProgramResult = Result<RobotOutputMap, ProgramError>;
+pub type ProgramResult<T = RobotOutputMap> = Result<T, ProgramError>;
 pub type Logs = Vec<String>;
 
 #[derive(Serialize, Deserialize, Debug)]
