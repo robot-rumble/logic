@@ -14,4 +14,3 @@ wasmer-wasi = "0.16"
 typetag = "0.1"
 
 serde = "1.0"
-owning_ref = "0.4"
