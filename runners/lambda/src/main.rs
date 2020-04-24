@@ -1,9 +1,41 @@
+#![allow(non_snake_case)]
+
 use lambda::lambda;
-use rusoto_core::Region;
-use rusoto_sqs::{SendMessageRequest, Sqs, SqsClient};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+
+/*
+SAMPLE EVENT
+{
+    "Records": Array([Object({
+        "attributes": Object({
+            "ApproximateFirstReceiveTimestamp": String("1523232000001"),
+            "ApproximateReceiveCount": String("1"),
+            "SenderId": String("123456789012"),
+            "SentTimestamp": String("1523232000000")
+        }),
+        "awsRegion": String("us-east-1"),
+        "body": String("{\"r1_id\": 1, \"r1_code\": \"\", \"r2_id\": 2, \"r2_code\":\"\"}"),
+        "eventSource": String("aws:sqs"),
+        "eventSourceARN": String("arn:aws:sqs:us-east-1:123456789012:MyQueue"),
+        "md5OfBody": String("7b270e59b47ff90a553787216d55d91d"),
+        "messageAttributes": Object({}),
+        "messageId": String("19dd0b57-b21e-4ac1-bd88-01bbb068cb78"),
+        "receiptHandle": String("MessageReceiptHandle")
+    })])
+}
+*/
+
+#[derive(Deserialize)]
+struct LambdaInput {
+    Records: Vec<LambdaInputRecord>,
+}
+
+#[derive(Deserialize)]
+struct LambdaInputRecord {
+    body: String,
+}
 
 #[derive(Deserialize)]
 struct Input {
@@ -35,19 +67,15 @@ type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[lambda]
 #[tokio::main]
-async fn main(data: Value) -> Result<(), Error> {
-    let input_data = serde_json::from_value::<Input>(data).unwrap();
+async fn main(data: Value) -> Result<Value, Error> {
+    let lambda_input = serde_json::from_value::<LambdaInput>(data).unwrap();
+    let input_data = serde_json::from_str::<Input>(&lambda_input.Records[0].body).unwrap();
 
     let data = logic::MainOutput {
         winner: None,
         errors: HashMap::new(),
         turns: Vec::new(),
     };
-
-    let client = SqsClient::new(Region::UsEast1);
-
-    let out_queue_url = std::env::var("BATTLE_QUEUE_OUT_URL")
-        .expect("\"BATTLE_QUEUE_OUT_URL\" environmental variable not found");
 
     let output = Output {
         r1_time: 0.,
@@ -59,15 +87,5 @@ async fn main(data: Value) -> Result<(), Error> {
         errored: false,
     };
 
-    client.send_message(SendMessageRequest {
-        queue_url: out_queue_url,
-        message_body: serde_json::to_string(&output).unwrap(),
-        delay_seconds: None,
-        message_attributes: None,
-        message_deduplication_id: None,
-        message_group_id: None,
-        message_system_attributes: None,
-    });
-
-    Ok(())
+    Ok(serde_json::to_value(output).unwrap())
 }

@@ -9,8 +9,6 @@ edition = "2018"
 [dependencies]
 logic = { path = "../../logic" }
 lambda = { git = "https://github.com/awslabs/aws-lambda-rust-runtime/", branch = "master" }
-rusoto_core = "0.43.0"
-rusoto_sqs = "0.43.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = "0.2.18"
