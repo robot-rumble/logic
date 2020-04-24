@@ -1,6 +1,8 @@
 #![allow(non_snake_case)]
 
 use lambda::handler_fn;
+use rusoto_core::Region;
+use rusoto_sqs::{SendMessageRequest, Sqs, SqsClient};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -71,9 +73,11 @@ async fn main() -> Result<(), Error> {
     lambda::run(func).await
 }
 
-async fn handler(event: Value) -> Result<Value, Error> {
-    let lambda_input = serde_json::from_value::<LambdaInput>(event).unwrap();
-    let input_data = serde_json::from_str::<Input>(&lambda_input.Records[0].body).unwrap();
+async fn handler(event: Value) -> Result<(), Error> {
+    println!("INPUT: {}", event);
+
+    let lambda_input = serde_json::from_value::<LambdaInput>(event)?;
+    let input_data = serde_json::from_str::<Input>(&lambda_input.Records[0].body)?;
 
     let data = logic::MainOutput {
         winner: None,
@@ -81,15 +85,32 @@ async fn handler(event: Value) -> Result<Value, Error> {
         turns: Vec::new(),
     };
 
+    let client = SqsClient::new(Region::UsEast1);
+
+    let out_queue_url = std::env::var("BATTLE_QUEUE_OUT_URL")
+        .expect("\"BATTLE_QUEUE_OUT_URL\" environmental variable not found");
+
     let output = Output {
         r1_time: 0.,
         r1_id: input_data.r1_id,
         r2_time: 0.,
         r2_id: input_data.r2_id,
-        data: serde_json::to_string(&data).unwrap(),
+        data: serde_json::to_string(&data)?,
         winner: Winner::Draw,
         errored: false,
     };
 
-    Ok(serde_json::to_value(output).unwrap())
+    client
+        .send_message(SendMessageRequest {
+            queue_url: out_queue_url,
+            message_body: serde_json::to_string(&output)?,
+            delay_seconds: None,
+            message_attributes: None,
+            message_deduplication_id: None,
+            message_group_id: None,
+            message_system_attributes: None,
+        })
+        .await?;
+
+    Ok(())
 }
