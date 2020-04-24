@@ -33,6 +33,7 @@ pub enum Team {
 pub struct MainOutput {
     pub winner: Option<Team>,
     pub errors: HashMap<Team, ProgramError>,
+    pub turns: Vec<CallbackInput>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
