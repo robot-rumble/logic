@@ -1,0 +1,3 @@
+[submodule "langs/javascript/quickjs"]
+	path = langs/javascript/quickjs
+	url = git@github.com:robot-rumble/qjs-wasi.git

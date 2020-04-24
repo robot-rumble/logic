@@ -112,18 +112,17 @@ def attack(direction):
 
 def __format_err(exc):
     return {
-                    # TODO(noah) get exception location
-                    "start": [0, 0],
-                    "end": [0, 0],
-                    "message": str(exc),
-                }
+        # TODO(noah) get exception location
+        "start": [0, 0],
+        "end": [0, 0],
+        "message": str(exc),
+    }
 
 def __main(state, scope=globals()):
-    import sys, io, json
+    import sys, io 
     hadstdout, oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
     logbuf = sys.stdout = io.StringIO()
 
-    state = json.loads(state)
     state = State(state)
     _robot = scope.get("_robot")
     _init_turn = scope.get("_init_turn")
@@ -140,9 +139,9 @@ def __main(state, scope=globals()):
                 "If you choose to define an _init_turn function, it must accept 1 value: the current state."
             )
     except Exception as e:
-        return json.dumps({
-            "robot_outputs": {"Err": {"RobotError": __format_err(e)}}
-        })
+        return {
+            "robot_outputs": {"Err": {"InitError": __format_err(e)}}
+        }
 
     if callable(_init_turn):
         _init_turn(state)
@@ -180,7 +179,7 @@ def __main(state, scope=globals()):
     logs = logbuf.readlines()
     logbuf.close()
 
-    return json.dumps({
+    return {
         "robot_outputs": {"Ok": robot_outputs},
         "logs": logs
-    })
+    }

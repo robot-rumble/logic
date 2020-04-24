@@ -16,3 +16,5 @@ strum = { version = "0.18", features = ["derive"] }
 thiserror = "1.0"
 itertools = "0.9"
 maplit = "1.0"
+futures-util = "0.3"
+async-trait = "0.1"

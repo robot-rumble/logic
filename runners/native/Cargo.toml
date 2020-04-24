@@ -1,5 +1,5 @@
 [package]
-name = "backend"
+name = "native-runner"
 version = "0.1.0"
 authors = ["Anton <antonoutkine@gmail.com>"]
 edition = "2018"
@@ -8,4 +8,6 @@ edition = "2018"
 logic = { path = "../../logic" }
 serde = { version = "1.0" }
 serde_json = "1.0"
-
+itertools = "0.9"
+tokio = { version = "0.2", features = ["macros", "process", "io-util"] }
+async-trait = "0.1"

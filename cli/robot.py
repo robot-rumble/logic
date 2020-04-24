@@ -1,4 +1,6 @@
-import json, sys
+import json
+import sys
+
 import stdlib
 from stdlib import *
 
@@ -15,6 +17,11 @@ def _robot(state, unit, debug):
     return move(robot_state["d"])
 
 
+print('__rr_init:{"Ok":null}', flush=True)
 for inp in sys.stdin:
+    # print(inp)
+    inp = json.loads(inp)
     output = stdlib.__main(inp, scope=globals())
-    print("__rr_output:", output, flush=True)
+    sys.stdout.write("__rr_output:")
+    json.dump(output, sys.stdout)
+    print(flush=True)
