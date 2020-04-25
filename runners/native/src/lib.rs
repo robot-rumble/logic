@@ -23,7 +23,7 @@ impl TokioRunner<io::BufWriter<ChildStdin>, io::BufReader<ChildStdout>> {
         Self::new(stdin, stdout).await
     }
 }
-impl<W: AsyncWrite + Unpin, R: AsyncBufRead + Unpin> TokioRunner<W, R> {
+impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W, R> {
     pub async fn new(stdin: W, mut stdout: R) -> Result<Self, ProgramError> {
         let line: String = (&mut stdout)
             .lines()
@@ -37,8 +37,10 @@ impl<W: AsyncWrite + Unpin, R: AsyncBufRead + Unpin> TokioRunner<W, R> {
     }
 }
 
-#[async_trait::async_trait(?Send)]
-impl<W: AsyncWrite + Unpin, R: AsyncBufRead + Unpin> logic::RobotRunner for TokioRunner<W, R> {
+#[async_trait::async_trait]
+impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotRunner
+    for TokioRunner<W, R>
+{
     async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
         let mut input = serde_json::to_vec(&input)?;
         input.push(b'\n');

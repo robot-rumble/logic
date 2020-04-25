@@ -268,7 +268,8 @@ where
     }
 }
 pub type RunnerResult = Result<ProgramOutput, RunnerError>;
-#[async_trait::async_trait(?Send)]
+#[cfg_attr(not(feature = "robot-runner-not-send"), async_trait::async_trait)]
+#[cfg_attr(feature = "robot-runner-not-send", async_trait::async_trait(?Send))]
 pub trait RobotRunner {
     async fn run(&mut self, input: ProgramInput) -> RunnerResult;
 }

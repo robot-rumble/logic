@@ -1,6 +1,7 @@
 use core::fmt;
 use std::collections::HashMap;
 use std::ops::Add;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use strum::*;
@@ -160,6 +161,8 @@ pub enum ProgramError {
     DataError(String),
     #[error("IO error")]
     IO(String),
+    #[error("The program took too long, past the time limit of {0:?}")]
+    Timeout(Duration),
 }
 impl From<serde_json::Error> for ProgramError {
     fn from(err: serde_json::Error) -> Self {
