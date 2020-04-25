@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
+set -e
+
 # $1 specifies the cargo build folder
-cd $1
+pushd $1
 cp lambda bootstrap
 zip lambda.zip bootstrap
 rm bootstrap
