@@ -92,6 +92,9 @@ impl State {
             .iter()
             .filter(|Coords(x, y)| match type_ {
                 MapType::Rect => *x == 0 || *x == size - 1 || *y == 0 || *y == size - 1,
+                MapType::Circle => {
+                    (size / 2 - *x).pow(2) + (size / 2 - *y).pow(2) >= (size / 2).pow(2)
+                }
             })
             .map(|coords| {
                 let obj = Obj::new_terrain(TerrainType::Wall, *coords);
@@ -254,7 +257,7 @@ where
         }
     };
 
-    let state = State::new(MapType::Rect, GRID_SIZE);
+    let state = State::new(MapType::Circle, GRID_SIZE);
     let mut turn_state = TurnState { turn: 0, state };
     while turn_state.turn < max_turn {
         let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = run_team_f

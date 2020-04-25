@@ -9,6 +9,7 @@ use thiserror::Error;
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum MapType {
     Rect,
+    Circle,
 }
 
 #[derive(
