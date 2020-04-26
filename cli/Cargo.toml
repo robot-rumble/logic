@@ -1,0 +1,20 @@
+[package]
+name = "cli"
+version = "0.1.0"
+authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+logic = { path = "../logic" }
+
+tokio = { version = "0.2", features = ["process", "macros"] }
+futures-util = "0.3"
+
+native-runner = { path = "../runners/native" }
+wasi-runner = { path = "../runners/wasi" }
+wasmer-runtime = "0.16"
+wasmer-wasi = "0.16"
+
+anyhow = "1.0"
+itertools = "0.9"
+tempfile = "3.1"

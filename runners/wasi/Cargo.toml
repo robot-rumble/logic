@@ -1,0 +1,16 @@
+[package]
+name = "wasi-runner"
+version = "0.1.0"
+authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2", features = ["sync", "io-util", "stream", "rt-core", "blocking", "rt-util", "rt-threaded"] }
+pin-project-lite = "0.1"
+futures = "0.3"
+
+wasmer-runtime = "0.16"
+wasmer-wasi = "0.16"
+typetag = "0.1"
+
+serde = "1.0"

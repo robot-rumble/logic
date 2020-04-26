@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use futures_util::future::{join_all, FutureExt};
 use itertools::Itertools;
 use maplit::hashmap;
 use multimap::MultiMap;
@@ -271,17 +272,62 @@ fn handle_program_errors<T>(
 
 const GRID_SIZE: usize = 19;
 
-pub fn run<RunF, TurnCb>(
-    run_team1: Result<RunF, ProgramError>,
-    run_team2: Result<RunF, ProgramError>,
+pub struct RunnerError {
+    err: ProgramError,
+    logs: Vec<String>,
+}
+impl RunnerError {
+    pub fn new(err: impl Into<ProgramError>, logs: Vec<String>) -> Self {
+        Self {
+            err: err.into(),
+            logs,
+        }
+    }
+    fn into_output(self) -> ProgramOutput {
+        ProgramOutput {
+            robot_outputs: Err(self.err),
+            logs: self.logs,
+        }
+    }
+}
+impl<T> From<T> for RunnerError
+where
+    ProgramError: From<T>,
+{
+    fn from(err: T) -> Self {
+        Self {
+            logs: Vec::new(),
+            err: err.into(),
+        }
+    }
+}
+pub type RunnerResult = Result<ProgramOutput, RunnerError>;
+#[async_trait::async_trait(?Send)]
+pub trait RobotRunner {
+    async fn run(&mut self, input: ProgramInput) -> RunnerResult;
+}
+
+#[async_trait::async_trait(?Send)]
+impl<F> RobotRunner for F
+where
+    F: FnMut(ProgramInput) -> ProgramOutput,
+{
+    async fn run(&mut self, input: ProgramInput) -> RunnerResult {
+        Ok((self)(input))
+    }
+}
+
+pub async fn run<TurnCb, R>(
+    run_team1: Result<R, ProgramError>,
+    run_team2: Result<R, ProgramError>,
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
 where
-    RunF: FnMut(ProgramInput) -> ProgramOutput,
-    TurnCb: FnMut(&CallbackInput) -> (),
+    TurnCb: FnMut(&CallbackInput),
+    R: RobotRunner,
 {
-    let mut run_team_f = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
+    let mut run_funcs = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
         ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
             hashmap! {
                 t1 => run_t1,
@@ -301,18 +347,26 @@ where
         if turn_state.turn % State::SPAWN_EVERY == 0 {
             turn_state.state.spawn_units();
         }
+
         turn_state.turn += 1;
 
-        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = run_team_f
-            .iter_mut()
-            .map(|(&team, run_f)| {
-                let program_output = run_f(ProgramInput::new(turn_state.clone(), team, GRID_SIZE));
-                (
-                    (team, program_output.robot_outputs),
-                    (team, program_output.logs),
-                )
-            })
-            .unzip();
+        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = async {
+            join_all(run_funcs.iter_mut().map(|(&team, runner)| {
+                runner
+                    .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
+                    .map(move |program_output| {
+                        let program_output = program_output.unwrap_or_else(|e| e.into_output());
+                        (
+                            (team, program_output.robot_outputs),
+                            (team, program_output.logs),
+                        )
+                    })
+            }))
+            .await
+            .into_iter()
+            .unzip()
+        }
+        .await;
 
         match robot_outputs.into_iter().collect_tuple().unwrap() {
             ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {
@@ -426,5 +480,42 @@ pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement
             grid.insert(objs.get(&id).unwrap().0.coords, id);
         }
         update_grid_with_movement(objs, grid, legal_moves);
+    }
+}
+
+pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
+    init: fn(&str) -> Result<F, ProgramError>,
+) {
+    use std::io::prelude::*;
+    let source_path = std::env::args_os().nth(1).unwrap();
+    let source = std::fs::read_to_string(source_path).unwrap();
+
+    let (run_turn, init_result) = match init(&source) {
+        Ok(f) => (Some(f), Ok(())),
+        Err(e) => (None, Err(e)),
+    };
+
+    {
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
+        stdout.write(b"__rr_init:").unwrap();
+        serde_json::to_writer(&mut stdout, &init_result).unwrap();
+        stdout.write(b"\n").unwrap();
+        stdout.flush().unwrap();
+    }
+
+    let mut run_turn = run_turn.unwrap_or_else(|| std::process::exit(1));
+
+    let stdin = std::io::stdin();
+    for input in stdin.lock().lines() {
+        let input = input.expect("couldn't read input");
+        let input = serde_json::from_str(&input).expect("bad input given to lang runner");
+        let output = run_turn(input);
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
+        stdout.write(b"__rr_output:").unwrap();
+        serde_json::to_writer(&mut stdout, &output).unwrap();
+        stdout.write(b"\n").unwrap();
+        stdout.flush().unwrap();
     }
 }

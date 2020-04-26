@@ -119,7 +119,8 @@ def __format_err(exc):
 
 def __main(state, scope=globals()):
     import sys, io 
-    hadstdout, oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
+    oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
+    hadstdout, oldstdout = oldstdout
     logbuf = sys.stdout = io.StringIO()
 
     state = State(state)

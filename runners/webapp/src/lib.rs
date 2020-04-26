@@ -22,5 +22,7 @@ pub fn run(code1: &str, code2: &str, turn_callback: &JsFunction, turn_num: usize
         turn_num,
     );
 
+    let output = futures::executor::block_on(output);
+
     JsValue::from_serde(&output).unwrap()
 }

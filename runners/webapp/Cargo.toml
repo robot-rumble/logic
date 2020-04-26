@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 logic = { path = "../../logic" }
 pyrunner = { path = "../../langs/python" }
+futures = "0.3"
 
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 js-sys = "0.3"
