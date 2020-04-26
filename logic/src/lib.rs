@@ -1,8 +1,8 @@
-use maplit::hashmap;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use maplit::hashmap;
 use multimap::MultiMap;
 use rand::Rng;
 use strum::IntoEnumIterator;
@@ -14,6 +14,14 @@ mod types;
 pub fn randrange(low: usize, high: usize) -> usize {
     let mut rng = rand::thread_rng();
     rng.gen_range(low, high)
+}
+
+pub fn randchoose<T: Copy>(v: &Vec<T>) -> T {
+    match v.len() {
+        0 => panic!("Cannot randomly choose from empty list"),
+        1 => v[0],
+        _ => v[randrange(0, v.len() - 1)],
+    }
 }
 
 pub fn new_id() -> Id {
@@ -64,20 +72,18 @@ impl Obj {
 
 impl State {
     const TEAM_UNIT_NUM: usize = 10;
+    const SPAWN_EVERY: usize = 10;
 
     pub fn new(grid_type: MapType, grid_size: usize) -> Self {
         // create initial objs/map combination
-        let terrain_objs = Self::create_obj_map(grid_type, grid_size);
-        let mut grid = Self::create_grid_map(&terrain_objs);
+        let (objs, spawn_points) = Self::init(grid_type, grid_size);
+        let grid = Self::create_grid_map(&objs);
 
-        // use the map to create the units
-        let mut objs: ObjMap = Team::iter()
-            .map(|team| Self::create_unit_objs(&mut grid, grid_size, team))
-            .flatten()
-            .collect();
-        objs.extend(terrain_objs);
-
-        Self { objs, grid }
+        Self {
+            objs,
+            grid,
+            spawn_points,
+        }
     }
 
     fn create_raw_grid(size: usize) -> Vec<Coords> {
@@ -87,47 +93,77 @@ impl State {
             .collect()
     }
 
-    fn create_obj_map(type_: MapType, size: usize) -> ObjMap {
-        Self::create_raw_grid(size)
+    fn init(type_: MapType, size: usize) -> (ObjMap, Vec<Coords>) {
+        let distance_from_center = |Coords(x, y)| {
+            ((size / 2) as i32 - x as i32).pow(2) + ((size / 2) as i32 - y as i32).pow(2)
+        };
+
+        let grid = Self::create_raw_grid(size);
+        let objs = grid
             .iter()
-            .filter(|Coords(x, y)| match type_ {
-                MapType::Rect => *x == 0 || *x == size - 1 || *y == 0 || *y == size - 1,
-                MapType::Circle => {
-                    (size / 2 - *x).pow(2) + (size / 2 - *y).pow(2) >= (size / 2).pow(2)
+            .filter(|coords| {
+                let coords = *coords;
+                match type_ {
+                    MapType::Rect => {
+                        coords.0 == 0
+                            || coords.0 == size - 1
+                            || coords.1 == 0
+                            || coords.1 == size - 1
+                    }
+                    MapType::Circle => distance_from_center(*coords) >= (size / 2).pow(2) as i32,
                 }
             })
             .map(|coords| {
                 let obj = Obj::new_terrain(TerrainType::Wall, *coords);
                 (obj.id(), obj)
             })
-            .collect()
+            .collect();
+        let spawn_points = grid
+            .into_iter()
+            .filter(|coords| match type_ {
+                MapType::Rect => {
+                    coords.0 == 1 || coords.0 == size - 2 || coords.1 == 1 || coords.1 == size - 2
+                }
+                MapType::Circle => distance_from_center(*coords) >= (size / 2 - 1).pow(2) as i32,
+            })
+            .collect();
+        (objs, spawn_points)
     }
 
     fn create_grid_map(objs: &ObjMap) -> GridMap {
         objs.values().map(|obj| (obj.coords(), obj.id())).collect()
     }
 
-    fn create_unit_objs(grid: &mut GridMap, grid_size: usize, team: Team) -> ObjMap {
-        (0..Self::TEAM_UNIT_NUM)
+    fn spawn_units(&mut self) {
+        let objs = (0..Self::TEAM_UNIT_NUM)
             .map(|_| {
-                let obj = Obj::new_unit(
-                    UnitType::Soldier,
-                    Self::random_grid_loc(grid, grid_size),
-                    team,
-                );
-                // update the grid continuously so random_grid_loc can account for new units
-                grid.insert(obj.coords(), obj.id());
-                (obj.id(), obj)
+                Team::iter()
+                    .map(|team| {
+                        self.random_spawn_loc().map(|loc| {
+                            let obj = Obj::new_unit(UnitType::Soldier, loc, team);
+                            // update the grid continuously so random_grid_loc can account for new units
+                            self.grid.insert(obj.coords(), obj.id());
+                            (obj.id(), obj)
+                        })
+                    })
+                    .flatten()
+                    .collect::<Vec<_>>()
             })
-            .collect()
+            .flatten()
+            .collect::<Vec<_>>();
+        self.objs.extend(objs);
     }
 
-    fn random_grid_loc(grid: &GridMap, grid_size: usize) -> Coords {
-        let random_coords = Coords(randrange(0, grid_size), randrange(0, grid_size));
-        if grid.contains_key(&random_coords) {
-            Self::random_grid_loc(grid, grid_size)
+    fn random_spawn_loc(&self) -> Option<Coords> {
+        let available_points = self
+            .spawn_points
+            .iter()
+            .filter(|loc| !self.grid.contains_key(&loc))
+            .collect::<Vec<_>>();
+        if available_points.is_empty() {
+            None
         } else {
-            random_coords
+            Some(*randchoose(&available_points))
         }
     }
 
@@ -257,9 +293,16 @@ where
         }
     };
 
-    let state = State::new(MapType::Circle, GRID_SIZE);
-    let mut turn_state = TurnState { turn: 0, state };
+    let mut turn_state = TurnState {
+        turn: 0,
+        state: State::new(MapType::Circle, GRID_SIZE),
+    };
     while turn_state.turn < max_turn {
+        if turn_state.turn % State::SPAWN_EVERY == 0 {
+            turn_state.state.spawn_units();
+        }
+        turn_state.turn += 1;
+
         let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = run_team_f
             .iter_mut()
             .map(|(&team, run_f)| {
@@ -270,8 +313,6 @@ where
                 )
             })
             .unzip();
-
-        turn_state.turn += 1;
 
         match robot_outputs.into_iter().collect_tuple().unwrap() {
             ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {

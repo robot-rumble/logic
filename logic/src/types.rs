@@ -82,6 +82,7 @@ pub struct GridMap(GridMapType);
 pub struct State {
     pub objs: ObjMap,
     pub grid: GridMap,
+    pub spawn_points: Vec<Coords>,
 }
 
 impl fmt::Display for State {
