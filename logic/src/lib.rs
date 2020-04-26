@@ -307,6 +307,16 @@ pub trait RobotRunner {
     async fn run(&mut self, input: ProgramInput) -> RunnerResult;
 }
 
+#[async_trait::async_trait(?Send)]
+impl<F> RobotRunner for F
+where
+    F: FnMut(ProgramInput) -> ProgramOutput,
+{
+    async fn run(&mut self, input: ProgramInput) -> RunnerResult {
+        Ok((self)(input))
+    }
+}
+
 pub async fn run<TurnCb, R>(
     run_team1: Result<R, ProgramError>,
     run_team2: Result<R, ProgramError>,

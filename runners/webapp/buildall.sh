@@ -5,4 +5,4 @@ set -e
 wasm-pack build
 
 pushd ../../../backend/src
-yarn build-worker
+yarn build
