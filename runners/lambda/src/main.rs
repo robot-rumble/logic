@@ -40,13 +40,15 @@ SAMPLE EVENT
 */
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct LambdaInput {
-    Records: Vec<LambdaInputRecord>,
+    records: Vec<LambdaInputRecord>,
 }
 
 #[derive(Deserialize)]
 struct LambdaInputRecord {
-    body: String,
+    #[serde(with = "serde_with::json::nested")]
+    body: Input,
 }
 
 #[derive(Deserialize)]
@@ -70,7 +72,8 @@ struct Output {
     r1_time: f64,
     r2_id: usize,
     r2_time: f64,
-    data: String,
+    #[serde(with = "serde_with::json::nested")]
+    data: logic::MainOutput,
     winner: Winner,
     errored: bool,
 }
@@ -122,7 +125,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run(data: LambdaInput) -> Result<(), Error> {
-    let input_data = serde_json::from_str::<Input>(&data.Records[0].body).unwrap();
+    let input_data = data.records.into_iter().next().unwrap().body;
 
     let make_runner = |code| async move {
         let (ref module, version) = *PYRUNNER;
@@ -169,7 +172,6 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
     let r1_time = handle_res(Team::Red, err1);
     let r2_time = handle_res(Team::Blue, err2);
 
-    let data = serde_json::to_string(&output)?;
     let winner = match output.winner {
         Some(Team::Red) => Winner::R1,
         Some(Team::Blue) => Winner::R2,
@@ -182,7 +184,7 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
         r1_id: input_data.r1_id,
         r2_time,
         r2_id: input_data.r2_id,
-        data,
+        data: output,
         winner,
         errored,
     };
