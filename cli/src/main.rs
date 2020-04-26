@@ -59,7 +59,9 @@ async fn try_main() -> anyhow::Result<()> {
             task::spawn(proc);
             Ok(TokioRunner::new(stdin, stdout))
         };
+        eprintln!("initializing runners");
         let (r1, r2) = tokio::join!(make_runner()?, make_runner()?);
+        eprintln!("done!");
         run(r1, r2).await
     } else {
         let mut c1 = Command::new(&command);
