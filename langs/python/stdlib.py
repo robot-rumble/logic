@@ -111,10 +111,18 @@ def attack(direction):
     return Action(ActionType.Attack, direction)
 
 def __format_err(exc):
+    loc = None
+    tb = exc.__traceback__
+    while tb:
+        if tb.tb_frame.f_code.co_filename == "<robot>":
+            loc = {
+                "start": (tb.tb_lineno, None),
+                "end": None,
+            }
+        tb = tb.tb_next
     return {
-        # TODO(noah) get exception location
         "message": str(exc),
-        "loc": None
+        "loc": loc,
     }
 
 def __main(state, scope=globals()):
