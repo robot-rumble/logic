@@ -347,9 +347,8 @@ where
         if turn_state.turn % State::SPAWN_EVERY == 0 {
             turn_state.state.spawn_units();
         }
-        turn_state.turn += 1;
 
-        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) =
+        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = async {
             join_all(run_funcs.iter_mut().map(|(&team, runner)| {
                 runner
                     .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
@@ -363,7 +362,9 @@ where
             }))
             .await
             .into_iter()
-            .unzip();
+            .unzip()
+        }
+        .await;
 
         match robot_outputs.into_iter().collect_tuple().unwrap() {
             ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {
@@ -401,6 +402,8 @@ where
                 return handle_program_errors(errored);
             }
         }
+
+        turn_state.turn += 1;
     }
     let winner = turn_state.state.determine_winner();
     MainOutput {
