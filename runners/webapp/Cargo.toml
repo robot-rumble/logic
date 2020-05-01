@@ -9,19 +9,17 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 logic = { path = "../../logic" }
-pyrunner = { path = "../../langs/python" }
-futures = "0.3"
+futures-util = "0.3"
 
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 
-rustpython-vm = { git = "https://github.com/RustPython/RustPython" }
-rustpython-compiler = { git = "https://github.com/RustPython/RustPython" }
-rustpython-parser = { git = "https://github.com/RustPython/RustPython" }
-
-serde = { version = "1.0" }
+serde = "1.0"
+serde_json = "1.0"
 
 console_error_panic_hook = { version = "0.1" }
+async-trait = "0.1"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false # ["-O1"]
