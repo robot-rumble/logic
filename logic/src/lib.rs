@@ -483,6 +483,9 @@ pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement
     }
 }
 
+// LANG RUNNER STUFF
+// TODO(noah): move this to a separate crate
+
 pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
     init: fn(&str) -> Result<F, ProgramError>,
 ) {
@@ -518,4 +521,75 @@ pub fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
         stdout.write(b"\n").unwrap();
         stdout.flush().unwrap();
     }
+}
+
+#[macro_export]
+macro_rules! lang_runner {
+    ($initfn:path) => {
+        fn main() {
+            $crate::lang_main($initfn);
+        }
+        const _: () = {
+            use std::cell::RefCell;
+            use $crate::__exports::serde_json;
+            thread_local! {
+                static CLOSURE: RefCell<Option<Box<dyn FnMut($crate::ProgramInput) -> $crate::ProgramOutput>>> = RefCell::default();
+                static IO_MEM: RefCell<Vec<u8>> = RefCell::default();
+            };
+            #[export_name = "__rr_io_addr"]
+            pub extern "C" fn rr_io_addr() -> usize {
+                IO_MEM.with(|c| c.borrow().as_ptr() as usize)
+            }
+            #[export_name = "__rr_prealloc"]
+            pub extern "C" fn rr_prealloc(len: usize) {
+                IO_MEM.with(|mem| {
+                    let mut mem = mem.borrow_mut();
+                    mem.clear();
+                    mem.reserve(len);
+                })
+            }
+            fn with_mem(f: impl FnOnce(&mut Vec<u8>)) -> usize {
+                IO_MEM.with(|mem| {
+                    let mut mem = mem.borrow_mut();
+                    f(&mut mem);
+                    mem.len()
+                })
+            }
+            #[export_name = "__rr_init"]
+            pub extern "C" fn robot_init() -> usize {
+                with_mem(|mut mem| {
+                    let res = $initfn(std::str::from_utf8(&mem).expect("invalid input utf8"));
+                    let res: Result<(), $crate::ProgramError> = res.map(|closure| {
+                        CLOSURE.with(|c| {
+                            let mut c = c.borrow_mut();
+                            if c.is_some() {
+                                panic!("double init");
+                            }
+                            *c = Some(Box::new(closure));
+                        });
+                    });
+                    mem.clear();
+                    serde_json::to_writer(&mut mem, &res).unwrap();
+                })
+            }
+            #[export_name = "__rr_run_turn"]
+            pub fn __rr_run(input_len: usize) -> usize {
+                with_mem(|mut mem| {
+                    let input: $crate::ProgramInput = serde_json::from_slice(&mem).unwrap();
+                    let output = CLOSURE.with(|c| {
+                        let mut f = c.borrow_mut();
+                        let f = f.as_mut().unwrap();
+                        f(input)
+                    });
+                    mem.clear();
+                    serde_json::to_writer(&mut mem, &output).unwrap();
+                })
+            }
+        };
+    };
+}
+
+#[doc(hidden)]
+pub mod __exports {
+    pub use serde_json;
 }

@@ -58,6 +58,7 @@ pub enum RobotErrorAfterValidation {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValidatedRobotOutput {
     pub action: Result<Action, RobotErrorAfterValidation>,
+    #[serde(default)]
     pub debug_table: DebugTable,
 }
 

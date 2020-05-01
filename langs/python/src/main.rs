@@ -1,3 +1,1 @@
-fn main() {
-    logic::lang_main(pyrunner::init)
-}
+logic::lang_runner!(pyrunner::init);
