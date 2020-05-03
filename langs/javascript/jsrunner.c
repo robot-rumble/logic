@@ -21,8 +21,8 @@ wasm_export(__rr_prealloc) char *prealloc(size_t len)
   if (len > io_buf_len)
   {
     io_buf = realloc(io_buf, len + 1);
-    io_buf_len = len;
   }
+  io_buf_len = len;
   io_buf[len] = '\0';
   return io_buf;
 }
@@ -97,13 +97,14 @@ static JSValue globalThis;
 static void write_json_stringify(JSValue val)
 {
   JSValue json = JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED);
-  RETURN_IF_EXC(json, INTERNAL_ERROR);
+  RETURN_IF_EXC(json, js_std_dump_error(ctx); exit(1));
   size_t plen = 0;
   const char *s = JS_ToCStringLen(ctx, &plen, json);
   JS_FreeValue(ctx, json);
   if (s == NULL)
   {
-    INTERNAL_ERROR;
+    js_std_dump_error(ctx);
+    exit(1);
     return;
   }
   prealloc(plen);
@@ -116,7 +117,7 @@ static void write_err(int init_err)
   JSValue exc = JS_GetException(ctx);
   JSValue ret = JS_Invoke(ctx, globalThis, format_err_atom, init_err ? 3 : 2, (JSValue[]){exc, JS_TRUE, JS_TRUE});
   JS_FreeValue(ctx, exc);
-  RETURN_IF_EXC(ret, INTERNAL_ERROR);
+  RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));
   write_json_stringify(ret);
   JS_FreeValue(ctx, ret);
 }
@@ -133,16 +134,8 @@ static void rr_init(void)
   extern const uint32_t qjsc_stdlib_size;
   js_std_eval_binary(ctx, qjsc_stdlib, qjsc_stdlib_size, 0);
 
-  size_t f_len = 0;
-  char *source = (char *)js_load_file(ctx, &f_len, io_buf);
-  if (!source)
-  {
-    INTERNAL_ERROR;
-    return;
-  }
   // JS_Keys
-  JSValue ret = JS_Eval(ctx, source, f_len, "<robot>", JS_EVAL_TYPE_GLOBAL);
-  js_free(ctx, source);
+  JSValue ret = JS_Eval(ctx, io_buf, io_buf_len, "<robot>", JS_EVAL_TYPE_GLOBAL);
   RETURN_IF_EXC(ret, write_err(1));
   // printf("AAA\n");
   write_buf("{\"Ok\":null}");
@@ -151,9 +144,9 @@ static void rr_init(void)
 static void rr_runturn(void)
 {
   JSValue input = JS_ParseJSON(ctx, io_buf, io_buf_len - 1, "input");
-  RETURN_IF_EXC(input, INTERNAL_ERROR; printf("AAA"));
+  RETURN_IF_EXC(input, js_std_dump_error(ctx); exit(1));
   JSValue ret = JS_Invoke(ctx, globalThis, main_atom, 1, &input);
-  RETURN_IF_EXC(ret, js_std_dump_error(ctx); INTERNAL_ERROR);
+  RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));
   write_json_stringify(ret);
   JS_FreeValue(ctx, ret);
 }

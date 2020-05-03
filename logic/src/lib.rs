@@ -537,15 +537,16 @@ macro_rules! lang_runner {
                 static IO_MEM: RefCell<Vec<u8>> = RefCell::default();
             };
             #[export_name = "__rr_io_addr"]
-            pub extern "C" fn rr_io_addr() -> usize {
-                IO_MEM.with(|c| c.borrow().as_ptr() as usize)
+            pub extern "C" fn rr_io_addr() -> *mut u8 {
+                IO_MEM.with(|c| c.borrow_mut().as_mut_ptr())
             }
             #[export_name = "__rr_prealloc"]
-            pub extern "C" fn rr_prealloc(len: usize) {
+            pub extern "C" fn rr_prealloc(len: usize) -> *mut u8 {
                 IO_MEM.with(|mem| {
                     let mut mem = mem.borrow_mut();
                     mem.clear();
-                    mem.reserve(len);
+                    mem.resize(len, b'\0');
+                    mem.as_mut_ptr()
                 })
             }
             fn with_mem(f: impl FnOnce(&mut Vec<u8>)) -> usize {
@@ -557,9 +558,9 @@ macro_rules! lang_runner {
             }
             #[export_name = "__rr_init"]
             pub extern "C" fn robot_init() -> usize {
-                with_mem(|mut mem| {
-                    let res = $initfn(std::str::from_utf8(&mem).expect("invalid input utf8"));
-                    let res: Result<(), $crate::ProgramError> = res.map(|closure| {
+                with_mem(|mem| {
+                    let source = std::str::from_utf8(&mem).expect("non-utf8 source code");
+                    let res: Result<(), $crate::ProgramError> = $initfn(source).map(|closure| {
                         CLOSURE.with(|c| {
                             let mut c = c.borrow_mut();
                             if c.is_some() {
@@ -569,12 +570,12 @@ macro_rules! lang_runner {
                         });
                     });
                     mem.clear();
-                    serde_json::to_writer(&mut mem, &res).unwrap();
+                    serde_json::to_writer(mem, &res).unwrap();
                 })
             }
             #[export_name = "__rr_run_turn"]
             pub fn __rr_run(input_len: usize) -> usize {
-                with_mem(|mut mem| {
+                with_mem(|mem| {
                     let input: $crate::ProgramInput = serde_json::from_slice(&mem).unwrap();
                     let output = CLOSURE.with(|c| {
                         let mut f = c.borrow_mut();
@@ -582,7 +583,7 @@ macro_rules! lang_runner {
                         f(input)
                     });
                     mem.clear();
-                    serde_json::to_writer(&mut mem, &output).unwrap();
+                    serde_json::to_writer(mem, &output).unwrap();
                 })
             }
         };
