@@ -231,7 +231,7 @@ pub struct BasicObj {
 }
 
 #[derive(Serialize, Deserialize, IntoStaticStr, Debug, Clone)]
-#[serde(untagged)]
+#[serde(tag = "obj_type")]
 pub enum ObjDetails {
     Terrain(Terrain),
     Unit(Unit),

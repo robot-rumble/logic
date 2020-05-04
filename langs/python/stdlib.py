@@ -1,6 +1,7 @@
 import math
 import enum
 
+
 class Coords(tuple):
     def __new__(cls, x, y):
         self = super().__new__(cls, [x, y])
@@ -29,6 +30,18 @@ class Coords(tuple):
     def toward(self, other):
         pass
 
+    def __add__(self, other):
+        if isinstance(other, Direction):
+            dx, dy = {
+                Direction.East: (1, 0),
+                Direction.West: (-1, 0),
+                Direction.South: (0, 1),
+                Direction.North: (0, -1),
+            }[other]
+            return Coords(self.x + dx, self.y + dy)
+        else:
+            return NotImplemented
+
 
 class Team(enum.Enum):
     Red = "Red"
@@ -45,7 +58,17 @@ class Obj:
 
     @property
     def id(self):
-        return Coords(*self.__data["id"])
+        return self.__data["id"]
+
+    def is_unit(self):
+        return self.__data["obj_type"] == "Unit"
+
+    @property
+    def team(self):
+        if self.is_unit():
+            return Team(self.__data["team"])
+        else:
+            return None
 
 
 class State:
@@ -69,11 +92,11 @@ class State:
             raise TypeError("Team must be a Team")
         return self.__data["teams"][team.value]
 
-    def obj_by_loc(self, coord):
-        id = self.id_by_loc(coord)
+    def obj_by_coords(self, coord):
+        id = self.id_by_coords(coord)
         return id and self.obj_by_id(id)
 
-    def id_by_loc(self, coord):
+    def id_by_coords(self, coord):
         xs = self.__data["grid"][coord.x]
         return xs and xs[coord.y]
 
@@ -110,6 +133,7 @@ def move(direction):
 def attack(direction):
     return Action(ActionType.Attack, direction)
 
+
 def __format_err(exc):
     loc = None
     tb = exc.__traceback__
@@ -125,8 +149,10 @@ def __format_err(exc):
         "loc": loc,
     }
 
+
 def __main(state, scope=globals()):
-    import sys, io 
+    import sys, io
+
     oldstdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
     hadstdout, oldstdout = oldstdout
     logbuf = sys.stdout = io.StringIO()
@@ -147,9 +173,7 @@ def __main(state, scope=globals()):
                 "If you choose to define an _init_turn function, it must accept 1 value: the current state."
             )
     except Exception as e:
-        return {
-            "robot_outputs": {"Err": {"InitError": __format_err(e)}}
-        }
+        return {"robot_outputs": {"Err": {"InitError": __format_err(e)}}}
 
     if callable(_init_turn):
         _init_turn(state)
@@ -166,17 +190,12 @@ def __main(state, scope=globals()):
             if not isinstance(action, Action):
                 raise TypeError("Your _robot function must return an Action")
         except Exception as e:
-            result = {
-                "Err": __format_err(e)
-            }
+            result = {"Err": __format_err(e)}
         else:
             result = {
                 "Ok": {"type": action.type.value, "direction": action.direction.value}
             }
-        robot_outputs[id] = {
-            "action": result,
-            "debug_table": debug_table
-        }
+        robot_outputs[id] = {"action": result, "debug_table": debug_table}
 
     if hadstdout:
         sys.stdout = oldstdout
@@ -187,7 +206,4 @@ def __main(state, scope=globals()):
     logs = logbuf.readlines()
     logbuf.close()
 
-    return {
-        "robot_outputs": {"Ok": robot_outputs},
-        "logs": logs
-    }
+    return {"robot_outputs": {"Ok": robot_outputs}, "logs": logs}
