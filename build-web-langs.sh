@@ -8,9 +8,12 @@ optimize() {
     # TODO: remove once we do this in the browser
     wasm_transformer_cli "$1"
 
-    wasm-opt out.wasm -Os -o "../backend/src/runners/$fname"
+    # Do this in order to work around some weird parsing bug in wasm-opt
+    wasm-dis out.wasm -o out.wat
 
-    rm out.wasm
+    wasm-opt out.wat -Os -o "../backend/src/runners/$fname"
+
+    rm out.wasm out.wat
 }
 
 make -C langs/javascript
