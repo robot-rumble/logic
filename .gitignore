@@ -90,3 +90,5 @@ __pycache__/
 
 pkg/
 dist/
+
+/webapp-dist/
