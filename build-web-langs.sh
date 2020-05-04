@@ -2,18 +2,29 @@
 
 cd "$(dirname "$0")"
 
+OPTIMIZE=
+for arg in "$@"; do
+    case "$arg" in
+        --optimize) OPTIMIZE=1; ;;
+    esac
+done
+
 optimize() {
     fname=$(basename "$1")
 
     # TODO: remove once we do this in the browser
     wasm_transformer_cli "$1"
 
-    # Do this in order to work around some weird parsing bug in wasm-opt
-    wasm-dis out.wasm -o out.wat
+    if [[ $OPTIMIZE ]]; then
+        # Do this in order to work around some weird parsing bug in wasm-opt
+        wasm-dis out.wasm -o out.wat
+        wasm-opt out.wat -Os -o out.wasm
+        rm out.wat
+    fi
 
-    wasm-opt out.wat -Os -o "../backend/src/runners/$fname"
+    cp out.wasm "../backend/src/runners/$fname"
 
-    rm out.wasm out.wat
+    rm out.wasm
 }
 
 make -C langs/javascript
