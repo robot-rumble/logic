@@ -31,13 +31,21 @@ function __format_err(err, incl_err = false, init_err = false) {
   return incl_err ? { Err: init_err ? { InitError: e } : e } : e
 }
 
-// // import * as std from "std";
+const East = 'East'
+const West = 'West'
+const South = 'South'
+const North = 'North'
+const directions = [East, West, South, North]
 
-// (function (g) {
-//   const source = std.loadFile(scriptArgs[1]);
-//   print("__rr_init:", JSON.stringify({ Ok: null }));
-//   std.out.flush();
-
-// function convertErr(err) {
-//   }
-// })(globalThis);
+function move(direction) {
+  if (!directions.includes(direction)) {
+    throw new TypeError('Invalid direction!')
+  }
+  return { type: 'Move', direction }
+}
+function attack(direction) {
+  if (!directions.includes(direction)) {
+    throw new TypeError('Invalid direction!')
+  }
+  return { type: 'Attack', direction }
+}
