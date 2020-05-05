@@ -3,7 +3,7 @@ lto = true
 
 [workspace]
 members = [
-    "logic", "cli",
+    "logic",
     "runners/native", "runners/webapp", "runners/lambda", "runners/wasi",
     "langs/python" #, "langs/javascript"
 ]
