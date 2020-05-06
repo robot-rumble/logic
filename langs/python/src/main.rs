@@ -108,3 +108,7 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
 
     Ok(move |input| invoke_main(&main, &input, &vm))
 }
+
+include!("../../lang-common.rs");
+
+lang_runner!(init);
