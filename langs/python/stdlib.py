@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import math
 import enum
 
@@ -207,3 +209,19 @@ def __main(state, scope=globals()):
     logbuf.close()
 
     return {"robot_outputs": {"Ok": robot_outputs}, "logs": logs}
+
+del enum
+
+if __name__ == '__main__':
+    __builtins__.__dict__.update(globals())
+    import sys, json, runpy
+    module = sys.argv[1]
+    module = runpy.run_path(module)
+    print('__rr_init:{"Ok":null}', flush=True)
+    for inp in sys.stdin:
+        # print(inp)
+        inp = json.loads(inp)
+        output = __main(inp, scope=module)
+        sys.stdout.write("__rr_output:")
+        json.dump(output, sys.stdout)
+        print(flush=True)
