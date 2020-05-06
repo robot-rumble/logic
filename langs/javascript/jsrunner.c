@@ -43,13 +43,56 @@ wasm_export(__rr_run_turn) size_t robot_run()
   return io_buf_len;
 }
 
+// modified from js_load_file in quickjs-libc.c
+static uint8_t *load_file(uint8_t *buf, size_t *pbuf_len, const char *filename)
+{
+  FILE *f;
+  size_t buf_len;
+  long lret;
+
+  f = fopen(filename, "rb");
+  if (!f)
+    return NULL;
+  if (fseek(f, 0, SEEK_END) < 0)
+    goto fail;
+  lret = ftell(f);
+  if (lret < 0)
+    goto fail;
+  /* XXX: on Linux, ftell() return LONG_MAX for directories */
+  if (lret == LONG_MAX)
+  {
+    errno = EISDIR;
+    goto fail;
+  }
+  buf_len = lret;
+  if (fseek(f, 0, SEEK_SET) < 0)
+    goto fail;
+  buf = realloc(buf, buf_len + 1);
+  if (!buf)
+    goto fail;
+  if (fread(buf, 1, buf_len, f) != buf_len)
+  {
+    errno = EIO;
+    free(buf);
+  fail:
+    fclose(f);
+    return NULL;
+  }
+  buf[buf_len] = '\0';
+  fclose(f);
+  *pbuf_len = buf_len;
+  return buf;
+}
+
 int main(int argc, char **argv)
 {
   assert(argc > 1);
-  char *fname = argv[1];
-  size_t flen = strlen(fname);
-  prealloc(flen);
-  memcpy(io_buf, fname, flen);
+  io_buf = (char *)load_file((uint8_t *)io_buf, &io_buf_len, argv[1]);
+  if (!io_buf)
+  {
+    fprintf(stderr, "failed to load input file '%s': %s", argv[1], strerror(errno));
+    exit(1);
+  }
 
   rr_init();
 
@@ -58,8 +101,6 @@ int main(int argc, char **argv)
 
   while (getline(&io_buf, &io_buf_len, stdin) != -1)
   {
-    io_buf = realloc(io_buf, io_buf_len + 1);
-    io_buf[io_buf_len] = '\0';
     // printf("%.*s\n", (int)io_buf_len, io_buf);
     robot_run();
     printf("__rr_output:%.*s\n", (int)io_buf_len, io_buf);
