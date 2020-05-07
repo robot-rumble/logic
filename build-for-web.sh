@@ -15,26 +15,20 @@ done
 copy_lang() {
     fname=$(basename "$1")
 
-    tmpd=$(mktemp -d)
     inf=$(realpath "$1")
 
-    pushd "$tmpd"
-
-    # TODO: remove once we do this in the browser
-    wasm_transformer_cli "$inf"
+    # # TODO: remove once we do this in the browser
+    # wasm_transformer_cli "$inf"
 
     if [[ $OPTIMIZE ]]; then
         # Do this in order to work around some weird parsing bug in wasm-opt
-        wasm-dis out.wasm -o out.wat
-        wasm-opt out.wat -Os -o out.wasm
+        wasm-dis "$1" -o "$basename.wat"
+        wasm-opt "$basename.wat" -Os -o "$1"
+        rm "$basename.wat"
     fi
 
     mkdir -p "$OUTDIR/runners"
-    cp out.wasm "$OUTDIR/runners/$fname"
-
-    popd
-
-    rm -rf "$tmpd"
+    cp "$1" "$OUTDIR/runners/$fname"
 }
 
 BOLD=$(printf '\033[1m')
