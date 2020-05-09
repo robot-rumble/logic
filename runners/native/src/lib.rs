@@ -10,7 +10,9 @@ pub struct TokioRunner<W: AsyncWrite, R: AsyncBufRead> {
     stdout: R,
 }
 
-impl TokioRunner<io::BufWriter<ChildStdin>, io::BufReader<ChildStdout>> {
+pub type CommandRunner = TokioRunner<io::BufWriter<ChildStdin>, io::BufReader<ChildStdout>>;
+
+impl CommandRunner {
     pub async fn new_cmd(mut command: Command) -> Result<Self, ProgramError> {
         let mut proc = command
             .stdin(Stdio::piped())

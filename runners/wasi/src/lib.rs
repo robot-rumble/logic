@@ -1,4 +1,3 @@
-use futures::stream::Stream;
 use pin_project_lite::pin_project;
 use std::future::Future;
 use std::io::Cursor;
@@ -7,7 +6,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::task::{Context, Poll};
 use tokio::prelude::*;
-use tokio::stream::StreamExt;
 use tokio::sync::mpsc;
 use tokio::{io, task};
 use wasmer_runtime::{error::CallError, Instance};
@@ -27,17 +25,17 @@ type Buf = Cursor<Vec<u8>>;
 type StdinInner = io::Result<Buf>;
 tokio::task_local! {
     static STDIN: Arc<Mutex<io::StreamReader<mpsc::Receiver<StdinInner>, Buf>>>;
-    static STDOUT: Arc<Mutex<mpsc::Sender<Vec<u8>>>>;
-    static STDERR: Arc<Mutex<mpsc::Sender<Vec<u8>>>>;
+    static STDOUT: Arc<Mutex<mpsc::Sender<StdinInner>>>;
+    static STDERR: Arc<Mutex<mpsc::Sender<StdinInner>>>;
 }
 
 pin_project! {
-    struct MpscWriter {
+    pub struct WasiStdinWriter {
         tx: Option<mpsc::Sender<StdinInner>>,
     }
 }
 
-impl AsyncWrite for MpscWriter {
+impl AsyncWrite for WasiStdinWriter {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context, buf: &[u8]) -> Poll<io::Result<usize>> {
         let this = self.project();
         let tx = match this.tx {
@@ -70,15 +68,28 @@ impl AsyncWrite for MpscWriter {
     }
 }
 
-fn mpsc_reader(rx: impl Stream<Item = Vec<u8>>) -> impl AsyncRead {
-    io::stream_reader(rx.map(|b| Ok(Cursor::new(b))))
+pin_project! {
+    pub struct WasiStdoutReader {
+        #[pin]
+        inner: io::StreamReader<mpsc::Receiver<StdinInner>, Buf>,
+    }
+}
+
+impl AsyncRead for WasiStdoutReader {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        self.project().inner.poll_read(cx, buf)
+    }
 }
 
 pin_project! {
     pub struct WasiProcess {
         in_tx: Option<mpsc::Sender<StdinInner>>,
-        out_rx: Option<mpsc::Receiver<Vec<u8>>>,
-        err_rx: Option<mpsc::Receiver<Vec<u8>>>,
+        out_rx: Option<mpsc::Receiver<StdinInner>>,
+        err_rx: Option<mpsc::Receiver<StdinInner>>,
         handle: futures::future::BoxFuture<'static, Result<(), CallError>>,
     }
 }
@@ -106,14 +117,18 @@ impl WasiProcess {
         }
     }
 
-    pub fn take_stdin(&mut self) -> Option<impl AsyncWrite> {
-        self.in_tx.take().map(|tx| MpscWriter { tx: Some(tx) })
+    pub fn take_stdin(&mut self) -> Option<WasiStdinWriter> {
+        self.in_tx.take().map(|tx| WasiStdinWriter { tx: Some(tx) })
     }
-    pub fn take_stdout(&mut self) -> Option<impl AsyncRead> {
-        self.out_rx.take().map(mpsc_reader)
+    pub fn take_stdout(&mut self) -> Option<WasiStdoutReader> {
+        self.out_rx.take().map(|rx| WasiStdoutReader {
+            inner: io::stream_reader(rx),
+        })
     }
-    pub fn take_stderr(&mut self) -> Option<impl AsyncRead> {
-        self.err_rx.take().map(mpsc_reader)
+    pub fn take_stderr(&mut self) -> Option<WasiStdoutReader> {
+        self.err_rx.take().map(|rx| WasiStdoutReader {
+            inner: io::stream_reader(rx),
+        })
     }
 }
 

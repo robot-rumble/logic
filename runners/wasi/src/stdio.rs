@@ -1,6 +1,6 @@
 use futures::executor::block_on;
 use serde::{Deserialize, Serialize};
-use std::io::{prelude::*, SeekFrom};
+use std::io::{prelude::*, Cursor, SeekFrom};
 use tokio::io;
 use tokio::prelude::*;
 use wasmer_wasi::{
@@ -123,7 +123,7 @@ impl Write for Stdout {
             let stdout = STDOUT.with(Clone::clone);
             let mut stdout = stdout.lock().unwrap();
             stdout
-                .send(buf.to_owned())
+                .send(Ok(Cursor::new(buf.to_owned())))
                 .await
                 .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
             Ok(buf.len())
@@ -203,7 +203,7 @@ impl Write for Stderr {
             let stderr = STDERR.with(Clone::clone);
             let mut stderr = stderr.lock().unwrap();
             stderr
-                .send(buf.to_owned())
+                .send(Ok(Cursor::new(buf.to_owned())))
                 .await
                 .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
             Ok(buf.len())
