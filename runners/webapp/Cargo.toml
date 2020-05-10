@@ -8,7 +8,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-logic = { path = "../../logic" }
+logic = { path = "../../logic", features = ["robot-runner-not-send"] }
 futures-util = "0.3"
 
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
