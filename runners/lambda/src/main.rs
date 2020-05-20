@@ -15,7 +15,7 @@ use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
 
 use wasi_runner::WasiProcess;
-use wasmer_runtime::Module;
+use wasmer_runtime::Module as WasmModule;
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
 /*
@@ -56,8 +56,10 @@ struct LambdaInputRecord {
 struct Input {
     r1_id: usize,
     r1_code: String,
+    r1_lang: Lang,
     r2_id: usize,
     r2_code: String,
+    r2_lang: Lang,
 }
 
 #[derive(Serialize)]
@@ -81,12 +83,35 @@ struct Output {
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-static PYRUNNER: Lazy<(Module, WasiVersion)> = Lazy::new(|| {
-    let pyrunner_wasm = include_bytes!("../../../webapp-dist/runners/pyrunner.wasm");
-    let module = wasmer_runtime::compile(pyrunner_wasm).expect("pyrunner is invalid wasm");
-    let version = wasmer_wasi::get_wasi_version(&module, true).unwrap();
-    (module, version)
-});
+// TODO: deduplicate with cli somehow
+#[derive(Copy, Clone, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+enum Lang {
+    Python,
+    Javascript,
+}
+impl Lang {
+    fn get_wasm(self) -> (&'static WasmModule, WasiVersion) {
+        macro_rules! compiled_runner {
+            ($name:literal) => {{
+                static MODULE: Lazy<(WasmModule, WasiVersion)> = Lazy::new(|| {
+                    let wasm = include_bytes!(concat!("../../../webapp-dist/runners/", $name));
+                    let module = wasmer_runtime::compile(wasm)
+                        .expect(concat!("couldn't compile wasm module ", $name));
+                    let version = wasmer_wasi::get_wasi_version(&module, false)
+                        .unwrap_or(WasiVersion::Latest);
+                    (module, version)
+                });
+                let (module, version) = &*MODULE;
+                (module, *version)
+            }};
+        }
+        match self {
+            Self::Python => compiled_runner!("pyrunner.wasm"),
+            Self::Javascript => compiled_runner!("jsrunner.wasm"),
+        }
+    }
+}
 
 fn make_state(code: String) -> WasiState {
     use wasmer_wasi::state;
@@ -128,8 +153,8 @@ async fn main() -> Result<(), Error> {
 async fn run(data: LambdaInput) -> Result<(), Error> {
     let input_data = data.records.into_iter().next().unwrap().body;
 
-    let make_runner = |code| async move {
-        let (ref module, version) = *PYRUNNER;
+    let make_runner = |code, lang: Lang| async move {
+        let (module, version) = lang.get_wasm();
         let state = make_state(code);
         let imports = wasmer_wasi::generate_import_object_from_state(state, version);
         let instance = module.instantiate(&imports).unwrap();
@@ -150,8 +175,8 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
     };
 
     let ((r1, t1), (r2, t2)) = tokio::join!(
-        make_runner(input_data.r1_code),
-        make_runner(input_data.r2_code),
+        make_runner(input_data.r1_code, input_data.r1_lang),
+        make_runner(input_data.r2_code, input_data.r2_lang),
     );
 
     let run_fut = logic::run(r1, r2, |_| {}, TURN_COUNT);
