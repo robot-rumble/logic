@@ -82,7 +82,7 @@ struct Output {
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 static PYRUNNER: Lazy<(Module, WasiVersion)> = Lazy::new(|| {
-    let pyrunner_wasm = include_bytes!("../../../target/wasm32-wasi/release/pyrunner.wasm");
+    let pyrunner_wasm = include_bytes!("../../../webapp-dist/runners/pyrunner.wasm");
     let module = wasmer_runtime::compile(pyrunner_wasm).expect("pyrunner is invalid wasm");
     let version = wasmer_wasi::get_wasi_version(&module, true).unwrap();
     (module, version)

@@ -2,8 +2,16 @@
 
 set -e
 
-# $1 specifies the cargo build folder
-pushd $1
+cd "$(dirname "$0")"
+
+if [[ $# -gt 0 ]]; then
+    target_dir=$1
+else
+    cargo build --release
+    target_dir=$(cargo metadata --format-version=1 | jq -r .target_directory)/release
+fi
+
+pushd "$target_dir"
 cp lambda bootstrap
 zip lambda.zip bootstrap
 rm bootstrap

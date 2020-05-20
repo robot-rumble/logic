@@ -6,9 +6,11 @@ OUTDIR="$PWD"/webapp-dist
 mkdir -p "$OUTDIR"
 
 OPTIMIZE=
+RUNNERS_ONLY=
 for arg in "$@"; do
     case "$arg" in
         --optimize) OPTIMIZE=1; ;;
+        --runners-only|-r) RUNNERS_ONLY=1
     esac
 done
 
@@ -42,11 +44,13 @@ prepend() {
 
 pids=()
 
-{
-    wasm-pack build runners/webapp
-    cp -r runners/webapp/pkg "$OUTDIR/logic"
-} 2>&1 | prepend logic: &
-pids+=($!)
+if [[ ! $RUNNERS_ONLY ]]; then
+    {
+        wasm-pack build runners/webapp
+        cp -r runners/webapp/pkg "$OUTDIR/logic"
+    } 2>&1 | prepend logic: &
+    pids+=($!)
+fi
 
 {
     make -C langs/javascript
