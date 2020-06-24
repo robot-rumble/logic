@@ -16,6 +16,9 @@ use wasi_runner::WasiProcess;
 use wasmer_runtime::Module as WasmModule;
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 /*
 SAMPLE EVENT
 {
