@@ -9,7 +9,7 @@ use std::cell::Cell;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use logic::{ProgramError, Team};
+use logic::{CallbackInput, ProgramError, Team};
 use native_runner::TokioRunner;
 use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
@@ -41,9 +41,8 @@ SAMPLE EVENT
 */
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct LambdaInput {
-    records: Vec<LambdaInputRecord>,
+    Records: Vec<LambdaInputRecord>,
 }
 
 #[derive(Deserialize)]
@@ -55,9 +54,11 @@ struct LambdaInputRecord {
 #[derive(Deserialize)]
 struct Input {
     r1_id: usize,
+    pr1_id: usize,
     r1_code: String,
     r1_lang: Lang,
     r2_id: usize,
+    pr2_id: usize,
     r2_code: String,
     r2_lang: Lang,
 }
@@ -72,8 +73,10 @@ enum Winner {
 #[derive(Serialize)]
 struct Output {
     r1_id: usize,
+    pr1_id: usize,
     r1_time: f64,
     r2_id: usize,
+    pr2_id: usize,
     r2_time: f64,
     #[serde(with = "serde_with::json::nested")]
     data: logic::MainOutput,
@@ -85,7 +88,6 @@ type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 // TODO: deduplicate with cli somehow
 #[derive(Copy, Clone, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
 enum Lang {
     Python,
     Javascript,
@@ -151,7 +153,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run(data: LambdaInput) -> Result<(), Error> {
-    let input_data = data.records.into_iter().next().unwrap().body;
+    let input_data = data.Records.into_iter().next().unwrap().body;
 
     let make_runner = |code, lang: Lang| async move {
         let (module, version) = lang.get_wasm();
@@ -206,10 +208,12 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
     let errored = !output.errors.is_empty();
 
     let output = Output {
-        r1_time,
         r1_id: input_data.r1_id,
-        r2_time,
+        pr1_id: input_data.pr1_id,
+        r1_time,
         r2_id: input_data.r2_id,
+        pr2_id: input_data.pr2_id,
+        r2_time,
         data: output,
         winner,
         errored,
