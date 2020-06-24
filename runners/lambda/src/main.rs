@@ -4,12 +4,10 @@
 use rusoto_core::Region;
 use rusoto_sqs::{SendMessageRequest, Sqs, SqsClient};
 
-use std::cell::Cell;
-
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use logic::{CallbackInput, ProgramError, Team};
+use logic::{ProgramError, Team};
 use native_runner::TokioRunner;
 use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
@@ -115,34 +113,25 @@ impl Lang {
     }
 }
 
-fn make_state(code: String) -> WasiState {
-    use wasmer_wasi::state;
-    let code = Cell::new(code);
+// from cli/main.rs -- TODO: deduplicate
+fn make_sourcedir_inline(source: &str) -> tempfile::TempDir {
+    let sourcedir = tempfile::tempdir().expect("couldn't create temporary directory");
+    std::fs::write(sourcedir.path().join("sourcecode"), source)
+        .expect("Couldn't write code to disk");
+    sourcedir
+}
+
+fn make_state(code: &str) -> (WasiState, tempfile::TempDir) {
+    let tempdir = make_sourcedir_inline(code);
     let mut state = WasiState::new("robot");
     wasi_runner::add_stdio(&mut state);
-    state.arg("/sourcecode").setup_fs(Box::new(move |fs| {
-        let fd = fs
-            .open_file_at(
-                state::VIRTUAL_ROOT_FD,
-                Box::new(state::Stdin),
-                0,
-                "sourcecode".to_owned(),
-                state::ALL_RIGHTS,
-                state::ALL_RIGHTS,
-                0x10, // all rights, all bits 0..=4
-            )
-            .unwrap();
-        let code = code.take();
-        let kind = state::Kind::Buffer {
-            buffer: code.into_bytes(),
-        };
-        let stat = fs.get_stat_for_kind(&kind).unwrap();
-        let inode = fs.get_inodeval_mut(fd).unwrap();
-        inode.stat = stat;
-        inode.kind = kind;
-        Ok(())
-    }));
-    state.build().unwrap()
+    let state = state
+        .preopen(|p| p.directory(&tempdir).alias("source").read(true))
+        .expect("preopen failed")
+        .arg("/source/sourcecode")
+        .build()
+        .unwrap();
+    (state, tempdir)
 }
 
 #[tokio::main]
@@ -157,7 +146,7 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
 
     let make_runner = |code, lang: Lang| async move {
         let (module, version) = lang.get_wasm();
-        let state = make_state(code);
+        let (state, sourcedir) = make_state(code);
         let imports = wasmer_wasi::generate_import_object_from_state(state, version);
         let instance = module.instantiate(&imports).unwrap();
         let mut proc = WasiProcess::spawn(instance);
@@ -173,12 +162,12 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
             };
             (start_t.elapsed(), res)
         });
-        (TokioRunner::new(stdin, stdout).await, t)
+        (TokioRunner::new(stdin, stdout).await, t, sourcedir)
     };
 
-    let ((r1, t1), (r2, t2)) = tokio::join!(
-        make_runner(input_data.r1_code, input_data.r1_lang),
-        make_runner(input_data.r2_code, input_data.r2_lang),
+    let ((r1, t1, _d1), (r2, t2, _d2)) = tokio::join!(
+        make_runner(&input_data.r1_code, input_data.r1_lang),
+        make_runner(&input_data.r2_code, input_data.r2_lang),
     );
 
     let run_fut = logic::run(r1, r2, |_| {}, TURN_COUNT);

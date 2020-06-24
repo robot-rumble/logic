@@ -5,12 +5,12 @@ authors = ["Anton <antonoutkine@gmail.com>", "Noah <33094578+coolreader18@users.
 edition = "2018"
 
 [dependencies]
-tokio = { version = "0.2", features = ["sync", "io-util", "stream", "rt-core", "blocking", "rt-util", "rt-threaded"] }
-pin-project-lite = "0.1"
-futures = "0.3"
+tokio = { version = "0.2.21", features = ["sync", "io-util", "stream", "rt-core", "blocking", "rt-util", "rt-threaded"] }
+pin-project-lite = "0.1.7"
+futures = "0.3.5"
 
-wasmer-runtime = "0.16"
-wasmer-wasi = "0.16"
-typetag = "0.1"
+wasmer-runtime = "0.17.0"
+wasmer-wasi = "0.17.0"
+typetag = "0.1.5"
 
-serde = "1.0"
+serde = "1.0.114"
