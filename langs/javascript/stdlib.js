@@ -243,14 +243,14 @@ function __main (stateData) {
   const state = new State(stateData)
 
   try {
-    __validateFunction(globalThis._robot, 3, true)
-    __validateFunction(globalThis._initTurn, 1, true)
+    __validateFunction(globalThis.robot, 3, true)
+    __validateFunction(globalThis.initTurn, 1, true)
   } catch (e) {
     return {"robot_outputs": {"Err": {"InitError": __format_err(e)}}}
   }
 
-  if (typeof globalThis._initTurn === 'function') {
-    globalThis._initTurn(state)
+  if (typeof globalThis.initTurn === 'function') {
+    globalThis.initTurn(state)
   }
 
   const robotOutputs = {}
@@ -263,7 +263,7 @@ function __main (stateData) {
 
     let result
     try {
-      result = { Ok: globalThis._robot(stateData, state.objById(id), debug) }
+      result = { Ok: globalThis.robot(stateData, state.objById(id), debug) }
     } catch (e) {
       result = { Err: __format_err(e) }
     }
