@@ -71,15 +71,15 @@ class Coords {
     return `(${this.x}, ${this.y})`
   }
 
-  distance (other) {
+  distanceTo (other) {
     return Math.sqrt((other.x - this.x) ** 2 + (other.y - this.y) ** 2)
   }
 
-  walkingDistance (other) {
+  walkingDistanceTo (other) {
     return Math.abs(other.x - this.x) + Math.abs(other.y - this.y)
   }
 
-  towards (other) {
+  directionTo (other) {
     const diff = this.sub(other)
     const angle = Math.atan2(diff.y, diff.x)
     if (Math.abs(angle) > Math.PI / 4) {
