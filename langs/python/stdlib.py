@@ -49,16 +49,16 @@ class Coords(tuple):
     def y(self):
         return self[1]
 
-    def distance(self, other):
+    def distance_to(self, other):
         return math.sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
 
-    def walking_distance(self, other):
+    def walking_distance_to(self, other):
         return abs(other.x - self.x) + abs(other.y - self.y)
 
     def coords_around(self):
         [self + direction for direction in Direction]
 
-    def towards(self, other):
+    def direction_to(self, other):
         diff = other - self
         angle = math.atan2(diff.y, diff.x)
         if abs(angle) > math.pi / 4:
