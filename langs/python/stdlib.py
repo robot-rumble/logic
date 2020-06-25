@@ -211,13 +211,13 @@ def __main(state, scope=globals()):
 
     state = State(state)
     try:
-        _robot = __validate_function("_robot", 3, True)
-        _init_turn = __validate_function("_init_turn", 1, False)
+        robot = __validate_function("robot", 3, True)
+        init_turn = __validate_function("init_turn", 1, False)
     except Exception as e:
         return {"robot_outputs": {"Err": {"InitError": __format_err(e)}}}
 
-    if callable(_init_turn):
-        _init_turn(state)
+    if callable(init_turn):
+        init_turn(state)
 
     robot_outputs = {}
     for id in state.ids_by_team(state.our_team):
@@ -227,9 +227,9 @@ def __main(state, scope=globals()):
             debug_table[key] = str(val)
 
         try:
-            action = _robot(state, state.obj_by_id(id), debug)
+            action = robot(state, state.obj_by_id(id), debug)
             if not isinstance(action, Action):
-                raise TypeError("Your _robot function must return an Action")
+                raise TypeError("Your robot function must return an Action")
         except Exception as e:
             result = {"Err": __format_err(e)}
         else:
