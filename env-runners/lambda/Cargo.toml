@@ -26,7 +26,7 @@ wasmer-wasi = "0.17.0"
 # x86_64-unknown-linux-musl using the "vendored" feature below
 openssl-sys = "0.9.58"
 tempfile = "3.1.0"
-jemallocator = "0.3.2"
+mimalloc = "0.1.19"
 
 [features]
 # Force openssl-sys to staticly link in the openssl library. Necessary when

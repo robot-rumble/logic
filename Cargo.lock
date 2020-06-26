@@ -364,6 +364,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmake"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "console_error_panic_hook"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -795,12 +804,6 @@ name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
-
-[[package]]
-name = "fs_extra"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f2a4a2034423744d2cc7ca2068453168dcdb82c438419e639a26bd87839c674"
 
 [[package]]
 name = "fuchsia-cprng"
@@ -1256,27 +1259,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
-name = "jemalloc-sys"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d3b9f3f5c9b31aa0f5ed3260385ac205db665baa41d49bb8338008ae94ede45"
-dependencies = [
- "cc",
- "fs_extra",
- "libc",
-]
-
-[[package]]
-name = "jemallocator"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43ae63fcfc45e99ab3d1b29a46782ad679e98436c3169d15a167a1108a724b69"
-dependencies = [
- "jemalloc-sys",
- "libc",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1366,9 +1348,9 @@ dependencies = [
 name = "lambda-runner"
 version = "0.1.0"
 dependencies = [
- "jemallocator",
  "lambda",
  "logic",
+ "mimalloc",
  "native-runner",
  "once_cell",
  "openssl-sys",
@@ -1419,6 +1401,15 @@ name = "libc"
 version = "0.2.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
+
+[[package]]
+name = "libmimalloc-sys"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a27252ec1d0c4e0dd6142cbc572da50b363ab56fc334f7aa8fadf295b2e24e74"
+dependencies = [
+ "cmake",
+]
 
 [[package]]
 name = "libz-sys"
@@ -1555,6 +1546,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4fc2c02a7e374099d4ee95a193111f72d2110197fe200272371758f6c3643d8"
 dependencies = [
  "autocfg 1.0.0",
+]
+
+[[package]]
+name = "mimalloc"
+version = "0.1.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c52de2069999f01bd26436564dbe7de3a87898feeb7a0d0ff9eb20a05bb7ca0"
+dependencies = [
+ "libmimalloc-sys",
 ]
 
 [[package]]
