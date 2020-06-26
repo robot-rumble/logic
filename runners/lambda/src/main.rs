@@ -8,7 +8,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use logic::{ProgramError, Team};
-use native_runner::TokioRunner;
+use runners_common::TokioRunner;
 use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
 
@@ -86,35 +86,6 @@ struct Output {
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-
-// TODO: deduplicate with cli somehow
-#[derive(Copy, Clone, Deserialize)]
-enum Lang {
-    Python,
-    Javascript,
-}
-impl Lang {
-    fn get_wasm(self) -> (&'static WasmModule, WasiVersion) {
-        macro_rules! compiled_runner {
-            ($name:literal) => {{
-                static MODULE: Lazy<(WasmModule, WasiVersion)> = Lazy::new(|| {
-                    let wasm = include_bytes!(concat!("../../../webapp-dist/runners/", $name));
-                    let module = wasmer_runtime::compile(wasm)
-                        .expect(concat!("couldn't compile wasm module ", $name));
-                    let version = wasmer_wasi::get_wasi_version(&module, false)
-                        .unwrap_or(WasiVersion::Latest);
-                    (module, version)
-                });
-                let (module, version) = &*MODULE;
-                (module, *version)
-            }};
-        }
-        match self {
-            Self::Python => compiled_runner!("pyrunner.wasm"),
-            Self::Javascript => compiled_runner!("jsrunner.wasm"),
-        }
-    }
-}
 
 // from cli/main.rs -- TODO: deduplicate
 fn make_sourcedir_inline(source: &str) -> tempfile::TempDir {

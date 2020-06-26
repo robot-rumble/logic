@@ -1,0 +1,12 @@
+{
+  "repository": {},
+  "license": "MIT",
+  "dependencies": {
+    "@wasmer/wasi": "^0.10.2",
+    "@wasmer/wasm-transformer": "^0.10.2",
+    "@wasmer/wasmfs": "^0.10.2",
+    "comlink": "^4.3.0",
+    "wasm-feature-detect": "^1.2.3"
+  },
+  "version": "0.0.0"
+}

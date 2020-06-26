@@ -5,26 +5,39 @@ use tokio::process::{ChildStdin, ChildStdout, Command};
 
 use logic::{ProgramError, RunnerError};
 
+#[derive(Copy, Clone, Deserialize)]
+pub enum Lang {
+    Python,
+    Javascript,
+}
+impl Lang {
+    fn get_wasm(self) -> (&'static WasmModule, WasiVersion) {
+        macro_rules! compiled_runner {
+            ($name:literal) => {{
+                static MODULE: Lazy<(WasmModule, WasiVersion)> = Lazy::new(|| {
+                    let wasm = include_bytes!(concat!("../../../webapp-dist/runners/", $name));
+                    let module = wasmer_runtime::compile(wasm)
+                        .expect(concat!("couldn't compile wasm module ", $name));
+                    let version = wasmer_wasi::get_wasi_version(&module, false)
+                        .unwrap_or(WasiVersion::Latest);
+                    (module, version)
+                });
+                let (module, version) = &*MODULE;
+                (module, *version)
+            }};
+        }
+        match self {
+            Self::Python => compiled_runner!("pyrunner.wasm"),
+            Self::Javascript => compiled_runner!("jsrunner.wasm"),
+        }
+    }
+}
+
 pub struct TokioRunner<W: AsyncWrite, R: AsyncBufRead> {
     stdin: W,
     stdout: R,
 }
 
-pub type CommandRunner = TokioRunner<io::BufWriter<ChildStdin>, io::BufReader<ChildStdout>>;
-
-impl CommandRunner {
-    pub async fn new_cmd(mut command: Command) -> Result<Self, ProgramError> {
-        let mut proc = command
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to spawn child process");
-
-        let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
-        let stdout = io::BufReader::new(proc.stdout.take().unwrap());
-        Self::new(stdin, stdout).await
-    }
-}
 impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W, R> {
     pub async fn new(stdin: W, mut stdout: R) -> Result<Self, ProgramError> {
         let line: String = (&mut stdout)
