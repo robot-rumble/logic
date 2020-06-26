@@ -7,6 +7,7 @@ cd "$(dirname "$0")"
 if [[ $# -gt 0 ]]; then
     target_dir=$1
 else
+    unset OPENSSL_NO_VENDOR
     cargo build --target=x86_64-unknown-linux-musl --features vendored --release
     target_dir=$(cargo metadata --format-version=1 | jq -r .target_directory)/x86_64-unknown-linux-musl/release
 fi
