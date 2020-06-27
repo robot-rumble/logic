@@ -12,7 +12,7 @@ use native_runner::TokioRunner;
 use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
 
-use wasi_runner::WasiProcess;
+use wasi_process::WasiProcess;
 use wasmer_runtime::Module as WasmModule;
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
@@ -127,7 +127,7 @@ fn make_sourcedir_inline(source: &str) -> tempfile::TempDir {
 fn make_state(code: &str) -> (WasiState, tempfile::TempDir) {
     let tempdir = make_sourcedir_inline(code);
     let mut state = WasiState::new("robot");
-    wasi_runner::add_stdio(&mut state);
+    wasi_process::add_stdio(&mut state);
     let state = state
         .preopen(|p| p.directory(&tempdir).alias("source").read(true))
         .expect("preopen failed")
@@ -152,10 +152,10 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
         let (state, sourcedir) = make_state(code);
         let imports = wasmer_wasi::generate_import_object_from_state(state, version);
         let instance = module.instantiate(&imports).unwrap();
-        let mut proc = WasiProcess::spawn(instance);
-        let stdin = io::BufWriter::new(proc.take_stdin().unwrap());
-        let stdout = io::BufReader::new(proc.take_stdout().unwrap());
-        proc.take_stderr();
+        let mut proc = WasiProcess::new(instance);
+        let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
+        let stdout = io::BufReader::new(proc.stdout.take().unwrap());
+        proc.stdout.take();
         let t = task::spawn(async move {
             let start_t = Instant::now();
             let res = match time::timeout(TIMEOUT, proc).await {

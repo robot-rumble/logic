@@ -1369,7 +1369,7 @@ dependencies = [
  "serde_with",
  "tempfile",
  "tokio",
- "wasi-runner",
+ "wasi-process",
  "wasmer-runtime",
  "wasmer-wasi",
 ]
@@ -3680,8 +3680,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
-name = "wasi-runner"
+name = "wasi-process"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6545a5e6669b7bf23384b4870dfb44059a0853e56112284927cc6cccf7d064db"
 dependencies = [
  "futures",
  "pin-project-lite",
