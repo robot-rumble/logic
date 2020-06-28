@@ -3,11 +3,11 @@
 // https://2ality.com/2020/01/enum-pattern.html
 // https://github.com/rauschma/enumify/blob/master/ts/src/index.ts
 class Enum {
-  static closeEnum () {
+  static closeEnum() {
     const enumValues = []
 
     for (const [name, staticInstance] of Object.entries(this)) {
-      staticInstance.value = name
+      staticInstance.enumKey = name
       staticInstance.ordinal = enumValues.length
       enumValues.push(staticInstance)
     }
@@ -16,25 +16,23 @@ class Enum {
     this.enumValues = enumValues
   }
 
-  static valueOf (str) {
+  static valueOf(str) {
     return this.enumValues.find(val => val.enumKey === str)
   }
 
   // INSTANCE
 
-  toString () {
+  toString() {
     return `${this.constructor.name}.${this.enumKey}`
+  }
+
+  toJSON() {
+    return this.enumKey
   }
 }
 
 class Direction extends Enum {
-  static East = new Direction()
-  static West = new Direction()
-  static South = new Direction()
-  static North = new Direction()
-  static _ = this.closeEnum()
-
-  get opposite () {
+  get opposite() {
     switch (this) {
       case Direction.East:
         return Direction.West
@@ -47,7 +45,7 @@ class Direction extends Enum {
     }
   }
 
-  get toCoords () {
+  get toCoords() {
     switch (this) {
       case Direction.East:
         return new Coords(1, 0)
@@ -60,26 +58,31 @@ class Direction extends Enum {
     }
   }
 }
+Direction.East = new Direction()
+Direction.West = new Direction()
+Direction.South = new Direction()
+Direction.North = new Direction()
+Direction.closeEnum()
 
 class Coords {
-  constructor (x, y) {
+  constructor(x, y) {
     this.x = x
     this.y = y
   }
 
-  toString () {
+  toString() {
     return `(${this.x}, ${this.y})`
   }
 
-  distanceTo (other) {
+  distanceTo(other) {
     return Math.sqrt((other.x - this.x) ** 2 + (other.y - this.y) ** 2)
   }
 
-  walkingDistanceTo (other) {
+  walkingDistanceTo(other) {
     return Math.abs(other.x - this.x) + Math.abs(other.y - this.y)
   }
 
-  directionTo (other) {
+  directionTo(other) {
     const diff = this.sub(other)
     const angle = Math.atan2(diff.y, diff.x)
     if (Math.abs(angle) > Math.PI / 4) {
@@ -91,131 +94,128 @@ class Coords {
     }
   }
 
-  add (other) {
+  add(other) {
     return new Coords(this.x + other.x, this.y + other.y)
   }
 
-  sub (other) {
+  sub(other) {
     return new Coords(this.x - other.x, this.y - other.y)
   }
 
-  mul (n) {
+  mul(n) {
     return new Coords(this.x * n, this.y * n)
   }
 }
 
 class Team extends Enum {
-  static Red = new Team()
-  static Blue = new Team()
-  static _ = this.closeEnum()
-
-  get opposite () {
+  get opposite() {
     if (this === Team.Red) {
       return Team.Blue
     } else return Team.Red
   }
 }
+Team.Red = new Team()
+Team.Blue = new Team()
+Team.closeEnum()
 
-class ObjType extends Enum {
-  static Unit = new ObjType()
-  static Terrain = new ObjType()
-  static _ = this.closeEnum()
-}
+class ObjType extends Enum {}
+ObjType.Unit = new ObjType()
+ObjType.Terrain = new ObjType()
+ObjType.closeEnum()
 
 class Obj {
-  constructor (obj) {
+  constructor(obj) {
     this.__data = obj
   }
 
-  get coords () {
-    return new Coords(...this.__data['coords'])
+  get coords() {
+    return new Coords(...this.__data.coords)
   }
 
-  get id () {
-    return this.__data['id']
+  get id() {
+    return this.__data.id
   }
 
-  get objType () {
-    return ObjType.valueOf(this.__data['obj_type'])
+  get objType() {
+    return ObjType.valueOf(this.__data.obj_type)
   }
 
-  get team () {
+  get team() {
     if (this.objType === ObjType.Unit) {
-      return Team.valueOf(this.__data['team'])
+      return Team.valueOf(this.__data.team)
     }
   }
 
-  get health () {
+  get health() {
     if (this.objType === ObjType.Unit) {
-      return this.__data['health']
+      return this.__data.health
     }
   }
 }
 
 class State {
-  constructor (state) {
+  constructor(state) {
     this.__data = state
   }
 
-  get turnNum () {
-    return this.__data['turnNum']
+  get turnNum() {
+    return this.__data.turnNum
   }
 
-  get ourTeam () {
-    return Team.valueOf(this.__data['team'])
+  get ourTeam() {
+    return Team.valueOf(this.__data.team)
   }
 
-  get otherTeam () {
+  get otherTeam() {
     return this.ourTeam.opposite()
   }
 
-  idsByTeam (team) {
-    return this.__data['teams'][team.value]
+  idsByTeam(team) {
+    return this.__data.teams[team.enumKey]
   }
 
-  objById (id) {
-    return new Obj(this.__data['objs'][id])
+  objById(id) {
+    return new Obj(this.__data.objs[id])
   }
 
-  objsByTeam (team) {
+  objsByTeam(team) {
     return this.idsByTeam(team).map(this.objById)
   }
 
-  idByCoords (coords) {
-    return this.__data['grid'][coords.x][coords.y]
+  idByCoords(coords) {
+    return this.__data.grid[coords.x][coords.y]
   }
 
-  objByCoords (coords) {
+  objByCoords(coords) {
     return this.objById(this.idByCoords(coords))
   }
 }
 
-class ActionType extends Enum {
-  static Attack = new ActionType()
-  static Move = new ActionType()
-  static _ = this.closeEnum()
-}
+class ActionType extends Enum {}
+ActionType.Attack = new ActionType()
+ActionType.Move = new ActionType()
+ActionType.closeEnum()
 
 class Action {
-  constructor (type, direction) {
+  constructor(type, direction) {
     this.type = type
     this.direction = direction
   }
 
-  toString () {
+  toString() {
     return `<Action: ${this.type} ${this.direction}>`
   }
 
-  static move (direction) {
+  static move(direction) {
     return new Action(ActionType.Move, direction)
   }
 
-  static attack (direction) {
+  static attack(direction) {
     return new Action(ActionType.Attack, direction)
   }
 }
 
-function __format_err (err, incl_err = false, init_err = false) {
+function __format_err(err, incl_err = false, init_err = false) {
   const e = {
     start: [0, 0],
     end: [0, 0],
@@ -224,17 +224,16 @@ function __format_err (err, incl_err = false, init_err = false) {
   return incl_err ? { Err: init_err ? { InitError: e } : e } : e
 }
 
-
-function __main (stateData) {
-  function __validateFunction(f, argcount, mandatory) {
-    if (typeof f !== "function") {
+function __main(stateData) {
+  function __validateFunction(name, f, argcount, mandatory) {
+    if (typeof f !== 'function') {
       if (mandatory) {
         throw new TypeError(`You must define a '${name}' function`)
       }
     } else {
       if (f.length !== argcount) {
         throw new TypeError(
-          `Your ${name} function must accept ${argcount} arguments`
+          `Your ${name} function must accept ${argcount} arguments`,
         )
       }
     }
@@ -243,10 +242,10 @@ function __main (stateData) {
   const state = new State(stateData)
 
   try {
-    __validateFunction(globalThis.robot, 3, true)
-    __validateFunction(globalThis.initTurn, 1, true)
+    __validateFunction('robot', globalThis.robot, 3, true)
+    __validateFunction('initTurn', globalThis.initTurn, 1, false)
   } catch (e) {
-    return {"robot_outputs": {"Err": {"InitError": __format_err(e)}}}
+    return { robot_outputs: { Err: { InitError: __format_err(e) } } }
   }
 
   if (typeof globalThis.initTurn === 'function') {

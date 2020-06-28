@@ -26,3 +26,8 @@ jsstdlib.c: stdlib.js $(QJSC)
 
 $(QUICKJS)/%:
 	$(MAKE) -C $(QUICKJS) $(@:$(QUICKJS)/%=%) AR=$(AR)
+
+.PHONY: clean
+clean:
+	rm -f jsrunner.wasm *.o jsstdlib.c
+	$(MAKE) -C $(QUICKJS) clean
