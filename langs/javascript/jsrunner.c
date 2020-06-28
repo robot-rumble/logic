@@ -58,6 +58,7 @@ static void write_err(int init_err)
 
 static void rr_init(void)
 {
+  /* fprintf(stderr, "AAA\n"); */
   rt = JS_NewRuntime();
   ctx = JS_NewContext(rt);
   format_err_atom = JS_NewAtom(ctx, "__format_err");
@@ -71,7 +72,6 @@ static void rr_init(void)
   // JS_Keys
   JSValue ret = JS_Eval(ctx, io_buf, io_buf_len, "<robot>", JS_EVAL_TYPE_GLOBAL);
   RETURN_IF_EXC(ret, write_err(1));
-  // printf("AAA\n");
   write_buf("{\"Ok\":null}");
 }
 

@@ -19,14 +19,11 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     });
 
     let attrs = vm.ctx.new_dict();
-    attrs
-        .set_item("__name__", vm.new_str("<robot>".to_owned()), vm)
-        .unwrap();
-    vm.run_code_obj(
+    vm.unwrap_pyresult(attrs.set_item("__name__", vm.new_str("<robot>".to_owned()), vm));
+    vm.unwrap_pyresult(vm.run_code_obj(
         vm.ctx.new_code_object(CODE.clone()),
         Scope::with_builtins(None, attrs.clone(), vm),
-    )
-    .unwrap();
+    ));
     attrs
 }
 
@@ -83,7 +80,7 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, Pro
         })?;
 
     let attrs = setup_scope(&vm);
-    let formatexc = attrs.get_item("__format_err", &vm).unwrap();
+    let formatexc = vm.unwrap_pyresult(attrs.get_item("__format_err", &vm));
 
     let make_main = || {
         vm.run_code_obj(code, Scope::with_builtins(None, attrs.clone(), &vm))?;
