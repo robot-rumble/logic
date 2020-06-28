@@ -2551,7 +2551,7 @@ dependencies = [
 [[package]]
 name = "rustpython-bytecode"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#bc1717b7ac0e236196e2c350d3d70016985baa8e"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/wasm-_thread#0452e1a6175e87a44fca0a663b9b57ad53d9f528"
 dependencies = [
  "bincode",
  "bitflags",
@@ -2565,7 +2565,7 @@ dependencies = [
 [[package]]
 name = "rustpython-compiler"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#bc1717b7ac0e236196e2c350d3d70016985baa8e"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/wasm-_thread#0452e1a6175e87a44fca0a663b9b57ad53d9f528"
 dependencies = [
  "arrayvec 0.5.1",
  "indexmap",
@@ -2579,7 +2579,7 @@ dependencies = [
 [[package]]
 name = "rustpython-derive"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#bc1717b7ac0e236196e2c350d3d70016985baa8e"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/wasm-_thread#0452e1a6175e87a44fca0a663b9b57ad53d9f528"
 dependencies = [
  "maplit",
  "once_cell",
@@ -2593,7 +2593,7 @@ dependencies = [
 [[package]]
 name = "rustpython-parser"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#bc1717b7ac0e236196e2c350d3d70016985baa8e"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/wasm-_thread#0452e1a6175e87a44fca0a663b9b57ad53d9f528"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -2606,9 +2606,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustpython-pylib"
+version = "0.1.0"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/wasm-_thread#0452e1a6175e87a44fca0a663b9b57ad53d9f528"
+dependencies = [
+ "maplit",
+ "rustpython-bytecode",
+ "rustpython-derive",
+]
+
+[[package]]
 name = "rustpython-vm"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#bc1717b7ac0e236196e2c350d3d70016985baa8e"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/wasm-_thread#0452e1a6175e87a44fca0a663b9b57ad53d9f528"
 dependencies = [
  "adler32",
  "arr_macro",
@@ -2665,6 +2675,7 @@ dependencies = [
  "rustpython-compiler",
  "rustpython-derive",
  "rustpython-parser",
+ "rustpython-pylib",
  "rustyline",
  "schannel",
  "serde",
