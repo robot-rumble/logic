@@ -15,7 +15,7 @@ __pycache__/
 pkg/
 dist/
 
-/webapp-dist/
+/wasm-dist/
 
 ### JetBrains template
 .idea

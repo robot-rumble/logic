@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")"
 
-OUTDIR="$PWD"/webapp-dist
+OUTDIR="$PWD"/wasm-dist
 mkdir -p "$OUTDIR"
 
 OPTIMIZE=
