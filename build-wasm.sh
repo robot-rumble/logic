@@ -10,7 +10,7 @@ RUNNERS_ONLY=
 for arg in "$@"; do
     case "$arg" in
         --optimize) OPTIMIZE=1; ;;
-        --runners-only|-r) RUNNERS_ONLY=1
+        --runners-only) RUNNERS_ONLY=1
     esac
 done
 
@@ -29,8 +29,8 @@ copy_lang() {
         rm "$basename.wat"
     fi
 
-    mkdir -p "$OUTDIR/runners"
-    cp "$1" "$OUTDIR/runners/$fname"
+    mkdir -p "$OUTDIR/lang-runners"
+    cp "$1" "$OUTDIR/lang-runners/$fname"
 }
 
 BOLD=$(printf '\033[1m')
@@ -47,8 +47,8 @@ pids=()
 if [[ ! $RUNNERS_ONLY ]]; then
     {
         wasm-pack build env-runners/browser
-        cp -r env-runners/browser/pkg "$OUTDIR/logic"
-    } 2>&1 | prepend logic: &
+        cp -r env-runners/browser/pkg "$OUTDIR/browser-runner"
+    } 2>&1 | prepend browser-runner: &
     pids+=($!)
 fi
 

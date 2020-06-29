@@ -98,7 +98,7 @@ impl Lang {
         macro_rules! compiled_runner {
             ($name:literal) => {{
                 static MODULE: Lazy<(WasmModule, WasiVersion)> = Lazy::new(|| {
-                    let wasm = include_bytes!(concat!("../../../wasm-dist/runners/", $name));
+                    let wasm = include_bytes!(concat!("../../../wasm-dist/lang-runners/", $name));
                     let module = wasmer_runtime::compile(wasm)
                         .expect(concat!("couldn't compile wasm module ", $name));
                     let version = wasmer_wasi::get_wasi_version(&module, false)
