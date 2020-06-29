@@ -46,21 +46,21 @@ pids=()
 
 if [[ ! $RUNNERS_ONLY ]]; then
     {
-        wasm-pack build runners/webapp
-        cp -r runners/webapp/pkg "$OUTDIR/logic"
+        wasm-pack build env-runners/browser
+        cp -r env-runners/browser/pkg "$OUTDIR/logic"
     } 2>&1 | prepend logic: &
     pids+=($!)
 fi
 
 {
-    make -C langs/javascript
-    copy_lang langs/javascript/jsrunner.wasm
+    make -C lang-runners/javascript
+    copy_lang lang-runners/javascript/jsrunner.wasm
 } 2>&1 | prepend jsrunner: &
 pids+=($!)
 
 
 {
-    cargo build --release --target wasm32-wasi --manifest-path=langs/python/Cargo.toml
+    cargo build --release --target wasm32-wasi --manifest-path=lang-runners/python/Cargo.toml
     copy_lang ../target/wasm32-wasi/release/pyrunner.wasm
 } 2>&1 | prepend pyrunner: &
 pids+=($!)

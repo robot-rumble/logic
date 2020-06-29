@@ -4,6 +4,6 @@ lto = true
 [workspace]
 members = [
     "logic",
-    "runners/native", "runners/webapp", "runners/lambda",
-    "langs/python" #, "langs/javascript"
+    "env-runners/native", "env-runners/browser", "env-runners/lambda",
+    "lang-runners/python"
 ]
