@@ -16,6 +16,11 @@ use wasi_process::WasiProcess;
 use wasmer_runtime::Module as WasmModule;
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 /*
 SAMPLE EVENT
 {
