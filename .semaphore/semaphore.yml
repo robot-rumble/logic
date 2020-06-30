@@ -1,0 +1,76 @@
+version: "v1.0"
+name: Logic
+
+agent:
+  machine:
+    type: e1-standard-2
+  containers:
+    - name: main
+      image: circleci/rust:1.43.0
+
+global_job_config:
+  secrets:
+    - name: aws
+  prologue:
+    commands:
+      - checkout
+      - sudo apt install -y awscli
+
+blocks:
+  - name: lang-runners
+    dependencies: []
+    run:
+      when: "change_in('/lang-runners/')"
+    task:
+      prologue:
+        commands:
+          - git submodule update --init
+          - rustup target install wasm32-wasi
+          # install https://wasmer.io/
+          - curl https://get.wasmer.io -sSfL | sh
+          - source /home/circleci/.wasmer/wasmer.sh
+          # install https://github.com/wasienv/wasienv#install
+          - sudo apt install -y python python-pip python-setuptools
+          - curl https://raw.githubusercontent.com/wasienv/wasienv/master/install.sh | sh
+          - source ~/.wasienv/wasienv.sh
+      jobs:
+        - name: Build
+          commands:
+            - bash build-wasm.sh --langs
+      epilogue:
+        on_pass:
+          commands:
+            - aws s3 sync wasm-dist s3://dev-battle-runner
+
+  - name: browser-runner
+    dependencies: []
+    run:
+      when: "change_in(['/logic/', '/env-runners/browser/'])"
+    task:
+      prologue:
+        commands:
+          # install https://rustwasm.github.io/wasm-pack/installer/
+          - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      jobs:
+        - name: Build
+          commands:
+            - bash build-wasm.sh --browser
+      epilogue:
+        on_pass:
+          commands:
+            - aws s3 sync wasm-dist s3://dev-battle-runner
+
+  - name: lambda-runner
+    dependencies: [lang-runners]
+    run:
+      when: "change_in(['/logic/', '/lang-runners/', '/env-runners/native/', '/env-runners/lambda/'])"
+    task:
+      prologue:
+        commands:
+          - rustup target install x86_64-unknown-linux-musl
+          - aws s3 sync s3://dev-battle-runner/lang-runners ./wasm-dist/lang-runners
+      jobs:
+        - name: Build and Upload to S3
+          commands:
+            - bash build-lambda.sh --deploy --prod
+

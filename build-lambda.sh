@@ -13,22 +13,20 @@ for arg in "$@"; do
     esac
 done
 
-if [[ $# -gt 0 ]]; then
-    target_dir=$1
+if [[ $PROD ]]; then
+    build_command=cargo
 else
-    if [[ $PROD ]]; then
-        build_command=cargo
-    else
-        build_command=cross
-    fi
-    unset OPENSSL_NO_VENDOR
-    eval $build_command build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
-    if [[ $PROD ]]; then
-        target_dir=$($build_command metadata --format-version=1 | jq -r .target_directory)
-    else
-        target_dir=./target
-    fi
+    build_command=cross
 fi
+unset OPENSSL_NO_VENDOR
+eval $build_command build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
+#if [[ $PROD ]]; then
+#    target_dir=$($build_command metadata --format-version=1 | jq -r .target_directory)
+#else
+#    target_dir=./target
+#fi
+tree ../
+target_dir=./target
 
 pushd "${target_dir}/x86_64-unknown-linux-musl/release"
 cp lambda bootstrap
