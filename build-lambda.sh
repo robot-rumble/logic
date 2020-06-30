@@ -21,15 +21,12 @@ fi
 unset OPENSSL_NO_VENDOR
 eval ${build_command} build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
 
-ls
-ls target
 pushd "target/x86_64-unknown-linux-musl/release"
-ls
-cp lambda bootstrap
+cp lambda-runner bootstrap
 zip lambda.zip bootstrap
 rm bootstrap
 
 if [[ $DEPLOY ]]; then
-    aws s3 cp lambda.zip s3://dev-battle-runner
-    aws lambda update-function-code --function-name dev-battle-runner --s3-bucket=dev-battle-runner --s3-key lambda.zip
+    aws s3 cp lambda.zip s3://${S3_BUCKET}
+    aws lambda update-function-code --function-name ${FUNCTION_NAME} --s3-bucket=${S3_BUCKET} --s3-key lambda.zip
 fi
