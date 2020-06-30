@@ -73,7 +73,7 @@ if [[ $LANGS ]]; then
 
     {
         cargo build --release --target wasm32-wasi --manifest-path=lang-runners/python/Cargo.toml
-        copy_lang ../target/wasm32-wasi/release/pyrunner.wasm
+        copy_lang target/wasm32-wasi/release/pyrunner.wasm
     } 2>&1 | prepend pyrunner: &
     pids+=($!)
 fi
