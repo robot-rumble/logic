@@ -14,7 +14,14 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      - sudo apt install -y awscli
+      # lftp required to use caching
+      - sudo apt install -y awscli lftp
+      - cache restore rustup
+      - cache restore cargo
+  epilogue:
+    commands:
+      - cache store rustup ~/.rustup
+      - cache store cargo ~/.cargo
 
 blocks:
   - name: lang-runners
@@ -24,6 +31,7 @@ blocks:
     task:
       prologue:
         commands:
+          - cache restore lang-runners
           - git submodule update --init
           - rustup target install wasm32-wasi
           # install https://wasmer.io/
@@ -41,6 +49,7 @@ blocks:
         on_pass:
           commands:
             - aws s3 sync wasm-dist s3://dev-battle-runner
+            - cache store lang-runners target
 
   - name: browser-runner
     dependencies: []
@@ -49,6 +58,7 @@ blocks:
     task:
       prologue:
         commands:
+          - cache restore browser-runner
           # install https://rustwasm.github.io/wasm-pack/installer/
           - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       jobs:
@@ -59,6 +69,7 @@ blocks:
         on_pass:
           commands:
             - aws s3 sync wasm-dist s3://dev-battle-runner
+            - cache store browser-runner target
 
   - name: lambda-runner
     dependencies: [lang-runners]
@@ -67,10 +78,15 @@ blocks:
     task:
       prologue:
         commands:
+          - cache restore lambda-runner
           - rustup target install x86_64-unknown-linux-musl
           - aws s3 sync s3://dev-battle-runner/lang-runners ./wasm-dist/lang-runners
       jobs:
         - name: Build and Upload to S3
           commands:
             - bash build-lambda.sh --deploy --prod
+      epilogue:
+        on_pass:
+          commands:
+            - cache store lambda-runner target
 

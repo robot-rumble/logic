@@ -19,9 +19,12 @@ else
     build_command=cross
 fi
 unset OPENSSL_NO_VENDOR
-eval $build_command build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
+eval ${build_command} build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
 
+ls
+ls target
 pushd "target/x86_64-unknown-linux-musl/release"
+ls
 cp lambda bootstrap
 zip lambda.zip bootstrap
 rm bootstrap
