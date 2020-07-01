@@ -19,12 +19,12 @@ global_job_config:
       - checkout
       # lftp required to use caching
       - sudo apt install -y awscli lftp
-      - cache restore rustup
-      - cache restore cargo
+#      - cache restore rustup
+#      - cache restore cargo
   epilogue:
     commands:
-      - cache store rustup /root/.rustup
-      - cache store cargo /root/.cargo
+#      - cache store rustup /root/.rustup
+#      - cache store cargo /root/.cargo
 
 blocks:
   - name: lang-runners
