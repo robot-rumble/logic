@@ -131,8 +131,8 @@ class State:
         self.__data = state
 
     @property
-    def turn_num(self):
-        return self.__data["turn_num"]
+    def turn(self):
+        return self.__data["turn"]
 
     @property
     def our_team(self):
