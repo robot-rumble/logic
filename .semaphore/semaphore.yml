@@ -21,8 +21,8 @@ global_job_config:
       - sudo apt install -y awscli lftp
 #      - cache restore rustup
 #      - cache restore cargo
-  epilogue:
-    commands:
+#  epilogue:
+#    commands:
 #      - cache store rustup /root/.rustup
 #      - cache store cargo /root/.cargo
 
