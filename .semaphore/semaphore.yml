@@ -42,8 +42,8 @@ blocks:
           - source ~/.wasmer/wasmer.sh
           # install https://github.com/wasienv/wasienv#install
           - sudo apt install -y python python-pip python-setuptools
-          - curl https://raw.githubusercontent.com/wasienv/wasienv/master/install.sh | sh
-          - source ~/.wasienv/wasienv.sh
+          - pip install git+https://github.com/wasienv/wasienv
+          - wasienv install-sdk latest
       jobs:
         - name: Build
           commands:
