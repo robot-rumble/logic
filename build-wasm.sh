@@ -30,9 +30,6 @@ copy_lang() {
 
     inf=$(realpath "$1")
 
-    # # TODO: remove once we do this in the browser
-    # wasm_transformer_cli "$inf"
-
     if [[ $OPTIMIZE ]]; then
         # Do this in order to work around some weird parsing bug in wasm-opt
         wasm-dis "$1" -o "$basename.wat"

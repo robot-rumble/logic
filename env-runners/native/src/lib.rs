@@ -32,8 +32,7 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W
             .next_line()
             .await?
             .ok_or(ProgramError::NoData)?;
-        let init_result =
-            strip_prefix(dbg!(&line), "__rr_init:").ok_or(ProgramError::NoInitError)?;
+        let init_result = strip_prefix(&line, "__rr_init:").ok_or(ProgramError::NoInitError)?;
         serde_json::from_str::<Result<(), ProgramError>>(init_result)??;
 
         Ok(Self { stdin, stdout })
