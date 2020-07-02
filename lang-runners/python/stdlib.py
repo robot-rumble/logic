@@ -50,7 +50,7 @@ class Coords(tuple):
         return self[1]
 
     def distance_to(self, other):
-        return math.sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
+        return math.sqrt((other.x - self.x)**2 + (other.y - self.y)**2)
 
     def walking_distance_to(self, other):
         return abs(other.x - self.x) + abs(other.y - self.y)
@@ -140,7 +140,7 @@ class State:
 
     @property
     def other_team(self):
-        return self.our_team.opposite()
+        return self.our_team.opposite
 
     def ids_by_team(self, team):
         return self.__data["teams"][team.value]
@@ -200,13 +200,13 @@ def __main(state, scope=globals()):
         else:
             if f.__code__.co_argcount != argcount:
                 raise TypeError(
-                    f"Your {name} function must accept {argcount} arguments"
-                )
+                    f"Your {name} function must accept {argcount} arguments")
         return f
 
     import sys, io
 
-    had_stdout, old_stdout = (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
+    had_stdout, old_stdout = (True, sys.stdout) if hasattr(
+        sys, "stdout") else (False, None)
     logbuf = sys.stdout = io.StringIO()
 
     state = State(state)
@@ -234,7 +234,10 @@ def __main(state, scope=globals()):
             result = {"Err": __format_err(e)}
         else:
             result = {
-                "Ok": {"type": action.type.value, "direction": action.direction.value}
+                "Ok": {
+                    "type": action.type.value,
+                    "direction": action.direction.value
+                }
             }
         robot_outputs[id] = {"action": result, "debug_table": debug_table}
 

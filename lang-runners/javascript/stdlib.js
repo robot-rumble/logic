@@ -17,7 +17,7 @@ class Enum {
   }
 
   static valueOf(str) {
-    return this.enumValues.find((val) => val.enumKey === str)
+    return this.enumValues.find(val => val.enumKey === str)
   }
 
   // INSTANCE
@@ -167,7 +167,7 @@ class State {
   }
 
   get otherTeam() {
-    return this.ourTeam.opposite()
+    return this.ourTeam.opposite
   }
 
   idsByTeam(team) {
@@ -232,7 +232,9 @@ function __main(stateData) {
       }
     } else {
       if (f.length !== argcount) {
-        throw new TypeError(`Your ${name} function must accept ${argcount} arguments`)
+        throw new TypeError(
+          `Your ${name} function must accept ${argcount} arguments`,
+        )
       }
     }
   }
