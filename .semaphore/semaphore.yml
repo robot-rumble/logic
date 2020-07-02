@@ -20,7 +20,8 @@ global_job_config:
     commands:
       - checkout
       # lftp required to use caching
-#      - sudo apt install -y awscli lftp
+      - sudo apt install -y awscli
+#      - sudo apt install -y lftp
 #      - cache restore rustup
 #      - cache restore cargo
 #  epilogue:
