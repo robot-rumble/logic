@@ -10,15 +10,17 @@ agent:
 
 global_job_config:
   env_vars:
-    - name: S3_BUCKET
-      value: robot-static-files
+    - name: S3_BUCKET_BUILD
+      value: rr-build-riles
+    - name: S3_BUCKET_PUBLIC
+      value: rr-public-assets
   secrets:
     - name: aws
   prologue:
     commands:
       - checkout
       # lftp required to use caching
-      - sudo apt install -y awscli lftp
+#      - sudo apt install -y awscli lftp
 #      - cache restore rustup
 #      - cache restore cargo
 #  epilogue:
@@ -51,7 +53,7 @@ blocks:
       epilogue:
         on_pass:
           commands:
-            - aws s3 sync wasm-dist s3://${S3_BUCKET}
+            - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
             - cache store lang-runners target
 
   - name: browser-runner
@@ -71,7 +73,7 @@ blocks:
       epilogue:
         on_pass:
           commands:
-            - aws s3 sync wasm-dist s3://${S3_BUCKET}
+            - aws s3 sync wasm-dist/browser-runner s3://${S3_BUCKET_BUILD}/browser-runner
             - cache store browser-runner target
 
   - name: lambda-runner
@@ -83,11 +85,11 @@ blocks:
         commands:
           - cache restore lambda-runner
           - rustup target install x86_64-unknown-linux-musl
-          - aws s3 sync s3://${S3_BUCKET}/lang-runners ./wasm-dist/lang-runners
+          - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
       jobs:
         - name: Build and Upload to S3
           commands:
-            - S3_BUCKET=${S3_BUCKET} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod
+            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod
       epilogue:
         on_pass:
           commands:
