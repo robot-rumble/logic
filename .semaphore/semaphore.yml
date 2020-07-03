@@ -11,7 +11,7 @@ agent:
 global_job_config:
   env_vars:
     - name: S3_BUCKET_BUILD
-      value: rr-build-riles
+      value: rr-build-files
     - name: S3_BUCKET_PUBLIC
       value: rr-public-assets
   secrets:
