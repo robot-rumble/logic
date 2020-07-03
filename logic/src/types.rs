@@ -1,4 +1,3 @@
-use core::fmt;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::time::Duration;
@@ -86,31 +85,6 @@ pub struct State {
     pub objs: ObjMap,
     pub grid: GridMap,
     pub spawn_points: Vec<Coords>,
-}
-
-impl fmt::Display for State {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in SerdeGridMap::from(self.grid.clone()).0 {
-            for col in row {
-                let s = match col {
-                    Some(id) => {
-                        let obj = self.objs.get(&id).unwrap();
-                        match &obj.1 {
-                            ObjDetails::Terrain(_) => "■",
-                            ObjDetails::Unit(unit) => match unit.team {
-                                Team::Red => "\x1b[41;1mr\x1b[0m",
-                                Team::Blue => "\x1b[44;1mb\x1b[0m",
-                            },
-                        }
-                    }
-                    None => " ",
-                };
-                write!(f, " {}", s)?;
-            }
-            write!(f, "\n")?;
-        }
-        Ok(())
-    }
 }
 
 pub type TeamMap = HashMap<Team, Vec<Id>>;
@@ -317,10 +291,12 @@ impl From<SerdeObj> for Obj {
     }
 }
 
-type SerdeGridMapType = Vec<Vec<Option<Id>>>;
+pub type GridMap2D = SerdeGridMap;
+
+pub type SerdeGridMapType = Vec<Vec<Option<Id>>>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct SerdeGridMap(SerdeGridMapType);
+pub struct SerdeGridMap(SerdeGridMapType);
 
 impl From<GridMap> for SerdeGridMap {
     fn from(map: GridMap) -> Self {
@@ -332,6 +308,14 @@ impl From<GridMap> for SerdeGridMap {
             })
             .collect();
         Self(arr2d)
+    }
+}
+
+impl IntoIterator for SerdeGridMap {
+    type Item = Vec<Option<Id>>;
+    type IntoIter = <SerdeGridMapType as IntoIterator>::IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
