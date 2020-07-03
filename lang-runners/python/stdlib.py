@@ -224,7 +224,11 @@ def __main(state, scope=globals()):
         debug_table = {}
 
         def debug(key, val):
-            debug_table[key] = str(val)
+            if type(key) is not str:
+                raise TypeError(f'Debug table key "{key}" must be a string')
+            if type(val) is not str:
+                raise TypeError(f'Debug table value "{val}" must be a string')
+            debug_table[key] = val
 
         try:
             action = robot(state, state.obj_by_id(id), debug)

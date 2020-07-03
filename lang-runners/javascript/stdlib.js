@@ -257,6 +257,13 @@ function __main(stateData) {
     const debug_table = {}
 
     const debug = (key, val) => {
+      if (typeof key !== 'string') {
+        throw new TypeError(`Debug table key "${key}" must be a string`)
+      }
+      if (typeof val !== 'string') {
+        throw new TypeError(`Debug table value "${val}" must be a string`)
+      }
+
       debug_table[key] = val
     }
 
