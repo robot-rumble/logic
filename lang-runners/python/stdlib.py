@@ -39,7 +39,7 @@ class Coords(tuple):
         return self
 
     def __repr__(self):
-        return "({self.x}, {self.y})"
+        return f"({self.x}, {self.y})"
 
     @property
     def x(self):
