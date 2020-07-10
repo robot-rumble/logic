@@ -3692,9 +3692,9 @@ checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
 name = "wasi-process"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6545a5e6669b7bf23384b4870dfb44059a0853e56112284927cc6cccf7d064db"
+checksum = "79987a08ee4d350efbd3c8cee68c1cd5c56652505e57649348d3689af041e6fa"
 dependencies = [
  "futures",
  "pin-project-lite",
