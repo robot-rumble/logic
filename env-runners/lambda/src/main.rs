@@ -227,6 +227,7 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
             message_system_attributes: None,
         })
         .await?;
+    dbg!("Mimalloc");
     Ok(())
 }
 
