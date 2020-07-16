@@ -100,9 +100,7 @@ impl Lang {
                         .expect(concat!("couldn't compile wasm module ", $name));
                     let version = wasmer_wasi::get_wasi_version(&module, false)
                         .unwrap_or(WasiVersion::Latest);
-                    (module, version)
-                });
-                let (module, version) = &*MODULE;
+                    (module, version) }); let (module, version) = &*MODULE;
                 (module, *version)
             }};
         }
@@ -224,6 +222,7 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
             message_system_attributes: None,
         })
         .await?;
+    dbg!("Default allocator");
     Ok(())
 }
 
