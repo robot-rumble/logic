@@ -231,4 +231,4 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
 }
 
 const TIMEOUT: Duration = Duration::from_secs(60 * 3);
-const TURN_COUNT: usize = 10;
+const TURN_COUNT: usize = 100;
