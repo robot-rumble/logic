@@ -335,6 +335,7 @@ where
     }
 }
 
+// Team 1: Blue, Team 2: Red
 pub async fn run<TurnCb, R>(
     run_team1: Result<R, ProgramError>,
     run_team2: Result<R, ProgramError>,
@@ -347,7 +348,7 @@ where
 {
     let mut turns = Vec::new();
 
-    let mut run_funcs = match ((Team::Red, run_team1), (Team::Blue, run_team2)) {
+    let mut run_funcs = match ((Team::Blue, run_team1), (Team::Red, run_team2)) {
         ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
             hashmap! {
                 t1 => run_t1,
