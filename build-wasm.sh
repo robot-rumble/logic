@@ -43,6 +43,10 @@ copy_lang() {
 
 BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
+JSYELLOWBG=$(printf '\033[48;2;240;219;79m')
+JSGRAY=$(printf '\033[38;2;50;51;48m')
+PYBLUEBG=$(printf '\033[48;2;48;105;152m')
+PYYELLOW=$(printf '\033[38;2;255;212;59m')
 
 prepend() {
     while read -r line; do
@@ -64,13 +68,13 @@ if [[ $LANGS ]]; then
     {
         make -C lang-runners/javascript
         copy_lang lang-runners/javascript/jsrunner.wasm
-    } 2>&1 | prepend jsrunner: &
+    } 2>&1 | prepend "$JSYELLOWBG$JSGRAY"jsrunner: &
     pids+=($!)
 
     {
         cargo build --release --target wasm32-wasi --manifest-path=lang-runners/python/Cargo.toml
         copy_lang target/wasm32-wasi/release/pyrunner.wasm
-    } 2>&1 | prepend pyrunner: &
+    } 2>&1 | prepend "$PYBLUEBG$PYYELLOW"pyrunner: &
     pids+=($!)
 fi
 
