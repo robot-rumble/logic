@@ -12,10 +12,13 @@ LANGS=
 BROWSER=
 for arg in "$@"; do
     case "$arg" in
-        --optimize) OPTIMIZE=1; ;;
+        --optimize) OPTIMIZE=1 ;;
         --langs) LANGS=1 ;;
         --browser) BROWSER=1 ;;
-        --all) LANGS=1; BROWSER=1
+        --all)
+            LANGS=1
+            BROWSER=1
+            ;;
     esac
 done
 
@@ -24,17 +27,14 @@ if [[ ! $LANGS && ! $BROWSER ]]; then
     exit
 fi
 
-
 copy_lang() {
     fname=$(basename "$1")
 
-    inf=$(realpath "$1")
-
     if [[ $OPTIMIZE ]]; then
         # Do this in order to work around some weird parsing bug in wasm-opt
-        wasm-dis "$1" -o "$basename.wat"
-        wasm-opt "$basename.wat" -Os -o "$1"
-        rm "$basename.wat"
+        wasm-dis "$1" -o "$fname.wat"
+        wasm-opt "$fname.wat" -Os -o "$1"
+        rm "$fname.wat"
     fi
 
     mkdir -p "$OUTDIR/lang-runners"
@@ -45,7 +45,7 @@ BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
 
 prepend() {
-    while read line; do 
+    while read -r line; do
         echo "$BOLD$1$NC" "$line"
     done
 }
@@ -67,7 +67,6 @@ if [[ $LANGS ]]; then
     } 2>&1 | prepend jsrunner: &
     pids+=($!)
 
-
     {
         cargo build --release --target wasm32-wasi --manifest-path=lang-runners/python/Cargo.toml
         copy_lang target/wasm32-wasi/release/pyrunner.wasm
@@ -75,6 +74,10 @@ if [[ $LANGS ]]; then
     pids+=($!)
 fi
 
+code=0
+
 for pid in "${pids[@]}"; do
-    wait "$pid"
+    wait "$pid" || code=1
 done
+
+exit $code
