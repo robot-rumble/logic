@@ -252,6 +252,12 @@ function __main(stateData) {
     globalThis.initTurn(state)
   }
 
+  const logs = []
+  globalThis.console = {
+    log(...args) {
+      logs.push(args.join(' '))
+    },
+  }
   const robotOutputs = {}
   for (const id of state.idsByTeam(state.ourTeam)) {
     const debug_table = {}
@@ -275,5 +281,5 @@ function __main(stateData) {
     }
     robotOutputs[id] = { action: result, debug_table }
   }
-  return { robot_outputs: { Ok: robotOutputs }, logs: [] }
+  return { robot_outputs: { Ok: robotOutputs }, logs }
 }
