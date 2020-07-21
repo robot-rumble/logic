@@ -1,1 +1,2 @@
-jsstdlib.c
+*.js.c
+lodash.js

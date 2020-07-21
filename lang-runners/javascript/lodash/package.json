@@ -1,0 +1,7 @@
+{
+  "name": "rr-lodash-bundler",
+  "private": true,
+  "devDependencies": {
+    "lodash-cli": "^4.17.5"
+  }
+}

@@ -65,6 +65,9 @@ static void rr_init(void)
   main_atom = JS_NewAtom(ctx, "__main");
   globalThis = JS_GetGlobalObject(ctx);
 
+  extern const uint8_t qjsc_lodash[];
+  extern const uint32_t qjsc_lodash_size;
+  js_std_eval_binary(ctx, qjsc_lodash, qjsc_lodash_size, 0);
   extern const uint8_t qjsc_stdlib[];
   extern const uint32_t qjsc_stdlib_size;
   js_std_eval_binary(ctx, qjsc_stdlib, qjsc_stdlib_size, 0);
