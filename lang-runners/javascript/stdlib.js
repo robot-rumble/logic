@@ -216,9 +216,10 @@ class Action {
 }
 
 function __format_err(err, incl_err = false, init_err = false) {
+  const lineno = err.lineNumber
   const e = {
-    start: [0, 0],
-    end: [0, 0],
+    start: lineno == null ? null : [lineno, null],
+    end: null,
     message: err.toString(),
   }
   return incl_err ? { Err: init_err ? { InitError: e } : e } : e
