@@ -93,7 +93,6 @@ impl State {
             .flatten()
             .collect()
     }
-
     fn init(type_: MapType, size: usize) -> (ObjMap, Vec<Coords>) {
         let distance_from_center = |Coords(x, y)| {
             ((size / 2) as i32 - x as i32).pow(2) + ((size / 2) as i32 - y as i32).pow(2)
@@ -215,14 +214,13 @@ impl ProgramInput {
     }
 }
 
-fn validate_robot_output(
-    output: RobotOutput,
+fn validate_robot_action(
+    action: ActionResult,
     team: Team,
     id: Id,
     objs: &ObjMap,
-) -> ValidatedRobotOutput {
-    let action = output
-        .action
+) -> ValidatedRobotAction {
+    action
         .map_err(RobotErrorAfterValidation::RuntimeError)
         .and_then(|action| match objs.get(&id).map(|obj| obj.details()) {
             Some(ObjDetails::Unit(unit)) if unit.team != team => {
@@ -237,10 +235,13 @@ fn validate_robot_output(
                 "Action ID points to nonexistent object".into(),
             )),
             _ => Ok(action),
-        });
-    ValidatedRobotOutput {
-        action,
-        debug_table: output.debug_table,
+        })
+}
+
+fn is_id_valid(team: Team, id: Id, objs: &ObjMap) -> bool {
+    match objs.get(&id).map(|obj| obj.details()) {
+        Some(ObjDetails::Unit(unit)) => unit.team == team,
+        _ => false,
     }
 }
 
@@ -277,60 +278,30 @@ fn handle_program_errors<T>(
 
 const GRID_SIZE: usize = 19;
 
-pub struct RunnerError {
-    err: ProgramError,
-    logs: Vec<String>,
-}
-impl RunnerError {
-    pub fn new(err: impl Into<ProgramError>, logs: Vec<String>) -> Self {
-        Self {
-            err: err.into(),
-            logs,
-        }
-    }
-    fn into_output(self) -> ProgramOutput {
-        ProgramOutput {
-            robot_outputs: Err(self.err),
-            logs: self.logs,
-        }
-    }
-}
-impl<T> From<T> for RunnerError
-where
-    ProgramError: From<T>,
-{
-    fn from(err: T) -> Self {
-        Self {
-            logs: Vec::new(),
-            err: err.into(),
-        }
-    }
-}
-pub type RunnerResult = Result<ProgramOutput, RunnerError>;
 #[cfg_attr(not(feature = "robot-runner-not-send"), async_trait::async_trait)]
-#[cfg_attr(feature = "robot-runner-not-send", async_trait::async_trait(?Send))]
+#[cfg_attr(feature = "robot-runner-not-send", async_trait::async_trait(? Send))]
 pub trait RobotRunner {
-    async fn run(&mut self, input: ProgramInput) -> RunnerResult;
+    async fn run(&mut self, input: ProgramInput) -> ProgramResult;
 }
 
 #[cfg(not(feature = "robot-runner-not-send"))]
 #[async_trait::async_trait]
 impl<F> RobotRunner for F
 where
-    F: FnMut(ProgramInput) -> ProgramOutput + Send,
+    F: FnMut(ProgramInput) -> ProgramResult + Send,
 {
-    async fn run(&mut self, input: ProgramInput) -> RunnerResult {
+    async fn run(&mut self, input: ProgramInput) -> ProgramResult {
         Ok((self)(input))
     }
 }
 
 #[cfg(feature = "robot-runner-not-send")]
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait(? Send)]
 impl<F> RobotRunner for F
 where
-    F: FnMut(ProgramInput) -> ProgramOutput,
+    F: FnMut(ProgramInput) -> ProgramResult,
 {
-    async fn run(&mut self, input: ProgramInput) -> RunnerResult {
+    async fn run(&mut self, input: ProgramInput) -> ProgramResult {
         Ok((self)(input))
     }
 }
@@ -371,61 +342,67 @@ where
 
         turn_state.turn += 1;
 
-        let (robot_outputs, logs): (Vec<_>, HashMap<_, _>) = async {
-            join_all(run_funcs.iter_mut().map(|(&team, runner)| {
-                runner
-                    .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
-                    .map(move |program_output| {
-                        let program_output = program_output.unwrap_or_else(|e| e.into_output());
-                        (
-                            (team, program_output.robot_outputs),
-                            (team, program_output.logs),
-                        )
-                    })
-            }))
-            .await
-            .into_iter()
-            .unzip()
-        }
+        let program_results = join_all(run_funcs.iter_mut().map(|(&team, runner)| {
+            runner
+                .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
+                .map(move |program_result| (team, program_result))
+        }))
         .await;
 
-        match robot_outputs.into_iter().collect_tuple().unwrap() {
-            ((t1, Ok(output_map1)), (t2, Ok(output_map2))) => {
-                let team_outputs = hashmap! {
-                    t1 => output_map1,
-                    t2 => output_map2,
+        match program_results.into_iter().collect_tuple().unwrap() {
+            ((t1, Ok(output1)), (t2, Ok(output2))) => {
+                let team_actions = hashmap! {
+                    t1 => output1.robot_actions,
+                    t2 => output2.robot_actions,
                 };
-
-                let flattened_outputs = team_outputs
+                let merged_actions = team_actions
                     .into_iter()
                     .map(|(team, output)| output.into_iter().map(move |(k, v)| (k, v, team)))
                     .flatten()
-                    .map(|(id, output, team)| {
+                    .map(|(id, action, team)| {
                         (
                             id,
-                            validate_robot_output(output, team, id, &turn_state.state.objs),
+                            validate_robot_action(action, team, id, &turn_state.state.objs),
                         )
                     })
-                    .collect::<HashMap<Id, ValidatedRobotOutput>>();
+                    .collect::<HashMap<Id, ValidatedRobotAction>>();
 
-                run_turn(&flattened_outputs, &mut turn_state.state);
+                run_turn(&merged_actions, &mut turn_state.state);
+
+                let team_logs = hashmap! {
+                    t1 => output1.logs,
+                    t2 => output2.logs,
+                };
+                let team_debug_inspections = hashmap! {
+                    t1 => output1.debug_inspections,
+                    t2 => output2.debug_inspections,
+                };
+                let team_debug_tables = hashmap! {
+                    t1 => output1.debug_tables,
+                    t2 => output2.debug_tables,
+                };
+                let merged_debug_tables = team_debug_tables
+                    .into_iter()
+                    .filter(|(team, debug_tables)| {
+                        debug_tables
+                            .keys()
+                            .all(|id| is_id_valid(*team, *id, &turn_state.state.objs))
+                    })
+                    .map(|(_team, v)| v)
+                    .flatten()
+                    .collect();
 
                 let turn = CallbackInput {
                     state: turn_state.clone(),
-                    logs,
-                    robot_outputs: flattened_outputs,
+                    robot_actions: merged_actions,
+                    logs: team_logs,
+                    debug_inspections: team_debug_inspections,
+                    debug_tables: merged_debug_tables,
                 };
                 turn_cb(&turn);
                 turns.push(turn);
             }
             errored => {
-                let turn = CallbackInput {
-                    state: turn_state.clone(),
-                    logs,
-                    robot_outputs: HashMap::new(),
-                };
-                turn_cb(&turn);
-                turns.push(turn);
                 return handle_program_errors(errored, turns);
             }
         }
@@ -438,15 +415,14 @@ where
     }
 }
 
-fn run_turn(robot_outputs: &HashMap<Id, ValidatedRobotOutput>, state: &mut State) {
+fn run_turn(robot_actions: &HashMap<Id, ValidatedRobotAction>, state: &mut State) {
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
 
-    for (id, action) in robot_outputs.iter() {
-        let action = match action.action {
-            Ok(a) => a,
-            Err(_) => continue,
-        };
+    for (id, action) in robot_actions
+        .iter()
+        .filter_map(|(id, action)| action.as_ref().ok().map(|a| (id, a)))
+    {
         let map = match action.type_ {
             ActionType::Move => &mut movement_map,
             ActionType::Attack => &mut attack_map,

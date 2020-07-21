@@ -52,24 +52,20 @@ pub struct TurnState {
 pub enum RobotErrorAfterValidation {
     #[error("Robot function error")]
     RuntimeError(Error),
-    #[error("Invald action")]
+    #[error("Invalid action")]
     InvalidAction(String),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ValidatedRobotOutput {
-    pub action: Result<Action, RobotErrorAfterValidation>,
-    #[serde(default)]
-    pub debug_table: DebugTable,
-}
+pub type ValidatedRobotAction = Result<Action, RobotErrorAfterValidation>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CallbackInput {
     pub state: TurnState,
-    // logs are on the level of the team
-    pub logs: HashMap<Team, Logs>,
-    // debug_tables are on the level of the individual robots
-    pub robot_outputs: HashMap<Id, ValidatedRobotOutput>,
+    pub robot_actions: HashMap<Id, ValidatedRobotAction>,
+
+    pub logs: HashMap<Team, Vec<String>>,
+    pub debug_tables: HashMap<Id, DebugTable>,
+    pub debug_inspections: HashMap<Team, Vec<Id>>,
 }
 
 pub type ObjMap = HashMap<Id, Obj>;
@@ -121,14 +117,6 @@ pub struct Error {
 
 pub type DebugTable = HashMap<String, String>;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RobotOutput {
-    pub action: Result<Action, Error>,
-    pub debug_table: DebugTable,
-}
-
-pub type RobotOutputMap = HashMap<Id, RobotOutput>;
-
 #[derive(Serialize, Deserialize, Error, Debug)]
 pub enum ProgramError {
     #[error("Unhandled program error")]
@@ -157,14 +145,15 @@ impl From<std::io::Error> for ProgramError {
     }
 }
 
-pub type ProgramResult<T = RobotOutputMap> = Result<T, ProgramError>;
-pub type Logs = Vec<String>;
+pub type ProgramResult = Result<ProgramOutput, ProgramError>;
+pub type ActionResult = Result<Action, Error>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProgramOutput {
-    pub robot_outputs: ProgramResult,
-    #[serde(default)]
+    pub robot_actions: HashMap<Id, ActionResult>,
     pub logs: Vec<String>,
+    pub debug_tables: HashMap<Id, DebugTable>,
+    pub debug_inspections: Vec<Id>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
