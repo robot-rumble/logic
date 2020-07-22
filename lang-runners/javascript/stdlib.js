@@ -259,7 +259,8 @@ function __main(stateData) {
       logs.push(args.join(' '))
     },
   }
-  const robotOutputs = {}
+  const robot_actions = {}
+  const debug_tables = {}
   for (const id of state.idsByTeam(state.ourTeam)) {
     const debug_table = {}
 
@@ -280,7 +281,8 @@ function __main(stateData) {
     } catch (e) {
       result = { Err: __format_err(e) }
     }
-    robotOutputs[id] = { action: result, debug_table }
+    robot_actions[id] = result
+    debug_tables[id] = debug_table
   }
-  return { robot_outputs: { Ok: robotOutputs }, logs }
+  return { Ok: { robot_actions, logs, debug_tables, debug_inspections: [] } }
 }

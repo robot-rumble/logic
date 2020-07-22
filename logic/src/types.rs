@@ -145,7 +145,7 @@ impl From<std::io::Error> for ProgramError {
     }
 }
 
-pub type ProgramResult = Result<ProgramOutput, ProgramError>;
+pub type ProgramResult<T = ProgramOutput> = Result<T, ProgramError>;
 pub type ActionResult = Result<Action, Error>;
 
 #[derive(Serialize, Deserialize, Debug)]

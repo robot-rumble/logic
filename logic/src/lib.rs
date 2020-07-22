@@ -291,7 +291,7 @@ where
     F: FnMut(ProgramInput) -> ProgramResult + Send,
 {
     async fn run(&mut self, input: ProgramInput) -> ProgramResult {
-        Ok((self)(input))
+        (self)(input)
     }
 }
 
@@ -302,7 +302,7 @@ where
     F: FnMut(ProgramInput) -> ProgramResult,
 {
     async fn run(&mut self, input: ProgramInput) -> ProgramResult {
-        Ok((self)(input))
+        (self)(input)
     }
 }
 

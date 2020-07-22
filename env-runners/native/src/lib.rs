@@ -3,7 +3,7 @@ use tokio::io;
 use tokio::prelude::*;
 use tokio::process::{ChildStdin, ChildStdout, Command};
 
-use logic::{ProgramError, RunnerError};
+use logic::{ProgramError, ProgramResult};
 
 pub struct TokioRunner<W: AsyncWrite, R: AsyncBufRead> {
     stdin: W,
@@ -13,7 +13,7 @@ pub struct TokioRunner<W: AsyncWrite, R: AsyncBufRead> {
 pub type CommandRunner = TokioRunner<io::BufWriter<ChildStdin>, io::BufReader<ChildStdout>>;
 
 impl CommandRunner {
-    pub async fn new_cmd(mut command: Command) -> Result<Self, ProgramError> {
+    pub async fn new_cmd(mut command: Command) -> ProgramResult<Self> {
         let mut proc = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -26,14 +26,14 @@ impl CommandRunner {
     }
 }
 impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W, R> {
-    pub async fn new(stdin: W, mut stdout: R) -> Result<Self, ProgramError> {
+    pub async fn new(stdin: W, mut stdout: R) -> ProgramResult<Self> {
         let line: String = (&mut stdout)
             .lines()
             .next_line()
             .await?
             .ok_or(ProgramError::NoData)?;
         let init_result = strip_prefix(&line, "__rr_init:").ok_or(ProgramError::NoInitError)?;
-        serde_json::from_str::<Result<(), ProgramError>>(init_result)??;
+        serde_json::from_str::<ProgramResult<()>>(init_result)??;
 
         Ok(Self { stdin, stdout })
     }
@@ -43,7 +43,7 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W
 impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotRunner
     for TokioRunner<W, R>
 {
-    async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
+    async fn run(&mut self, input: logic::ProgramInput) -> ProgramResult {
         let mut input = serde_json::to_vec(&input)?;
         input.push(b'\n');
         self.stdin.write(&input).await?;
@@ -52,18 +52,10 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotR
         let mut logs = Vec::new();
         let mut lines = (&mut self.stdout).lines();
         let mut output: logic::ProgramOutput = loop {
-            macro_rules! try_with_logs {
-                ($result:expr) => {
-                    match $result {
-                        Ok(ret) => ret,
-                        Err(e) => return Err(RunnerError::new(e, logs)),
-                    }
-                };
-            }
-            let maybe_line = try_with_logs!(lines.next_line().await);
-            let line = try_with_logs!(maybe_line.ok_or(ProgramError::NoData));
+            let maybe_line = lines.next_line().await?;
+            let line = maybe_line.ok_or(ProgramError::NoData)?;
             if let Some(output) = strip_prefix(&line, "__rr_output:") {
-                break try_with_logs!(serde_json::from_str(output));
+                break serde_json::from_str(output)?;
             } else {
                 logs.push(line)
             }
