@@ -71,7 +71,7 @@ impl logic::RobotRunner for JsRunner {
         let logs = result.logs();
         let output = result.output();
 
-        let mut output: logic::ProgramOutput = serde_json::from_slice(&output)?;
+        let mut output: ProgramResult = serde_json::from_slice(&output)?;
         output.logs.extend(logs.split('\n').map(ToOwned::to_owned));
         Ok(output)
     }
