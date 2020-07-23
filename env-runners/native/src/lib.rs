@@ -51,17 +51,19 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotR
 
         let mut logs = Vec::new();
         let mut lines = (&mut self.stdout).lines();
-        let mut output: logic::ProgramOutput = loop {
+        let mut res = loop {
             let maybe_line = lines.next_line().await?;
             let line = maybe_line.ok_or(ProgramError::NoData)?;
             if let Some(output) = strip_prefix(&line, "__rr_output:") {
-                break serde_json::from_str(output)?;
+                break serde_json::from_str::<ProgramResult>(output)?;
             } else {
                 logs.push(line)
             }
         };
-        output.logs.extend(logs);
-        Ok(output)
+        if let Ok(output) = &mut res {
+            output.logs.extend(logs);
+        }
+        res
     }
 }
 

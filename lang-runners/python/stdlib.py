@@ -213,7 +213,7 @@ def __main(state, scope=globals()):
 
     state = State(state)
     try:
-        robot = __validate_function("robot", 3, True)
+        robot = __validate_function("robot", 2, True)
         init_turn = __validate_function("init_turn", 1, False)
     except Exception as e:
         return {"Err": {"InitError": __format_err(e)}}
@@ -224,6 +224,7 @@ def __main(state, scope=globals()):
     robot_actions = {}
     debug_tables = {}
     for id in state.ids_by_team(state.our_team):
+        global debug
         debug_table = {}
 
         def debug(key, val):
@@ -234,7 +235,7 @@ def __main(state, scope=globals()):
             debug_table[key] = val
 
         try:
-            action = robot(state, state.obj_by_id(id), debug)
+            action = robot(state, state.obj_by_id(id))
             if not isinstance(action, Action):
                 raise TypeError("Your robot function must return an Action")
         except Exception as e:
