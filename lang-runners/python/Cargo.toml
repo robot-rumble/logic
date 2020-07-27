@@ -7,7 +7,9 @@ edition = "2018"
 [dependencies]
 logic = { path = "../../logic" }
 
-rustpython-vm = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
+# default-features = false removes 'threading', which might make single-threaded apps faster? but it's wasm
+# which is single-threaded anyway, so who knows
+rustpython-vm = { git = "https://github.com/RustPython/RustPython", default-features = false, features = ["compile-parse", "freeze-stdlib"] }
 rustpython-compiler = { git = "https://github.com/RustPython/RustPython" }
 
 serde = "1.0.114"
