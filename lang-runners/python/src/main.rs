@@ -49,7 +49,7 @@ fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) ->
     let ret = vm
         .invoke(main, vec![serde_to_py(&input, vm)?])
         .map_err(|_| ProgramError::InternalError)?;
-    py_to_serde(&ret, vm)
+    py_to_serde(&ret, vm).and_then(|r| r)
 }
 
 pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramResult, ProgramError> {

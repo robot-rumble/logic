@@ -17,7 +17,7 @@ class Enum {
   }
 
   static valueOf(str) {
-    return this.enumValues.find(val => val.enumKey === str)
+    return this.enumValues.find((val) => val.enumKey === str)
   }
 
   // INSTANCE
