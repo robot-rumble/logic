@@ -18,6 +18,8 @@ dist/
 
 /wasm-dist/
 
+node_modules
+
 ### JetBrains template
 .idea
 *.iml

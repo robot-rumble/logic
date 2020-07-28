@@ -1,5 +1,6 @@
 QUICKJS := quickjs/src
 LODASH := lodash
+LOGICCRATE := ../../logic
 
 LIBS := $(QUICKJS)/libquickjs.a
 OBJS := jsrunner.o stdlib.js.o lodash.js.o
@@ -7,6 +8,7 @@ OBJS := jsrunner.o stdlib.js.o lodash.js.o
 QJSC := $(QUICKJS)/qjsc.wasm
 run_qjsc = wasmer --dir . -- $(QJSC)
 
+YARN = yarn -s
 CC := wasicc
 CFLAGS := -I$(QUICKJS)
 
@@ -26,13 +28,24 @@ jsrunner.wasm: $(OBJS) $(LIBS)
 %.js.c: %.js $(QJSC)
 	$(run_qjsc) -c -o $@ $<
 
-lodash.js:
-	$(MAKE) -C $(LODASH) lodash.bundle.js
-	cp $(LODASH)/lodash.bundle.js $@
+stdlib.js: stdlib.ts
+	$(YARN) tsc
 
+stdlib.ts: logictypes.d.ts
+
+
+lodash.js: package.json yarn.lock Makefile
+	$(YARN) install
+	$(YARN) lodash -d -o $@
 
 $(QUICKJS)/%:
 	$(MAKE) -C $(QUICKJS) $(@:$(QUICKJS)/%=%) AR=$(AR)
+
+logictypes.d.ts: $(LOGICCRATE)/Cargo.toml $(LOGICCRATE)/src/*.rs
+	echo 'declare module "logictypes" {' > $@
+	cargo -q run --manifest-path=$< --bin gen_schema --features=schemars | node ~/json-schema-to-typescript/dist/src/cli.js >> $@
+	echo '}' >> $@
+
 
 .PHONY: clean
 clean:

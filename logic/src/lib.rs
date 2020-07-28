@@ -35,21 +35,21 @@ impl Obj {
     const ATTACK_POWER: usize = 1;
 
     pub fn new_terrain(type_: TerrainType, coords: Coords) -> Self {
-        Self(
-            Self::new_basic_obj(coords),
-            ObjDetails::Terrain(Terrain { type_ }),
-        )
+        Self {
+            basic: Self::new_basic_obj(coords),
+            details: ObjDetails::Terrain(Terrain { type_ }),
+        }
     }
 
     pub fn new_unit(type_: UnitType, coords: Coords, team: Team) -> Self {
-        Self(
-            Self::new_basic_obj(coords),
-            ObjDetails::Unit(Unit {
+        Self {
+            basic: Self::new_basic_obj(coords),
+            details: ObjDetails::Unit(Unit {
                 type_,
                 team,
                 health: Self::UNIT_HEALTH,
             }),
-        )
+        }
     }
 
     fn new_basic_obj(coords: Coords) -> BasicObj {
@@ -60,13 +60,13 @@ impl Obj {
     }
 
     fn id(&self) -> Id {
-        self.0.id
+        self.basic.id
     }
     fn coords(&self) -> Coords {
-        self.0.coords
+        self.basic.coords
     }
     fn details(&self) -> &ObjDetails {
-        &self.1
+        &self.details
     }
 }
 
@@ -481,7 +481,7 @@ fn run_turn(robot_actions: &HashMap<Id, ValidatedRobotAction>, state: &mut State
         match state.grid.get(coords) {
             Some(id) => {
                 if let Some(ObjDetails::Unit(ref mut unit)) =
-                    state.objs.get_mut(id).map(|obj| &mut obj.1)
+                    state.objs.get_mut(id).map(|obj| &mut obj.details)
                 {
                     unit.health = unit.health.saturating_sub(attack_power);
                     if unit.health == 0 {
@@ -502,13 +502,13 @@ pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement
 
     if illegal_moves.is_empty() {
         for (&coords, id) in legal_moves.iter() {
-            objs.get_mut(id).unwrap().0.coords = coords
+            objs.get_mut(id).unwrap().basic.coords = coords
         }
         grid.extend(legal_moves)
     } else {
         // insert the units with illegal moves back in their original location
         for (_, id) in illegal_moves.into_iter() {
-            grid.insert(objs.get(&id).unwrap().0.coords, id);
+            grid.insert(objs.get(&id).unwrap().basic.coords, id);
         }
         update_grid_with_movement(objs, grid, legal_moves);
     }

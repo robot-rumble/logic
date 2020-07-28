@@ -1,0 +1,9 @@
+{
+  "name": "rr-lodash-bundler",
+  "private": true,
+  "devDependencies": {
+    "json-schema-to-typescript": "^9.1.1",
+    "lodash-cli": "^4.17.5",
+    "typescript": "^3.9.7"
+  }
+}

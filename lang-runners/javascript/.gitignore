@@ -1,2 +1,4 @@
 *.js.c
 lodash.js
+logictypes.d.ts
+stdlib.js

@@ -229,8 +229,12 @@ impl Add<Direction> for Coords {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[serde(from = "SerdeObj", into = "SerdeObj")]
-pub struct Obj(pub BasicObj, pub ObjDetails);
+pub struct Obj {
+    #[serde(flatten)]
+    pub basic: BasicObj,
+    #[serde(flatten)]
+    pub details: ObjDetails,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -308,26 +312,6 @@ impl Direction {
             East => (1, 0),
             South => (0, 1),
         }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-struct SerdeObj {
-    #[serde(flatten)]
-    basic: BasicObj,
-    #[serde(flatten)]
-    details: ObjDetails,
-}
-
-impl From<Obj> for SerdeObj {
-    fn from(Obj(basic, details): Obj) -> Self {
-        Self { basic, details }
-    }
-}
-impl From<SerdeObj> for Obj {
-    fn from(SerdeObj { basic, details }: SerdeObj) -> Self {
-        Obj(basic, details)
     }
 }
 
