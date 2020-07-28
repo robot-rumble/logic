@@ -50,7 +50,7 @@ class Coords(tuple):
         return self[1]
 
     def distance_to(self, other):
-        return math.sqrt((other.x - self.x)**2 + (other.y - self.y)**2)
+        return math.sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
 
     def walking_distance_to(self, other):
         return abs(other.x - self.x) + abs(other.y - self.y)
@@ -200,27 +200,31 @@ def __main(state, scope=globals()):
         else:
             if f.__code__.co_argcount != argcount:
                 raise TypeError(
-                    f"Your {name} function must accept {argcount} arguments")
+                    f"Your {name} function must accept {argcount} arguments"
+                )
         return f
 
     import sys, io
 
-    had_stdout, old_stdout = (True, sys.stdout) if hasattr(
-        sys, "stdout") else (False, None)
+    had_stdout, old_stdout = (
+        (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
+    )
     logbuf = sys.stdout = io.StringIO()
 
     state = State(state)
     try:
-        robot = __validate_function("robot", 3, True)
+        robot = __validate_function("robot", 2, True)
         init_turn = __validate_function("init_turn", 1, False)
     except Exception as e:
-        return {"robot_outputs": {"Err": {"InitError": __format_err(e)}}}
+        return {"Err": {"InitError": __format_err(e)}}
 
     if callable(init_turn):
         init_turn(state)
 
-    robot_outputs = {}
+    robot_actions = {}
+    debug_tables = {}
     for id in state.ids_by_team(state.our_team):
+        global debug
         debug_table = {}
 
         def debug(key, val):
@@ -231,19 +235,18 @@ def __main(state, scope=globals()):
             debug_table[key] = val
 
         try:
-            action = robot(state, state.obj_by_id(id), debug)
+            action = robot(state, state.obj_by_id(id))
             if not isinstance(action, Action):
                 raise TypeError("Your robot function must return an Action")
         except Exception as e:
             result = {"Err": __format_err(e)}
         else:
             result = {
-                "Ok": {
-                    "type": action.type.value,
-                    "direction": action.direction.value
-                }
+                "Ok": {"type": action.type.value, "direction": action.direction.value}
             }
-        robot_outputs[id] = {"action": result, "debug_table": debug_table}
+        robot_actions[id] = result
+        if debug_table:
+            debug_tables[id] = debug_table
 
     if had_stdout:
         sys.stdout = old_stdout
@@ -254,12 +257,19 @@ def __main(state, scope=globals()):
     logs = logbuf.readlines()
     logbuf.close()
 
-    return {"robot_outputs": {"Ok": robot_outputs}, "logs": logs}
+    return {
+        "Ok": {
+            "robot_actions": robot_actions,
+            "logs": logs,
+            "debug_tables": debug_tables,
+            "debug_inspections": []
+        }
+    }
 
 
 del enum
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     __builtins__.__dict__.update(globals())
     import sys, json, runpy
 

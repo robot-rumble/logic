@@ -1,5 +1,5 @@
 use js_sys::{Function as JsFunction, Promise, Uint8Array};
-use logic::ProgramError;
+use logic::{ProgramError, ProgramResult};
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::{future_to_promise, JsFuture};
 
@@ -41,7 +41,7 @@ struct JsRunner {
 }
 
 impl JsRunner {
-    async fn new(runner: WasiRunner) -> Result<Self, ProgramError> {
+    async fn new(runner: WasiRunner) -> ProgramResult<Self> {
         let res = JsFuture::from(runner.init_result()).await.map_err(|err| {
             dbg!(err);
             ProgramError::InternalError
@@ -50,7 +50,7 @@ impl JsRunner {
             .dyn_into::<Uint8Array>()
             .map_err(|_| ProgramError::InternalError)?
             .to_vec();
-        let init_result: Result<(), ProgramError> = serde_json::from_slice(&res)?;
+        let init_result: ProgramResult<()> = serde_json::from_slice(&res)?;
 
         init_result.map(|()| JsRunner { runner })
     }
@@ -58,7 +58,7 @@ impl JsRunner {
 
 #[async_trait::async_trait(?Send)]
 impl logic::RobotRunner for JsRunner {
-    async fn run(&mut self, input: logic::ProgramInput) -> logic::RunnerResult {
+    async fn run(&mut self, input: logic::ProgramInput) -> ProgramResult {
         let input = serde_json::to_vec(&input)?;
         let result = JsFuture::from(self.runner.run_turn(&input))
             .await
@@ -71,7 +71,7 @@ impl logic::RobotRunner for JsRunner {
         let logs = result.logs();
         let output = result.output();
 
-        let mut output: logic::ProgramOutput = serde_json::from_slice(&output)?;
+        let mut output: ProgramResult = serde_json::from_slice(&output)?;
         output.logs.extend(logs.split('\n').map(ToOwned::to_owned));
         Ok(output)
     }

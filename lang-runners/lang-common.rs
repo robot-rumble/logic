@@ -2,8 +2,8 @@ macro_rules! lang_runner {
     ($initfn:path) => {
         fn main() {
             lang_main($initfn);
-            use ::logic::{ProgramError, ProgramInput, ProgramOutput};
-            fn lang_main<F: FnMut(ProgramInput) -> ProgramOutput>(
+            use ::logic::{ProgramError, ProgramInput, ProgramResult};
+            fn lang_main<F: FnMut(ProgramInput) -> ProgramResult>(
                 init: fn(&str) -> Result<F, ProgramError>,
             ) {
                 use std::io::prelude::*;
@@ -43,7 +43,7 @@ macro_rules! lang_runner {
         const _: () = {
             use std::cell::RefCell;
             thread_local! {
-                static CLOSURE: RefCell<Option<Box<dyn FnMut($crate::ProgramInput) -> $crate::ProgramOutput>>> = RefCell::default();
+                static CLOSURE: RefCell<Option<Box<dyn FnMut($crate::ProgramInput) -> $crate::ProgramResult>>> = RefCell::default();
                 static IO_MEM: RefCell<Vec<u8>> = RefCell::default();
             };
             #[export_name = "__rr_io_addr"]

@@ -49,7 +49,7 @@ PYBLUEBG=$(printf '\033[48;2;48;105;152m')
 PYYELLOW=$(printf '\033[38;2;255;212;59m')
 
 prepend() {
-    while read -r line; do
+    while IFS='' read -r line; do
         echo "$BOLD$1$NC" "$line"
     done
 }

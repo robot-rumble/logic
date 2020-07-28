@@ -5,7 +5,7 @@ use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef};
 use rustpython_vm::scope::Scope;
 use rustpython_vm::{InitParameter, PySettings, VirtualMachine};
 
-use logic::{ProgramError, ProgramInput, ProgramOutput};
+use logic::{ProgramError, ProgramInput, ProgramResult};
 use once_cell::sync::Lazy;
 
 fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
@@ -45,20 +45,14 @@ fn py_to_serde<T: serde::de::DeserializeOwned>(
     Ok(out)
 }
 
-fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) -> ProgramOutput {
-    let run = || {
-        let ret = vm
-            .invoke(main, vec![serde_to_py(&input, vm)?])
-            .map_err(|_| ProgramError::InternalError)?;
-        py_to_serde(&ret, vm)
-    };
-    run().unwrap_or_else(|err| ProgramOutput {
-        robot_outputs: Err(err),
-        logs: Vec::new(),
-    })
+fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) -> ProgramResult {
+    let ret = vm
+        .invoke(main, vec![serde_to_py(&input, vm)?])
+        .map_err(|_| ProgramError::InternalError)?;
+    py_to_serde(&ret, vm).and_then(|r| r)
 }
 
-pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramOutput, ProgramError> {
+pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramResult, ProgramError> {
     let vm = VirtualMachine::new(PySettings {
         initialization_parameter: InitParameter::InitializeInternal,
         ..Default::default()

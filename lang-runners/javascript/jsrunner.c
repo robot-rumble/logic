@@ -58,7 +58,6 @@ static void write_err(int init_err)
 
 static void rr_init(void)
 {
-  /* fprintf(stderr, "AAA\n"); */
   rt = JS_NewRuntime();
   ctx = JS_NewContext(rt);
   format_err_atom = JS_NewAtom(ctx, "__format_err");
@@ -72,7 +71,6 @@ static void rr_init(void)
   extern const uint32_t qjsc_stdlib_size;
   js_std_eval_binary(ctx, qjsc_stdlib, qjsc_stdlib_size, 0);
 
-  // JS_Keys
   JSValue ret = JS_Eval(ctx, io_buf, io_buf_len, "<robot>", JS_EVAL_TYPE_GLOBAL);
   RETURN_IF_EXC(ret, write_err(1));
   write_buf("{\"Ok\":null}");
@@ -80,7 +78,7 @@ static void rr_init(void)
 
 static void rr_runturn(void)
 {
-  JSValue input = JS_ParseJSON(ctx, io_buf, io_buf_len - 1, "input");
+  JSValue input = JS_ParseJSON(ctx, io_buf, io_buf_len - 1, "rr_input");
   RETURN_IF_EXC(input, js_std_dump_error(ctx); exit(1));
   JSValue ret = JS_Invoke(ctx, globalThis, main_atom, 1, &input);
   RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));

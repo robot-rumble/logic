@@ -100,9 +100,11 @@ int main(int argc, char **argv)
   printf("__rr_init:%.*s\n", (int)io_buf_len, io_buf);
   fflush(stdout);
 
-  while (getline(&io_buf, &io_buf_len, stdin) != -1)
+  ssize_t n = 0;
+  while ((n = getline(&io_buf, &io_buf_len, stdin)) != -1)
   {
-    // printf("%.*s\n", (int)io_buf_len, io_buf);
+    // not sure why this assignment is necessary, but if we don't do this instead of 11000 we get like 16000
+    io_buf_len = n;
     robot_run();
     printf("__rr_output:%.*s\n", (int)io_buf_len, io_buf);
     fflush(stdout);

@@ -17,7 +17,7 @@ class Enum {
   }
 
   static valueOf(str) {
-    return this.enumValues.find(val => val.enumKey === str)
+    return this.enumValues.find((val) => val.enumKey === str)
   }
 
   // INSTANCE
@@ -243,10 +243,10 @@ function __main(stateData) {
   const state = new State(stateData)
 
   try {
-    __validateFunction('robot', globalThis.robot, 3, true)
+    __validateFunction('robot', globalThis.robot, 2, true)
     __validateFunction('initTurn', globalThis.initTurn, 1, false)
   } catch (e) {
-    return { robot_outputs: { Err: { InitError: __format_err(e) } } }
+    return { Err: { InitError: __format_err(e) } }
   }
 
   if (typeof globalThis.initTurn === 'function') {
@@ -259,7 +259,8 @@ function __main(stateData) {
       logs.push(args.join(' '))
     },
   }
-  const robotOutputs = {}
+  const robot_actions = {}
+  const debug_tables = {}
   for (const id of state.idsByTeam(state.ourTeam)) {
     const debug_table = {}
 
@@ -273,14 +274,16 @@ function __main(stateData) {
 
       debug_table[key] = val
     }
+    globalThis.debug = debug
 
     let result
     try {
-      result = { Ok: globalThis.robot(stateData, state.objById(id), debug) }
+      result = { Ok: globalThis.robot(stateData, state.objById(id)) }
     } catch (e) {
       result = { Err: __format_err(e) }
     }
-    robotOutputs[id] = { action: result, debug_table }
+    robot_actions[id] = result
+    debug_tables[id] = debug_table
   }
-  return { robot_outputs: { Ok: robotOutputs }, logs }
+  return { Ok: { robot_actions, logs, debug_tables, debug_inspections: [] } }
 }
