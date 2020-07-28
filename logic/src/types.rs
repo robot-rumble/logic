@@ -7,6 +7,7 @@ use strum::*;
 use thiserror::Error;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum MapType {
     Rect,
     Circle,
@@ -25,6 +26,7 @@ pub enum MapType {
     Copy,
     Clone,
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum Team {
     Red,
     Blue,
@@ -40,6 +42,20 @@ pub struct MainOutput {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 #[serde(transparent)]
 pub struct Id(#[serde(with = "serde_with::rust::display_fromstr")] pub usize);
+
+#[cfg(feature = "schemars")]
+impl schemars::JsonSchema for Id {
+    fn schema_name() -> String {
+        "Id".to_owned()
+    }
+    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        use schemars::schema::*;
+        let mut s = SchemaObject::default();
+        s.instance_type = Some(SingleOrVec::Single(Box::new(InstanceType::String)));
+        s.string().pattern = Some(r"^[0-9]+$".to_owned());
+        Schema::Object(s)
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TurnState {
@@ -72,6 +88,7 @@ pub type ObjMap = HashMap<Id, Obj>;
 type GridMapType = HashMap<Coords, Id>;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(from = "SerdeGridMap", into = "SerdeGridMap")]
 pub struct GridMap(GridMapType);
 
@@ -85,6 +102,7 @@ impl From<ObjMap> for GridMap {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct State {
     pub objs: ObjMap,
     pub grid: GridMap,
@@ -100,6 +118,7 @@ pub struct StateForOutput {
 pub type TeamMap = HashMap<Team, Vec<Id>>;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct StateForProgramInput {
     pub objs: ObjMap,
     pub grid: GridMap,
@@ -108,6 +127,7 @@ pub struct StateForProgramInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ProgramInput {
     #[serde(flatten)]
     pub state: StateForProgramInput,
@@ -118,12 +138,14 @@ pub struct ProgramInput {
 pub type Range = (usize, Option<usize>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ErrorLoc {
     pub start: Range,
     pub end: Option<Range>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Error {
     pub summary: String,
     pub details: Option<String>,
@@ -133,6 +155,7 @@ pub struct Error {
 pub type DebugTable = HashMap<String, String>;
 
 #[derive(Serialize, Deserialize, Error, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum ProgramError {
     #[error("Unhandled program error")]
     InternalError,
@@ -164,6 +187,7 @@ pub type ProgramResult<T = ProgramOutput> = Result<T, ProgramError>;
 pub type ActionResult = Result<Option<Action>, Error>;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ProgramOutput {
     pub robot_actions: HashMap<Id, ActionResult>,
     pub logs: Vec<String>,
@@ -172,6 +196,7 @@ pub struct ProgramOutput {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Coords(pub usize, pub usize);
 
 impl Add for Coords {
@@ -203,16 +228,19 @@ impl Add<Direction> for Coords {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(from = "SerdeObj", into = "SerdeObj")]
 pub struct Obj(pub BasicObj, pub ObjDetails);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct BasicObj {
     pub id: Id,
     pub coords: Coords,
 }
 
 #[derive(Serialize, Deserialize, IntoStaticStr, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(tag = "obj_type")]
 pub enum ObjDetails {
     Terrain(Terrain),
@@ -220,17 +248,20 @@ pub enum ObjDetails {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Terrain {
     #[serde(rename = "type")]
     pub type_: TerrainType,
 }
 
 #[derive(Serialize, Deserialize, IntoStaticStr, Debug, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum TerrainType {
     Wall,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Unit {
     #[serde(rename = "type")]
     pub type_: UnitType,
@@ -239,11 +270,13 @@ pub struct Unit {
 }
 
 #[derive(Serialize, Deserialize, IntoStaticStr, Debug, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum UnitType {
     Soldier,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Action {
     #[serde(rename = "type")]
     pub type_: ActionType,
@@ -251,12 +284,14 @@ pub struct Action {
 }
 
 #[derive(Serialize, Deserialize, EnumString, Debug, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum ActionType {
     Move,
     Attack,
 }
 
 #[derive(Serialize, Deserialize, EnumString, Debug, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum Direction {
     North,
     South,
@@ -277,6 +312,7 @@ impl Direction {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 struct SerdeObj {
     #[serde(flatten)]
     basic: BasicObj,
@@ -300,6 +336,7 @@ pub type GridMap2D = SerdeGridMap;
 pub type SerdeGridMapType = Vec<Vec<Option<Id>>>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct SerdeGridMap(SerdeGridMapType);
 
 impl From<GridMap> for SerdeGridMap {
