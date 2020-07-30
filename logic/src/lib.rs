@@ -357,8 +357,7 @@ where
                 };
                 let merged_actions = team_actions
                     .into_iter()
-                    .map(|(team, output)| output.into_iter().map(move |(k, v)| (k, v, team)))
-                    .flatten()
+                    .flat_map(|(team, output)| output.into_iter().map(move |(k, v)| (k, v, team)))
                     .map(|(id, action, team)| {
                         (
                             id,
@@ -388,8 +387,7 @@ where
                             .keys()
                             .all(|id| is_id_valid(*team, *id, &turn_state.state.objs))
                     })
-                    .map(|(_team, v)| v)
-                    .flatten()
+                    .flat_map(|(_team, v)| v)
                     .collect();
 
                 let turn = CallbackInput {

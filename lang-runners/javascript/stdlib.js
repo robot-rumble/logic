@@ -17,7 +17,7 @@ class Enum {
   }
 
   static valueOf(str) {
-    return this.enumValues.find((val) => val.enumKey === str)
+    return this.enumValues.find(val => val.enumKey === str)
   }
 
   // INSTANCE
@@ -215,14 +215,19 @@ class Action {
   }
 }
 
-function __format_err(err, incl_err = false, init_err = false) {
-  const lineno = err.lineNumber
+function __format_err(err, is_init_err = false) {
+  const lineno = err && err.lineNumber
   const e = {
-    start: lineno == null ? null : [lineno, null],
-    end: null,
-    message: err.toString(),
+    loc:
+      lineno == null
+        ? null
+        : {
+            start: [lineno, null],
+            end: null,
+          },
+    message: err.toString() + lineno + err && err.fileName,
   }
-  return incl_err ? { Err: init_err ? { InitError: e } : e } : e
+  return { Err: is_init_err ? { InitError: e } : e }
 }
 
 function __main(stateData) {
@@ -233,9 +238,12 @@ function __main(stateData) {
       }
     } else {
       if (f.length !== argcount) {
-        throw new TypeError(
+        const err = new TypeError(
           `Your ${name} function must accept ${argcount} arguments`,
         )
+        err.lineNumber = f && f.lineNumber
+        err.fileName = f && f.fileName
+        throw err
       }
     }
   }
@@ -246,7 +254,7 @@ function __main(stateData) {
     __validateFunction('robot', globalThis.robot, 2, true)
     __validateFunction('initTurn', globalThis.initTurn, 1, false)
   } catch (e) {
-    return { Err: { InitError: __format_err(e) } }
+    return __format_err(e, true)
   }
 
   if (typeof globalThis.initTurn === 'function') {
@@ -280,7 +288,7 @@ function __main(stateData) {
     try {
       result = { Ok: globalThis.robot(stateData, state.objById(id)) }
     } catch (e) {
-      result = { Err: __format_err(e) }
+      result = __format_err(e)
     }
     robot_actions[id] = result
     debug_tables[id] = debug_table

@@ -46,10 +46,11 @@ static void write_json_stringify(JSValue val)
   JS_FreeCString(ctx, s);
 }
 
-static void write_err(int init_err)
+static void write_err(int is_init_err)
 {
   JSValue exc = JS_GetException(ctx);
-  JSValue ret = JS_Invoke(ctx, globalThis, format_err_atom, init_err ? 3 : 2, (JSValue[]){exc, JS_TRUE, JS_TRUE});
+  JSValue args[] = {exc, JS_TRUE}; // true only gets passed if the argc VVVVVVV is 2
+  JSValue ret = JS_Invoke(ctx, globalThis, format_err_atom, is_init_err ? 2 : 1, args);
   JS_FreeValue(ctx, exc);
   RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));
   write_json_stringify(ret);
