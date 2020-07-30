@@ -269,20 +269,29 @@ function __main(stateData) {
   }
   const robot_actions = {}
   const debug_tables = {}
+  const debug_inspections = []
   for (const id of state.idsByTeam(state.ourTeam)) {
     const debug_table = {}
 
-    const debug = (key, val) => {
-      if (typeof key !== 'string') {
-        throw new TypeError(`Debug table key "${key}" must be a string`)
-      }
-      if (typeof val !== 'string') {
-        throw new TypeError(`Debug table value "${val}" must be a string`)
+    class Debug {
+      log (key, val) {
+        if (typeof key !== 'string') {
+          throw new TypeError(`Debug table key "${key}" must be a string`)
+        }
+
+        debug_table[key] = String(val)
       }
 
-      debug_table[key] = val
+      inspect (unit) {
+        if (!(unit instanceof Obj)) {
+          throw new TypeError('Debug table argument must be an Obj')
+        }
+
+        debug_inspections.push(unit.id)
+      }
     }
-    globalThis.debug = debug
+
+    globalThis.debug = new Debug()
 
     let result
     try {
@@ -293,5 +302,5 @@ function __main(stateData) {
     robot_actions[id] = result
     debug_tables[id] = debug_table
   }
-  return { Ok: { robot_actions, logs, debug_tables, debug_inspections: [] } }
+  return { Ok: { robot_actions, logs, debug_tables, debug_inspections } }
 }

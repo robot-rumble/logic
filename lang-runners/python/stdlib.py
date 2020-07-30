@@ -223,16 +223,24 @@ def __main(state, scope=globals()):
 
     robot_actions = {}
     debug_tables = {}
+    debug_inspections = []
+
     for id in state.ids_by_team(state.our_team):
         global debug
         debug_table = {}
 
-        def debug(key, val):
-            if type(key) is not str:
-                raise TypeError(f'Debug table key "{key}" must be a string')
-            if type(val) is not str:
-                raise TypeError(f'Debug table value "{val}" must be a string')
-            debug_table[key] = val
+        class Debug:
+            def log(self, key, val):
+                if type(key) is not str:
+                    raise TypeError(f'Debug table key "{key}" must be a string')
+                debug_table[key] = str(val)
+
+            def inspect(self, unit):
+                if type(unit) is not Obj:
+                    raise TypeError(f'Debug.inspect argument must be an Obj')
+                debug_inspections.append(unit.id)
+
+        debug = Debug()
 
         try:
             action = robot(state, state.obj_by_id(id))
@@ -262,7 +270,7 @@ def __main(state, scope=globals()):
             "robot_actions": robot_actions,
             "logs": logs,
             "debug_tables": debug_tables,
-            "debug_inspections": []
+            "debug_inspections": debug_inspections
         }
     }
 
