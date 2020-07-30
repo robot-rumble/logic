@@ -225,7 +225,7 @@ function __format_err(err, is_init_err = false) {
             start: [lineno, null],
             end: null,
           },
-    message: err.toString() + lineno + err && err.fileName,
+    message: String(err),
   }
   return { Err: is_init_err ? { InitError: e } : e }
 }
