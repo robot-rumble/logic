@@ -13,7 +13,7 @@ use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
 
 use wasi_process::WasiProcess;
-use wasmer_runtime::Module as WasmModule;
+use wasmer_runtime::{cache::Artifact, Module as WasmModule};
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
 #[global_allocator]
@@ -93,25 +93,36 @@ enum Lang {
     Python,
     Javascript,
 }
+
 impl Lang {
     fn get_wasm(self) -> (&'static WasmModule, WasiVersion) {
-        macro_rules! compiled_runner {
+        macro_rules! load_cache {
             ($name:literal) => {{
                 static MODULE: Lazy<(WasmModule, WasiVersion)> = Lazy::new(|| {
-                    let wasm = include_bytes!(concat!("../../../wasm-dist/lang-runners/", $name));
-                    let module = wasmer_runtime::compile(wasm)
-                        .expect(concat!("couldn't compile wasm module ", $name));
+                    let artifact_path = concat!("/opt/wasmer-cache/", $name);
+                    let wasm_bytes = std::fs::read(artifact_path).unwrap_or_else(|e| {
+                        panic!("couldn't read wasm artifact {:?}: {}", artifact_path, e)
+                    });
+                    let artifact =
+                        Artifact::deserialize(&wasm_bytes).expect("couldn't deserialize artifact");
+                    let module = unsafe {
+                        wasmer_runtime_core::load_cache_with(
+                            artifact,
+                            &wasmer_runtime::default_compiler(),
+                        )
+                        .expect("couldn't load module from cache")
+                    };
                     let version = wasmer_wasi::get_wasi_version(&module, false)
                         .unwrap_or(WasiVersion::Latest);
                     (module, version)
                 });
-                let (module, version) = &*MODULE;
-                (module, *version)
+                let (ref m, v) = *MODULE;
+                (m, v)
             }};
         }
         match self {
-            Self::Python => compiled_runner!("pyrunner.wasm"),
-            Self::Javascript => compiled_runner!("jsrunner.wasm"),
+            Self::Python => load_cache!("pyrunner.wasm"),
+            Self::Javascript => load_cache!("jsrunner.wasm"),
         }
     }
 }
@@ -144,7 +155,7 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run(data: LambdaInput) -> Result<(), Error> {
+async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     let input_data = data.Records.into_iter().next().unwrap().body;
 
     let make_runner = |code, lang: Lang| async move {
@@ -227,7 +238,7 @@ async fn run(data: LambdaInput) -> Result<(), Error> {
             message_system_attributes: None,
         })
         .await?;
-    dbg!("Mimalloc");
+
     Ok(())
 }
 

@@ -260,6 +260,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "build-lambda-cache"
+version = "0.0.0"
+dependencies = [
+ "wasmer-runtime",
+]
+
+[[package]]
 name = "build_const"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1315,6 +1322,7 @@ dependencies = [
  "tokio",
  "wasi-process",
  "wasmer-runtime",
+ "wasmer-runtime-core",
  "wasmer-wasi",
 ]
 
