@@ -179,7 +179,7 @@ class State {
   }
 
   objsByTeam(team) {
-    return this.idsByTeam(team).map(this.objById)
+    return this.idsByTeam(team).map(id => this.objById(id))
   }
 
   idByCoords(coords) {
@@ -295,7 +295,7 @@ function __main(stateData) {
 
     let result
     try {
-      result = { Ok: globalThis.robot(stateData, state.objById(id)) }
+      result = { Ok: globalThis.robot(state, state.objById(id)) }
     } catch (e) {
       result = __format_err(e)
     }
