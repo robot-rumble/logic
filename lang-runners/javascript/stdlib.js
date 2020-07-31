@@ -85,12 +85,14 @@ class Coords {
   directionTo(other) {
     const diff = this.sub(other)
     const angle = Math.atan2(diff.y, diff.x)
-    if (Math.abs(angle) > Math.PI / 4) {
-      if (diff.y > 0) return Direction.North
-      else return Direction.South
+    if (Math.abs(angle) <= Math.PI / 4) {
+      return Direction.West
+    } else if (Math.abs(angle + Math.PI / 2) <= Math.PI / 4) {
+      return Direction.South
+    } else if (Math.abs(angle - Math.PI / 2) <= Math.PI / 4) {
+      return Direction.North
     } else {
-      if (diff.x > 0) return Direction.East
-      else return Direction.West
+      return Direction.East
     }
   }
 
@@ -159,11 +161,7 @@ class State {
   }
 
   get turn() {
-    return this.__data.turn
-  }
-
-  get ourTeam() {
-    return Team.valueOf(this.__data.team)
+    return this.__data.turn } get ourTeam() { return Team.valueOf(this.__data.team)
   }
 
   get otherTeam() {
@@ -175,7 +173,8 @@ class State {
   }
 
   objById(id) {
-    return new Obj(this.__data.objs[id])
+    const obj = this.__data.objs[id]
+    if (obj) return new Obj(obj)
   }
 
   objsByTeam(team) {
@@ -183,11 +182,12 @@ class State {
   }
 
   idByCoords(coords) {
-    return this.__data.grid[coords.x][coords.y]
+    return this.__data.grid[coords.x]?.[coords.y]
   }
 
   objByCoords(coords) {
-    return this.objById(this.idByCoords(coords))
+    const id = this.idByCoords(coords)
+    if (id) return this.objById(id)
   }
 }
 
@@ -284,7 +284,7 @@ function __main(stateData) {
 
       inspect (unit) {
         if (!(unit instanceof Obj)) {
-          throw new TypeError('Debug table argument must be an Obj')
+          throw new TypeError('Debug.inspect argument must be an Obj')
         }
 
         debug_inspections.push(unit.id)

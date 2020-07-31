@@ -59,18 +59,16 @@ class Coords(tuple):
         [self + direction for direction in Direction]
 
     def direction_to(self, other):
-        diff = other - self
+        diff = self - other
         angle = math.atan2(diff.y, diff.x)
-        if abs(angle) > math.pi / 4:
-            if diff.y > 0:
-                return Direction.North
-            else:
-                return Direction.South
+        if abs(angle) <= math.pi / 4:
+            return Direction.West
+        elif abs(angle + math.pi / 2) <= math.pi / 4:
+            return Direction.South
+        elif abs(angle - math.pi / 2) <= math.pi / 4:
+            return Direction.North
         else:
-            if diff.x > 0:
-                return Direction.East
-            else:
-                return Direction.West
+            return Direction.East
 
     def __add__(self, other):
         return Coords(self.x + other.x, self.y + other.y)
@@ -146,16 +144,24 @@ class State:
         return self.__data["teams"][team.value]
 
     def obj_by_id(self, id):
-        return Obj(self.__data["objs"][id])
+        try:
+            return Obj(self.__data["objs"][id])
+        except KeyError:
+            return None
 
     def objs_by_team(self, team):
         return [self.obj_by_id(id) for id in self.ids_by_team(team)]
 
     def id_by_coords(self, coords):
-        return self.__data["grid"][coords.x][coords.y]
+        try:
+            return self.__data["grid"][coords.x][coords.y]
+        except IndexError:
+            return None
 
     def obj_by_coords(self, coords):
-        return self.obj_by_id(self.id_by_coords(coords))
+        id = self.id_by_coords(coords)
+        if id:
+            return self.obj_by_id(id)
 
 
 class Action:
@@ -237,7 +243,7 @@ def __main(state, scope=globals()):
 
             def inspect(self, unit):
                 if type(unit) is not Obj:
-                    raise TypeError(f'Debug.inspect argument must be an Obj')
+                    raise TypeError('Debug.inspect argument must be an Obj')
                 debug_inspections.append(unit.id)
 
         debug = Debug()
