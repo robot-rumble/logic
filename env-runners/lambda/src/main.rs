@@ -65,10 +65,9 @@ struct Input {
 }
 
 #[derive(Serialize)]
-enum Winner {
+enum OutputTeam {
     R1,
     R2,
-    Draw,
 }
 
 #[derive(Serialize)]
@@ -81,7 +80,7 @@ struct Output {
     r2_time: f64,
     #[serde(with = "serde_with::json::nested")]
     data: logic::MainOutput,
-    winner: Winner,
+    winner: Option<OutputTeam>,
     errored: bool,
 }
 
@@ -204,9 +203,9 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     let r2_time = handle_res(Team::Blue, err2);
 
     let winner = match output.winner {
-        Some(Team::Red) => Winner::R1,
-        Some(Team::Blue) => Winner::R2,
-        None => Winner::Draw,
+        Some(Team::Red) => Some(OutputTeam::R1),
+        Some(Team::Blue) => Some(OutputTeam::R2),
+        None => None,
     };
     let errored = !output.errors.is_empty();
 
