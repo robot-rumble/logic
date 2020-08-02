@@ -6,7 +6,6 @@ use itertools::Itertools;
 use maplit::hashmap;
 use multimap::MultiMap;
 use rand::Rng;
-use strum::IntoEnumIterator;
 
 pub use types::*;
 
@@ -134,21 +133,29 @@ impl State {
         objs.values().map(|obj| (obj.coords(), obj.id())).collect()
     }
 
+    fn mirror_loc(loc: &Coords) -> Coords {
+        Coords(GRID_SIZE - loc.0 - 1, GRID_SIZE - loc.1 - 1)
+    }
+
     fn spawn_units(&mut self) {
         let objs = (0..Self::TEAM_UNIT_NUM)
             .map(|_| {
-                Team::iter()
-                    .map(|team| {
-                        self.random_spawn_loc().map(|loc| {
-                            let obj = Obj::new_unit(UnitType::Soldier, loc, team);
-                            // update the grid continuously so random_grid_loc can account for new units
-                            self.grid.insert(obj.coords(), obj.id());
-                            (obj.id(), obj)
-                        })
+                self.random_spawn_loc().map(|spawn_loc| {
+                    [
+                        (Team::Blue, spawn_loc),
+                        (Team::Red, Self::mirror_loc(&spawn_loc)),
+                    ]
+                    .iter()
+                    .map(|(team, loc)| {
+                        let obj = Obj::new_unit(UnitType::Soldier, *loc, *team);
+                        // update the grid continuously so random_grid_loc can account for new units
+                        self.grid.insert(obj.coords(), obj.id());
+                        (obj.id(), obj)
                     })
-                    .flatten()
                     .collect::<Vec<_>>()
+                })
             })
+            .flatten()
             .flatten()
             .collect::<Vec<_>>();
         self.objs.extend(objs);
@@ -158,7 +165,9 @@ impl State {
         let available_points = self
             .spawn_points
             .iter()
-            .filter(|loc| !self.grid.contains_key(&loc))
+            .filter(|loc| {
+                !self.grid.contains_key(&loc) && !self.grid.contains_key(&Self::mirror_loc(&loc))
+            })
             .collect::<Vec<_>>();
         if available_points.is_empty() {
             None
