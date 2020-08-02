@@ -264,7 +264,7 @@ function __main(stateData) {
   const logs = []
   globalThis.console = {
     log(...args) {
-      logs.push(args.join(' '))
+      logs.push(args.join(' ') + '\n')
     },
   }
   const robot_actions = {}
