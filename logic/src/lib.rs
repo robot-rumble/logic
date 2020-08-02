@@ -375,8 +375,6 @@ where
                     })
                     .collect::<HashMap<Id, ValidatedRobotAction>>();
 
-                run_turn(&merged_actions, &mut turn_state.state);
-
                 let team_logs = hashmap! {
                     t1 => output1.logs,
                     t2 => output2.logs,
@@ -399,8 +397,14 @@ where
                     .flat_map(|(_team, v)| v)
                     .collect();
 
+                let old_state = turn_state.clone();
+
+                // update state
+                run_turn(&merged_actions, &mut turn_state.state);
+
+                // but the new state isn't passed until the next cycle
                 let turn = CallbackInput {
-                    state: turn_state.clone(),
+                    state: old_state,
                     robot_actions: merged_actions,
                     logs: team_logs,
                     debug_inspections: team_debug_inspections,
