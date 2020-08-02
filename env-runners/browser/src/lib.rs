@@ -73,7 +73,9 @@ impl logic::RobotRunner for JsRunner {
 
         let mut res: ProgramResult = serde_json::from_slice(&output)?;
         if let Ok(ref mut output) = res {
-            output.logs.extend(logs.split('\n').map(ToOwned::to_owned));
+            if !logs.is_empty() {
+                output.logs.extend(logs.split('\n').map(ToOwned::to_owned));
+            }
         }
         res
     }
