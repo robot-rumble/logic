@@ -16,7 +16,7 @@ class Direction(enum.Enum):
     West = "West"
 
     @property
-    def opposite(self) -> Direction:
+    def opposite(self) -> "Direction":
         return {
             Direction.East: Direction.West,
             Direction.West: Direction.East,
@@ -25,7 +25,7 @@ class Direction(enum.Enum):
         }[self]
 
     @property
-    def to_coords(self) -> Coords:
+    def to_coords(self) -> "Coords":
         return {
             Direction.East: Coords(1, 0),
             Direction.West: Coords(-1, 0),
@@ -40,7 +40,7 @@ class ActionType(enum.Enum):
 
 
 class Coords(tuple):
-    def __new__(cls, x: int, y: int) -> Coords:
+    def __new__(cls, x: int, y: int) -> "Coords":
         check_instance(x, int, "Coords.__new__")
         check_instance(y, int, "Coords.__new__")
         self = super().__new__(cls, [x, y])
@@ -57,18 +57,18 @@ class Coords(tuple):
     def y(self) -> int:
         return self[1]
 
-    def distance_to(self, other: Coords) -> float:
+    def distance_to(self, other: "Coords") -> float:
         check_instance(other, Coords, "Coords.distance_to")
         return math.sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
 
-    def walking_distance_to(self, other: Coords) -> int:
+    def walking_distance_to(self, other: "Coords") -> int:
         check_instance(other, Coords, "Coords.walking_distance_to")
         return abs(other.x - self.x) + abs(other.y - self.y)
 
     def coords_around(self) -> List[Direction]:
         [self + direction for direction in Direction]
 
-    def direction_to(self, other: Coords) -> Direction:
+    def direction_to(self, other: "Coords") -> Direction:
         check_instance(other, Coords, "Coords.direction_to")
         diff = self - other
         angle = math.atan2(diff.y, diff.x)
@@ -81,15 +81,15 @@ class Coords(tuple):
         else:
             return Direction.East
 
-    def __add__(self, other: Coords) -> Coords:
+    def __add__(self, other: "Coords") -> "Coords":
         check_instance(other, Coords, "Coords.__add__")
         return Coords(self.x + other.x, self.y + other.y)
 
-    def __sub__(self, other: Coords) -> Coords:
+    def __sub__(self, other: "Coords") -> "Coords":
         check_instance(other, Coords, "Coords.__sub__")
         return Coords(self.x - other.x, self.y - other.y)
 
-    def __mul__(self, n: int) -> Coords:
+    def __mul__(self, n: int) -> "Coords":
         check_instance(n, int, "Coords.__mul__")
         return Coords(self.x * n, self.y * n)
 
@@ -99,7 +99,7 @@ class Team(enum.Enum):
     Blue = "Blue"
 
     @property
-    def opposite(self) -> Team:
+    def opposite(self) -> "Team":
         if self == Team.Red:
             return Team.Blue
         else:
@@ -196,12 +196,12 @@ class Action:
         return f"<Action: {self.type} {self.direction}>"
 
     @staticmethod
-    def move(direction: Direction) -> Action:
+    def move(direction: Direction) -> "Action":
         check_instance(direction, Direction, 'Action.move')
         return Action(ActionType.Move, direction)
 
     @staticmethod
-    def attack(direction: Direction) -> Action:
+    def attack(direction: Direction) -> "Action":
         check_instance(direction, Direction, 'Action.attack')
         return Action(ActionType.Attack, direction)
 
