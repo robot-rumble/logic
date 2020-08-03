@@ -295,11 +295,14 @@ function __main(stateData) {
 
     let result
     try {
-      result = { Ok: globalThis.robot(state, state.objById(id)) }
+      const output = globalThis.robot(state, state.objById(id))
+      if (output instanceof Action) result = { Ok: output }
+      else if (output === null) result = null
+      else throw new TypeError('Robot must return an Action or null')
     } catch (e) {
       result = __format_err(e)
     }
-    robot_actions[id] = result
+    if (result !== null) robot_actions[id] = result
     debug_tables[id] = debug_table
   }
   return { Ok: { robot_actions, logs, debug_tables, debug_inspections } }

@@ -250,17 +250,20 @@ def __main(state, scope=globals()):
 
         try:
             action = robot(state, state.obj_by_id(id))
-            if not isinstance(action, Action):
-                raise TypeError("Your robot function must return an Action")
+            if isinstance(action, Action):
+                result = {
+                    "Ok": {"type": action.type.value, "direction": action.direction.value}
+                }
+            elif action is None:
+                result = None
+            else:
+                raise TypeError("Robot must return an Action or None")
         except Exception as e:
             result = {"Err": __format_err(e)}
-        else:
-            result = {
-                "Ok": {"type": action.type.value, "direction": action.direction.value}
-            }
-        robot_actions[id] = result
-        if debug_table:
-            debug_tables[id] = debug_table
+
+        if result is not None:
+            robot_actions[id] = result
+        debug_tables[id] = debug_table
 
     if had_stdout:
         sys.stdout = old_stdout
