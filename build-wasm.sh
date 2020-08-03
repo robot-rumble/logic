@@ -59,6 +59,7 @@ pids=()
 if [[ $BROWSER ]]; then
     {
         wasm-pack build env-runners/browser
+        rm -r "$OUTDIR/browser-runner"
         cp -r env-runners/browser/pkg "$OUTDIR/browser-runner"
     } 2>&1 | prepend browser-runner: &
     pids+=($!)
