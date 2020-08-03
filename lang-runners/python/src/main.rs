@@ -27,10 +27,7 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     attrs
 }
 
-fn serde_to_py<T: serde::Serialize>(
-    s: &T,
-    vm: &VirtualMachine,
-) -> Result<PyObjectRef, ProgramError> {
+fn serde_to_py<T: serde::Serialize>(s: &T, vm: &VirtualMachine) -> ProgramResult<PyObjectRef> {
     let val = serde_json::to_value(s)?;
     let py = py_serde::deserialize(vm, val)?;
     Ok(py)
@@ -39,7 +36,7 @@ fn serde_to_py<T: serde::Serialize>(
 fn py_to_serde<T: serde::de::DeserializeOwned>(
     py: &PyObjectRef,
     vm: &VirtualMachine,
-) -> Result<T, ProgramError> {
+) -> ProgramResult<T> {
     let val = py_serde::serialize(vm, py, serde_json::value::Serializer)?;
     let out = serde_json::from_value(val)?;
     Ok(out)
@@ -48,11 +45,14 @@ fn py_to_serde<T: serde::de::DeserializeOwned>(
 fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) -> ProgramResult {
     let ret = vm
         .invoke(main, vec![serde_to_py(&input, vm)?])
-        .map_err(|_| ProgramError::InternalError)?;
+        .map_err(|e| {
+            eprintln!("main err: {}", vm.to_repr(e.as_object()).unwrap());
+            ProgramError::InternalError
+        })?;
     py_to_serde(&ret, vm).and_then(|r| r)
 }
 
-pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramResult, ProgramError> {
+pub fn init(code: &str) -> ProgramResult<impl FnMut(ProgramInput) -> ProgramResult> {
     let vm = VirtualMachine::new(PySettings {
         initialization_parameter: InitParameter::InitializeInternal,
         ..Default::default()
@@ -65,7 +65,8 @@ pub fn init(code: &str) -> Result<impl FnMut(ProgramInput) -> ProgramResult, Pro
         )
         .map_err(|err| {
             ProgramError::InitError(logic::Error {
-                message: err.to_string(),
+                summary: err.to_string(),
+                details: None,
                 loc: Some(logic::ErrorLoc {
                     start: (err.location.row(), Some(err.location.column())),
                     end: None,
