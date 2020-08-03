@@ -184,7 +184,11 @@ class State {
   }
 
   get turn() {
-    return this.__data.turn } get ourTeam() { return Team.valueOf(this.__data.team)
+    return this.__data.turn
+  }
+
+  get ourTeam() {
+    return Team.valueOf(this.__data.team)
   }
 
   get otherTeam() {
@@ -250,6 +254,7 @@ class Action {
 function __format_err(err, is_init_err = false) {
   const lineno = err && err.lineNumber
   const e = {
+    // TODO: patch quickjs with Error.traceback to reliably get correct location info
     loc:
       lineno == null
         ? null
@@ -257,7 +262,8 @@ function __format_err(err, is_init_err = false) {
             start: [lineno, null],
             end: null,
           },
-    message: String(err),
+    summary: String(err),
+    details: (err && err.stack) || null,
   }
   return { Err: is_init_err ? { InitError: e } : e }
 }
