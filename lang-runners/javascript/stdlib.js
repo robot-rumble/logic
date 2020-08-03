@@ -1,5 +1,17 @@
 // "use strict";
 
+function checkInstance(val, cls, funcName) {
+  if (!(val instanceof cls)) {
+    throw new TypeError(`${funcName} argument must be an instance of ${cls.name} (ignore the line num)`)
+  }
+}
+
+function checkType(val, type, funcName) {
+  if (typeof val !== type) {
+    throw new TypeError(`${funcName} argument must be of type ${type} (ignore the line num)`)
+  }
+}
+
 // https://2ality.com/2020/01/enum-pattern.html
 // https://github.com/rauschma/enumify/blob/master/ts/src/index.ts
 class Enum {
@@ -17,6 +29,7 @@ class Enum {
   }
 
   static valueOf(str) {
+    checkType(str, 'string', 'Enum.valueOf')
     return this.enumValues.find(val => val.enumKey === str)
   }
 
@@ -66,6 +79,8 @@ Direction.closeEnum()
 
 class Coords {
   constructor(x, y) {
+    checkType(x, 'number', 'Coords constructor')
+    checkType(y, 'number', 'Coords constructor')
     this.x = x
     this.y = y
   }
@@ -75,14 +90,17 @@ class Coords {
   }
 
   distanceTo(other) {
+    checkInstance(other, Coords, 'Coords.distanceTo')
     return Math.sqrt((other.x - this.x) ** 2 + (other.y - this.y) ** 2)
   }
 
   walkingDistanceTo(other) {
+    checkInstance(other, Coords, 'Coords.walkingDistanceTo')
     return Math.abs(other.x - this.x) + Math.abs(other.y - this.y)
   }
 
   directionTo(other) {
+    checkInstance(other, Coords, 'Coords.directionTo')
     const diff = this.sub(other)
     const angle = Math.atan2(diff.y, diff.x)
     if (Math.abs(angle) <= Math.PI / 4) {
@@ -97,14 +115,17 @@ class Coords {
   }
 
   add(other) {
+    checkInstance(other, Coords, 'Coords.add')
     return new Coords(this.x + other.x, this.y + other.y)
   }
 
   sub(other) {
+    checkInstance(other, Coords, 'Coords.sub')
     return new Coords(this.x - other.x, this.y - other.y)
   }
 
   mul(n) {
+    checkType(n, 'number', 'Coords.mul')
     return new Coords(this.x * n, this.y * n)
   }
 }
@@ -127,6 +148,7 @@ ObjType.closeEnum()
 
 class Obj {
   constructor(obj) {
+    checkType(obj, 'object', 'Obj constructor')
     this.__data = obj
   }
 
@@ -157,6 +179,7 @@ class Obj {
 
 class State {
   constructor(state) {
+    checkType(state, 'object', 'State constructor')
     this.__data = state
   }
 
@@ -168,24 +191,29 @@ class State {
     return this.ourTeam.opposite
   }
 
-  idsByTeam(team) {
-    return this.__data.teams[team.enumKey]
-  }
-
   objById(id) {
+    checkType(id, 'string', 'State.objById')
     const obj = this.__data.objs[id]
     if (obj) return new Obj(obj)
   }
 
+  idsByTeam(team) {
+    checkInstance(team, Team, 'State.idsByTeam')
+    return this.__data.teams[team.enumKey]
+  }
+
   objsByTeam(team) {
+    checkInstance(team, Team, 'State.objsByTeam')
     return this.idsByTeam(team).map(id => this.objById(id))
   }
 
   idByCoords(coords) {
+    checkInstance(coords, Coords, 'State.idByCoords')
     return this.__data.grid[coords.x]?.[coords.y]
   }
 
   objByCoords(coords) {
+    checkInstance(coords, Coords, 'State.objByCoords')
     const id = this.idByCoords(coords)
     if (id) return this.objById(id)
   }
@@ -198,6 +226,8 @@ ActionType.closeEnum()
 
 class Action {
   constructor(type, direction) {
+    checkInstance(type, ActionType, 'Action constructor')
+    checkInstance(direction, Direction, 'Action constructor')
     this.type = type
     this.direction = direction
   }
@@ -207,10 +237,12 @@ class Action {
   }
 
   static move(direction) {
+    checkInstance(direction, Direction, 'Action.move')
     return new Action(ActionType.Move, direction)
   }
 
   static attack(direction) {
+    checkInstance(direction, Direction, 'Action.attack')
     return new Action(ActionType.Attack, direction)
   }
 }
@@ -275,18 +307,12 @@ function __main(stateData) {
 
     class Debug {
       log (key, val) {
-        if (typeof key !== 'string') {
-          throw new TypeError(`Debug table key "${key}" must be a string`)
-        }
-
+        checkType(key, 'string', 'Debug.log "key"')
         debug_table[key] = String(val)
       }
 
       inspect (unit) {
-        if (!(unit instanceof Obj)) {
-          throw new TypeError('Debug.inspect argument must be an Obj')
-        }
-
+        checkInstance(unit, Obj, 'Debug.inspect')
         debug_inspections.push(unit.id)
       }
     }
