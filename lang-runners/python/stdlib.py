@@ -66,7 +66,7 @@ class Coords(tuple):
         return abs(other.x - self.x) + abs(other.y - self.y)
 
     def coords_around(self) -> List[Direction]:
-        [self + direction for direction in Direction]
+        return [self + direction for direction in Direction]
 
     def direction_to(self, other: "Coords") -> Direction:
         check_instance(other, Coords, "Coords.direction_to")
