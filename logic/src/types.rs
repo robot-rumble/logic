@@ -111,7 +111,8 @@ pub struct ErrorLoc {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Error {
-    pub message: String,
+    pub summary: String,
+    pub details: Option<String>,
     pub loc: Option<ErrorLoc>,
 }
 

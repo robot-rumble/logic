@@ -191,8 +191,12 @@ def __format_err(exc):
                 "end": None,
             }
         tb = tb.tb_next
+    import traceback
+    tb_lines = traceback.TracebackException.from_exception(exc.__class__, exc).format()
+    # from docs: "The message indicating which exception occurred is always the last string in the output."
     return {
-        "message": str(exc),
+        "summary": tb_lines.pop().strip(),
+        "details": str(tb_lines),
         "loc": loc,
     }
 

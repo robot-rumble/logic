@@ -161,7 +161,10 @@ class State {
   }
 
   get turn() {
-    return this.__data.turn } get ourTeam() { return Team.valueOf(this.__data.team)
+    return this.__data.turn
+  }
+  get ourTeam() {
+    return Team.valueOf(this.__data.team)
   }
 
   get otherTeam() {
@@ -218,6 +221,7 @@ class Action {
 function __format_err(err, is_init_err = false) {
   const lineno = err && err.lineNumber
   const e = {
+    // TODO: patch quickjs with Error.traceback to reliably get correct location info
     loc:
       lineno == null
         ? null
@@ -225,7 +229,8 @@ function __format_err(err, is_init_err = false) {
             start: [lineno, null],
             end: null,
           },
-    message: String(err),
+    summary: String(err),
+    details: (err && err.stack) || null,
   }
   return { Err: is_init_err ? { InitError: e } : e }
 }
@@ -274,7 +279,7 @@ function __main(stateData) {
     const debug_table = {}
 
     class Debug {
-      log (key, val) {
+      log(key, val) {
         if (typeof key !== 'string') {
           throw new TypeError(`Debug table key "${key}" must be a string`)
         }
@@ -282,7 +287,7 @@ function __main(stateData) {
         debug_table[key] = String(val)
       }
 
-      inspect (unit) {
+      inspect(unit) {
         if (!(unit instanceof Obj)) {
           throw new TypeError('Debug.inspect argument must be an Obj')
         }
