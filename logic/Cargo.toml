@@ -15,7 +15,5 @@ rand = { version = "0.7.3", features = ["wasm-bindgen"] }
 multimap = "0.8.1"
 strum = { version = "0.18.0", features = ["derive"] }
 thiserror = "1.0.20"
-itertools = "0.9.0"
-maplit = "1.0.2"
 futures-util = "0.3.5"
 async-trait = "0.1.36"

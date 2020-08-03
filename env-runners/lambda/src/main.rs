@@ -183,7 +183,11 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         make_runner(&input_data.r2_code, input_data.r2_lang),
     );
 
-    let run_fut = logic::run(r1, r2, |_| {}, TURN_COUNT);
+    let runners = maplit::hashmap! {
+        Team::Blue => r1,
+        Team::Red => r2,
+    };
+    let run_fut = logic::run(runners, |_| {}, TURN_COUNT);
 
     let (mut output, err1, err2) = tokio::join!(run_fut, t1, t2);
 
