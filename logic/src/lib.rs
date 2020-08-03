@@ -2,8 +2,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use futures_util::future::{join_all, FutureExt};
-use itertools::Itertools;
-use maplit::hashmap;
 use multimap::MultiMap;
 use rand::Rng;
 
@@ -254,32 +252,26 @@ fn is_id_valid(team: Team, id: Id, objs: &ObjMap) -> bool {
     }
 }
 
-fn handle_program_errors<T>(
-    errored_players: (
-        (Team, Result<T, ProgramError>),
-        (Team, Result<T, ProgramError>),
-    ),
+fn handle_program_errors(
+    errored_players: impl IntoIterator<Item = (Team, Option<ProgramError>)>,
     turns: Vec<CallbackInput>,
 ) -> MainOutput {
     let mut errors = HashMap::new();
-    let winner = match errored_players {
-        ((t1, Err(e1)), (t2, Err(e2))) => {
-            errors.insert(t1, e1);
-            errors.insert(t2, e2);
-            None
+    let mut winner = Some(None);
+    for (team, res) in errored_players {
+        if let Some(err) = res {
+            errors.insert(team, err);
+        } else {
+            // basically, we only want a winner if there's only one
+            if let Some(None) = winner {
+                winner = Some(Some(team))
+            } else {
+                winner = None
+            }
         }
-        ((t1, Err(e1)), (t2, Ok(_))) => {
-            errors.insert(t1, e1);
-            Some(t2)
-        }
-        ((t1, Ok(_)), (t2, Err(e2))) => {
-            errors.insert(t2, e2);
-            Some(t1)
-        }
-        _ => unreachable!(),
-    };
+    }
     MainOutput {
-        winner,
+        winner: winner.flatten(),
         errors,
         turns,
     }
@@ -315,10 +307,34 @@ where
     }
 }
 
+fn unwrap_result_map<T>(
+    map: impl Iterator<Item = (Team, Result<T, ProgramError>)> + ExactSizeIterator,
+    mut ok: impl FnMut(Team, T),
+) -> Option<HashMap<Team, Option<ProgramError>>> {
+    let mut errs = HashMap::with_capacity(map.len());
+    let mut errored = false;
+    for (team, res) in map {
+        match res {
+            Ok(t) => {
+                ok(team, t);
+                errs.insert(team, None);
+            }
+            Err(e) => {
+                errored = true;
+                errs.insert(team, Some(e));
+            }
+        }
+    }
+    if errored {
+        Some(errs)
+    } else {
+        None
+    }
+}
+
 // Team 1: Blue, Team 2: Red
 pub async fn run<TurnCb, R>(
-    run_team1: Result<R, ProgramError>,
-    run_team2: Result<R, ProgramError>,
+    runners: HashMap<Team, Result<R, ProgramError>>,
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
@@ -326,19 +342,15 @@ where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
-    let mut turns = Vec::new();
+    let mut run_funcs = HashMap::with_capacity(runners.len());
+    let errs = unwrap_result_map(runners.into_iter(), |team, runner| {
+        run_funcs.insert(team, runner);
+    });
+    if let Some(errs) = errs {
+        return handle_program_errors(errs, vec![]);
+    }
 
-    let mut run_funcs = match ((Team::Blue, run_team1), (Team::Red, run_team2)) {
-        ((t1, Ok(run_t1)), (t2, Ok(run_t2))) => {
-            hashmap! {
-                t1 => run_t1,
-                t2 => run_t2,
-            }
-        }
-        errored => {
-            return handle_program_errors(errored, turns);
-        }
-    };
+    let mut turns = Vec::with_capacity(max_turn);
 
     let mut turn_state = TurnState {
         turn: 0,
@@ -358,65 +370,46 @@ where
         }))
         .await;
 
-        match program_results.into_iter().collect_tuple().unwrap() {
-            ((t1, Ok(output1)), (t2, Ok(output2))) => {
-                let team_actions = hashmap! {
-                    t1 => output1.robot_actions,
-                    t2 => output2.robot_actions,
-                };
-                let merged_actions = team_actions
-                    .into_iter()
-                    .flat_map(|(team, output)| output.into_iter().map(move |(k, v)| (k, v, team)))
-                    .map(|(id, action, team)| {
-                        (
-                            id,
-                            validate_robot_action(action, team, id, &turn_state.state.objs),
-                        )
-                    })
-                    .collect::<HashMap<Id, ValidatedRobotAction>>();
-
-                let team_logs = hashmap! {
-                    t1 => output1.logs,
-                    t2 => output2.logs,
-                };
-                let team_debug_inspections = hashmap! {
-                    t1 => output1.debug_inspections,
-                    t2 => output2.debug_inspections,
-                };
-                let team_debug_tables = hashmap! {
-                    t1 => output1.debug_tables,
-                    t2 => output2.debug_tables,
-                };
-                let merged_debug_tables = team_debug_tables
-                    .into_iter()
-                    .filter(|(team, debug_tables)| {
-                        debug_tables
-                            .keys()
-                            .all(|id| is_id_valid(*team, *id, &turn_state.state.objs))
-                    })
-                    .flat_map(|(_team, v)| v)
-                    .collect();
-
-                let old_state = turn_state.clone();
-
-                // update state
-                run_turn(&merged_actions, &mut turn_state.state);
-
-                // but the new state isn't passed until the next cycle
-                let turn = CallbackInput {
-                    state: old_state,
-                    robot_actions: merged_actions,
-                    logs: team_logs,
-                    debug_inspections: team_debug_inspections,
-                    debug_tables: merged_debug_tables,
-                };
-                turn_cb(&turn);
-                turns.push(turn);
+        let mut merged_actions = HashMap::new();
+        let mut team_logs = HashMap::with_capacity(program_results.len());
+        let mut team_debug_inspections = HashMap::with_capacity(program_results.len());
+        let mut merged_debug_tables = HashMap::new();
+        let errs = unwrap_result_map(program_results.into_iter(), |team, output| {
+            merged_actions.extend(output.robot_actions.into_iter().map(|(id, action)| {
+                (
+                    id,
+                    validate_robot_action(action, team, id, &turn_state.state.objs),
+                )
+            }));
+            team_logs.insert(team, output.logs);
+            team_debug_inspections.insert(team, output.debug_inspections);
+            if output
+                .debug_tables
+                .keys()
+                .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
+            {
+                merged_debug_tables.extend(output.debug_tables)
             }
-            errored => {
-                return handle_program_errors(errored, turns);
-            }
+        });
+        if let Some(errs) = errs {
+            return handle_program_errors(errs, turns);
         }
+
+        let old_state = turn_state.clone();
+
+        // update state
+        run_turn(&merged_actions, &mut turn_state.state);
+
+        // but the new state isn't passed until the next cycle
+        let turn = CallbackInput {
+            state: old_state,
+            robot_actions: merged_actions,
+            logs: team_logs,
+            debug_inspections: team_debug_inspections,
+            debug_tables: merged_debug_tables,
+        };
+        turn_cb(&turn);
+        turns.push(turn);
     }
     let winner = turn_state.state.determine_winner();
     MainOutput {

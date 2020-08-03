@@ -20,6 +20,7 @@ native-runner = { path = "../native" }
 wasi-process = "0.1"
 wasmer-runtime = "0.17.0"
 wasmer-wasi = "0.17.0"
+maplit = "1.0"
 
 # https://github.com/sfackler/rust-openssl/issues/980#issuecomment-415757400
 # Add openssl-sys as a direct dependency so it can be cross compiled to

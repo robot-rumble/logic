@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 logic = { path = "../../logic", features = ["robot-runner-not-send"] }
 futures-util = "0.3.5"
+maplit = "1.0"
 
 wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4.13"
