@@ -2,7 +2,6 @@
 import enum
 import typing
 
-
 def check_instance(val: typing.Any, cls: typing.Any, func_name: str):
     if not isinstance(val, cls):
         raise TypeError(f"{func_name} argument must be an instance of {cls.__name__}")
