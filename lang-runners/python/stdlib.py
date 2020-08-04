@@ -16,6 +16,8 @@ class Direction(enum.Enum):
     East = "East"
     West = "West"
 
+    __repr__ = lambda self: self.__str__()
+
     @property
     def opposite(self) -> "Direction":
         return {
@@ -120,6 +122,8 @@ class Team(enum.Enum):
     Red = "Red"
     Blue = "Blue"
 
+    __repr__ = lambda self: self.__str__()
+
     @property
     def opposite(self) -> "Team":
         if self == Team.Red:
@@ -131,6 +135,8 @@ class Team(enum.Enum):
 class ObjType(enum.Enum):
     Unit = "Unit"
     Terrain = "Terrain"
+
+    __repr__ = lambda self: self.__str__()
 
 
 class Obj:
@@ -210,6 +216,8 @@ class State:
 class ActionType(enum.Enum):
     Attack = "Attack"
     Move = "Move"
+
+    __repr__ = lambda self: self.__str__()
 
 
 class Action:
