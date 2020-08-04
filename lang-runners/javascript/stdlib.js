@@ -252,9 +252,23 @@ class Action {
 }
 
 function __format_err(err, is_init_err = false) {
-  const lineno = err && err.lineNumber
+  let lineno = null
+  if (err) {
+    if (err.lineNumber) {
+      lineno = err.lineNumber
+    } else if (Array.isArray(err.traceback)) {
+      for (const entry of err.traceback) {
+        if (
+          entry &&
+          entry.fileName === '<robot>' &&
+          Number.isInteger(entry.lineNumber)
+        ) {
+          lineno = entry.lineNumber
+        }
+      }
+    }
+  }
   const e = {
-    // TODO: patch quickjs with Error.traceback to reliably get correct location info
     loc:
       lineno == null
         ? null
