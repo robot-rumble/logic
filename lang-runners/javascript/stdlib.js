@@ -2,13 +2,15 @@
 
 function checkInstance(val, cls, funcName) {
   if (!(val instanceof cls)) {
-    throw new TypeError(`${funcName} argument must be an instance of ${cls.name} (ignore the line num)`)
+    throw new TypeError(
+      `${funcName} argument must be an instance of ${cls.name}`,
+    )
   }
 }
 
 function checkType(val, type, funcName) {
   if (typeof val !== type) {
-    throw new TypeError(`${funcName} argument must be of type ${type} (ignore the line num)`)
+    throw new TypeError(`${funcName} argument must be of type ${type}`)
   }
 }
 
@@ -326,12 +328,12 @@ function __main(stateData) {
     const debug_table = {}
 
     class Debug {
-      log (key, val) {
+      log(key, val) {
         checkType(key, 'string', 'Debug.log "key"')
         debug_table[key] = String(val)
       }
 
-      inspect (unit) {
+      inspect(unit) {
         checkInstance(unit, Obj, 'Debug.inspect')
         debug_inspections.push(unit.id)
       }
