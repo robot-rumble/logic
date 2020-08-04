@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import enum
 import math
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 
 
-def check_instance(val, cls, func_name):
+def check_instance(val: Any, cls: Any, func_name: str):
     if not isinstance(val, cls):
         raise TypeError(f"{func_name} argument must be an instance of {cls.__name__}")
 
@@ -31,6 +31,24 @@ class Direction(enum.Enum):
             Direction.West: Coords(-1, 0),
             Direction.South: Coords(0, 1),
             Direction.North: Coords(0, -1),
+        }[self]
+
+    @property
+    def rotate_cw(self) -> "Direction":
+        return {
+            Direction.North: Direction.East,
+            Direction.East: Direction.South,
+            Direction.South: Direction.West,
+            Direction.West: Direction.North,
+        }[self]
+
+    @property
+    def rotate_ccw(self) -> "Direction":
+        return {
+            Direction.North: Direction.West,
+            Direction.West: Direction.South,
+            Direction.South: Direction.East,
+            Direction.East: Direction.North,
         }[self]
 
 
@@ -81,13 +99,21 @@ class Coords(tuple):
         else:
             return Direction.East
 
-    def __add__(self, other: "Coords") -> "Coords":
-        check_instance(other, Coords, "Coords.__add__")
-        return Coords(self.x + other.x, self.y + other.y)
+    def __add__(self, other: Union["Coords", Direction]) -> "Coords":
+        if isinstance(other, Coords):
+            return Coords(self.x + other.x, self.y + other.y)
+        elif isinstance(other, Direction):
+            return Coords(self.x + other.to_coords.x, self.y + other.to_coords.y)
+        else:
+            raise TypeError('Coords.__add__ argument must be an instance of Coords or Direction')
 
-    def __sub__(self, other: "Coords") -> "Coords":
-        check_instance(other, Coords, "Coords.__sub__")
-        return Coords(self.x - other.x, self.y - other.y)
+    def __sub__(self, other: Union["Coords", Direction]) -> "Coords":
+        if isinstance(other, Coords):
+            return Coords(self.x - other.x, self.y - other.y)
+        elif isinstance(other, Direction):
+            return Coords(self.x - other.to_coords.x, self.y - other.to_coords.y)
+        else:
+            raise TypeError('Coords.__sub__ argument must be an instance of Coords or Direction')
 
     def __mul__(self, n: int) -> "Coords":
         check_instance(n, int, "Coords.__mul__")
@@ -204,6 +230,9 @@ class Action:
     def attack(direction: Direction) -> "Action":
         check_instance(direction, Direction, 'Action.attack')
         return Action(ActionType.Attack, direction)
+
+
+MAP_SIZE = 19
 
 
 def __format_err(exc):

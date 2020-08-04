@@ -72,6 +72,32 @@ class Direction extends Enum {
         return new Coords(0, -1)
     }
   }
+
+  get rotateCw() {
+    switch (this) {
+        case Direction.North:
+          return Direction.East
+        case Direction.East:
+          return Direction.South
+        case Direction.South:
+          return Direction.West
+        case Direction.West:
+          return Direction.North
+    }
+  }
+
+  get rotateCcw() {
+    switch (this) {
+      case Direction.North:
+        return Direction.West
+      case Direction.West:
+        return Direction.South
+      case Direction.South:
+        return Direction.East
+      case Direction.East:
+        return Direction.North
+    }
+  }
 }
 Direction.East = new Direction()
 Direction.West = new Direction()
@@ -117,13 +143,23 @@ class Coords {
   }
 
   add(other) {
-    checkInstance(other, Coords, 'Coords.add')
-    return new Coords(this.x + other.x, this.y + other.y)
+    if (other instanceof Coords) {
+      return new Coords(this.x + other.x, this.y + other.y)
+    } else if (other instanceof Direction) {
+      return new Coords(this.x + other.toCoords.x, this.y + other.toCoords.y)
+    } else {
+      throw new TypeError('Coords.add argument must be an instance of Coords or Direction')
+    }
   }
 
   sub(other) {
-    checkInstance(other, Coords, 'Coords.sub')
-    return new Coords(this.x - other.x, this.y - other.y)
+    if (other instanceof Coords) {
+      return new Coords(this.x - other.x, this.y - other.y)
+    } else if (other instanceof Direction) {
+      return new Coords(this.x - other.toCoords.x, this.y - other.toCoords.y)
+    } else {
+      throw new TypeError('Coords.sub argument must be an instance of Coords or Direction')
+    }
   }
 
   mul(n) {
@@ -252,6 +288,10 @@ class Action {
     return new Action(ActionType.Attack, direction)
   }
 }
+
+
+const MAP_SIZE = 19
+
 
 function __format_err(err, is_init_err = false) {
   let lineno = null
