@@ -190,6 +190,13 @@ class Obj {
     this.__data = obj
   }
 
+  toString() {
+    if (this.objType === ObjType.Unit)
+      return `<${this.objType} id=${this.id} coords=${this.coords} ${this.team} health=${this.health}>`
+    else
+      return `<${this.objType} id=${this.id} coords=${this.coords}>`
+  }
+
   get coords() {
     return new Coords(...this.__data.coords)
   }
@@ -275,7 +282,7 @@ class Action {
   }
 
   toString() {
-    return `<Action: ${this.type} ${this.direction}>`
+    return `<${this.type} ${this.direction}>`
   }
 
   static move(direction) {

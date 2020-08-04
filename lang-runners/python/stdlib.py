@@ -143,6 +143,12 @@ class Obj:
     def __init__(self, obj: dict) -> None:
         check_instance(obj, dict, "Coords.__init__")
         self.__data = obj
+        
+    def __repr__(self) -> str:
+        if self.obj_type == ObjType.Unit:
+            return f"<{self.objType} id={self.id} coords={self.coords} {self.team} health={self.health}>"
+        else:
+            return f"<{self.objType} id={self.id} coords={self.coords}>"
 
     @property
     def coords(self) -> Coords:
@@ -228,7 +234,7 @@ class Action:
         self.direction = direction
 
     def __repr__(self) -> str:
-        return f"<Action: {self.type} {self.direction}>"
+        return f"<{self.type} {self.direction}>"
 
     @staticmethod
     def move(direction: Direction) -> "Action":
