@@ -423,10 +423,12 @@ fn run_turn(robot_actions: &HashMap<Id, ValidatedRobotAction>, state: &mut State
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
 
-    for (id, action) in robot_actions
-        .iter()
-        .filter_map(|(id, action)| action.as_ref().ok().map(|a| (id, a)))
-    {
+    for (id, action) in robot_actions.iter().filter_map(|(id, action)| {
+        action
+            .as_ref()
+            .ok()
+            .and_then(|maybe_a| maybe_a.map(|a| (id, a)))
+    }) {
         let map = match action.type_ {
             ActionType::Move => &mut movement_map,
             ActionType::Attack => &mut attack_map,

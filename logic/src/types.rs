@@ -56,7 +56,7 @@ pub enum RobotErrorAfterValidation {
     InvalidAction(String),
 }
 
-pub type ValidatedRobotAction = Result<Action, RobotErrorAfterValidation>;
+pub type ValidatedRobotAction = Result<Option<Action>, RobotErrorAfterValidation>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CallbackInput {
@@ -147,7 +147,7 @@ impl From<std::io::Error> for ProgramError {
 }
 
 pub type ProgramResult<T = ProgramOutput> = Result<T, ProgramError>;
-pub type ActionResult = Result<Action, Error>;
+pub type ActionResult = Result<Option<Action>, Error>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProgramOutput {

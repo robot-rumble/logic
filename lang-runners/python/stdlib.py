@@ -142,7 +142,7 @@ class Obj:
     def __init__(self, obj: dict) -> None:
         check_instance(obj, dict, "Coords.__init__")
         self.__data = obj
-        
+
     def __repr__(self) -> str:
         if self.obj_type == ObjType.Unit:
             return f"<{self.objType} id={self.id} coords={self.coords} {self.team} health={self.health}>"
