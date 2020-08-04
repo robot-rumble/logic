@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import enum
-import math
 from typing import List, Optional, Any, Union
+
+import math
 
 
 def check_instance(val: Any, cls: Any, func_name: str):
@@ -50,11 +51,6 @@ class Direction(enum.Enum):
             Direction.South: Direction.East,
             Direction.East: Direction.North,
         }[self]
-
-
-class ActionType(enum.Enum):
-    Attack = "Attack"
-    Move = "Move"
 
 
 class Coords(tuple):
@@ -209,6 +205,11 @@ class State:
         id = self.id_by_coords(coords)
         if id:
             return self.obj_by_id(id)
+
+
+class ActionType(enum.Enum):
+    Attack = "Attack"
+    Move = "Move"
 
 
 class Action:
