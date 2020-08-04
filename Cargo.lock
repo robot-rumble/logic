@@ -2276,7 +2276,7 @@ dependencies = [
 [[package]]
 name = "rustpython-bytecode"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "bincode",
  "bitflags",
@@ -2290,7 +2290,7 @@ dependencies = [
 [[package]]
 name = "rustpython-common"
 version = "0.0.0"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "cfg-if",
  "hexf-parse",
@@ -2302,7 +2302,7 @@ dependencies = [
 [[package]]
 name = "rustpython-compiler"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "arrayvec",
  "indexmap",
@@ -2316,7 +2316,7 @@ dependencies = [
 [[package]]
 name = "rustpython-derive"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "maplit",
  "once_cell",
@@ -2330,7 +2330,7 @@ dependencies = [
 [[package]]
 name = "rustpython-parser"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -2345,7 +2345,7 @@ dependencies = [
 [[package]]
 name = "rustpython-pylib"
 version = "0.1.0"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "maplit",
  "rustpython-bytecode",
@@ -2355,7 +2355,7 @@ dependencies = [
 [[package]]
 name = "rustpython-vm"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#543104d9154cd3c43d71fb3000c0e3fd6873ae24"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/fix-wasi#a995f973ead14b7fef20b27f0e7a5741a11a30f5"
 dependencies = [
  "adler32",
  "arr_macro",

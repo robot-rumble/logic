@@ -46,7 +46,8 @@ fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) ->
     let ret = vm
         .invoke(main, vec![serde_to_py(&input, vm)?])
         .map_err(|e| {
-            eprintln!("main err: {}", vm.to_repr(e.as_object()).unwrap());
+            eprintln!("error in stdlib init:");
+            rustpython_vm::exceptions::print_exception(vm, e);
             ProgramError::InternalError
         })?;
     py_to_serde(&ret, vm).and_then(|r| r)
