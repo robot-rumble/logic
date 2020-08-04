@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 import enum
-from typing import List, Optional, Any, Union
-
-import math
+import typing
 
 
-def check_instance(val: Any, cls: Any, func_name: str):
+def check_instance(val: typing.Any, cls: typing.Any, func_name: str):
     if not isinstance(val, cls):
         raise TypeError(f"{func_name} argument must be an instance of {cls.__name__}")
 
@@ -74,6 +72,7 @@ class Coords(tuple):
         return self[1]
 
     def distance_to(self, other: "Coords") -> float:
+        import math
         check_instance(other, Coords, "Coords.distance_to")
         return math.sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
 
@@ -81,10 +80,11 @@ class Coords(tuple):
         check_instance(other, Coords, "Coords.walking_distance_to")
         return abs(other.x - self.x) + abs(other.y - self.y)
 
-    def coords_around(self) -> List[Direction]:
+    def coords_around(self) -> typing.List[Direction]:
         return [self + direction for direction in Direction]
 
     def direction_to(self, other: "Coords") -> Direction:
+        import math
         check_instance(other, Coords, "Coords.direction_to")
         diff = self - other
         angle = math.atan2(diff.y, diff.x)
@@ -97,7 +97,7 @@ class Coords(tuple):
         else:
             return Direction.East
 
-    def __add__(self, other: Union["Coords", Direction]) -> "Coords":
+    def __add__(self, other: typing.Union["Coords", Direction]) -> "Coords":
         if isinstance(other, Coords):
             return Coords(self.x + other.x, self.y + other.y)
         elif isinstance(other, Direction):
@@ -105,7 +105,7 @@ class Coords(tuple):
         else:
             raise TypeError('Coords.__add__ argument must be an instance of Coords or Direction')
 
-    def __sub__(self, other: Union["Coords", Direction]) -> "Coords":
+    def __sub__(self, other: typing.Union["Coords", Direction]) -> "Coords":
         if isinstance(other, Coords):
             return Coords(self.x - other.x, self.y - other.y)
         elif isinstance(other, Direction):
@@ -190,29 +190,29 @@ class State:
     def other_team(self) -> Team:
         return self.our_team.opposite
 
-    def obj_by_id(self, id: str) -> Optional[Obj]:
+    def obj_by_id(self, id: str) -> typing.Optional[Obj]:
         check_instance(id, str, 'State.obj_by_id')
         try:
             return Obj(self.__data["objs"][id])
         except KeyError:
             return None
 
-    def ids_by_team(self, team: Team) -> List[str]:
+    def ids_by_team(self, team: Team) -> typing.List[str]:
         check_instance(team, Team, 'State.check_instance')
         return self.__data["teams"][team.value]
 
-    def objs_by_team(self, team: Team) -> List[Obj]:
+    def objs_by_team(self, team: Team) -> typing.List[Obj]:
         check_instance(team, Team, 'State.objs_by_team')
         return [self.obj_by_id(id) for id in self.ids_by_team(team)]
 
-    def id_by_coords(self, coords: Coords) -> Optional[str]:
+    def id_by_coords(self, coords: Coords) -> typing.Optional[str]:
         check_instance(coords, Coords, 'State.id_by_coords')
         try:
             return self.__data["grid"][coords.x][coords.y]
         except IndexError:
             return None
 
-    def obj_by_coords(self, coords: Coords) -> Optional[Obj]:
+    def obj_by_coords(self, coords: Coords) -> typing.Optional[Obj]:
         check_instance(coords, Coords, 'State.obj_by_coords')
         id = self.id_by_coords(coords)
         if id:
@@ -284,6 +284,7 @@ def __main(state, scope=globals()):
         return f
 
     import sys, io
+    import typing
 
     had_stdout, old_stdout = (
         (True, sys.stdout) if hasattr(sys, "stdout") else (False, None)
@@ -309,7 +310,7 @@ def __main(state, scope=globals()):
         debug_table = {}
 
         class Debug:
-            def log(self, key: str, val: Any) -> None:
+            def log(self, key: str, val: typing.Any) -> None:
                 check_instance(key, str, "Debug.log 'key'")
                 debug_table[key] = str(val)
 
@@ -326,14 +327,13 @@ def __main(state, scope=globals()):
                     "Ok": {"type": action.type.value, "direction": action.direction.value}
                 }
             elif action is None:
-                result = None
+                result = {"Ok": None}
             else:
                 raise TypeError("Robot must return an Action or None")
         except Exception as e:
             result = {"Err": __format_err(e)}
 
-        if result is not None:
-            robot_actions[id] = result
+        robot_actions[id] = result
         debug_tables[id] = debug_table
 
     if had_stdout:
@@ -356,6 +356,7 @@ def __main(state, scope=globals()):
 
 
 del enum
+del typing
 
 if __name__ == "__main__":
     __builtins__.__dict__.update(globals())
