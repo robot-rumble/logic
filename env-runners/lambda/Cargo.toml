@@ -30,6 +30,8 @@ tempfile = "3.1.0"
 jemallocator = "0.3.2"
 wasmer-runtime-core = "0.17.1"
 
+flate2 = "1.0"
+
 [features]
 # Force openssl-sys to staticly link in the openssl library. Necessary when
 # cross compiling to x86_64-unknown-linux-musl.

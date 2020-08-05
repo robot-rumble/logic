@@ -16,6 +16,10 @@ use wasi_process::WasiProcess;
 use wasmer_runtime::{cache::Artifact, Module as WasmModule};
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use std::io::Write;
+
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
@@ -238,6 +242,12 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         errored,
     };
 
+    let body = serde_json::to_string(&output)?;
+
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&body.into_bytes())?;
+    let result = encoder.finish()?;
+
     let client = SqsClient::new(Region::UsEast1);
 
     let out_queue_url = std::env::var("BATTLE_QUEUE_OUT_URL")
@@ -246,7 +256,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     client
         .send_message(SendMessageRequest {
             queue_url: out_queue_url,
-            message_body: serde_json::to_string(&output)?,
+            message_body: String::from_utf8(result)?,
             delay_seconds: None,
             message_attributes: None,
             message_deduplication_id: None,
