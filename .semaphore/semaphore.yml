@@ -52,13 +52,11 @@ blocks:
         - name: Build Python
           commands:
             - bash build-wasm.sh --python
-        - name: Build and upload lambda wasm cache
-          commands:
-            - bash build-lambda.sh --wasm-layer
       epilogue:
         on_pass:
           commands:
             - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
+            - bash build-lambda.sh --wasm-layer
 
   - name: browser-runner
     dependencies: []
