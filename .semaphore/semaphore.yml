@@ -19,15 +19,7 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      # lftp required to use caching
       - sudo apt install -y awscli
-#      - sudo apt install -y lftp
-#      - cache restore rustup
-#      - cache restore cargo
-#  epilogue:
-#    commands:
-#      - cache store rustup /root/.rustup
-#      - cache store cargo /root/.cargo
 
 blocks:
   - name: lang-runners
@@ -64,7 +56,6 @@ blocks:
         on_pass:
           commands:
             - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
-#            - cache store lang-runners target
 
   - name: browser-runner
     dependencies: []
@@ -73,7 +64,6 @@ blocks:
     task:
       prologue:
         commands:
-#          - cache restore browser-runner
           # install https://rustwasm.github.io/wasm-pack/installer/
           - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       jobs:
@@ -84,7 +74,6 @@ blocks:
         on_pass:
           commands:
             - aws s3 sync wasm-dist/browser-runner s3://${S3_BUCKET_BUILD}/browser-runner
-#            - cache store browser-runner target
 
   - name: lambda-runner
     dependencies: [lang-runners]
@@ -93,15 +82,10 @@ blocks:
     task:
       prologue:
         commands:
-#          - cache restore lambda-runner
           - rustup target install x86_64-unknown-linux-musl
           - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
       jobs:
         - name: Build and Upload to S3
           commands:
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod
-#      epilogue:
-#        on_pass:
-#          commands:
-#            - cache store lambda-runner target
 
