@@ -44,7 +44,6 @@ pub struct Id(#[serde(with = "serde_with::rust::display_fromstr")] pub usize);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TurnState {
     pub turn: usize,
-    #[serde(flatten)]
     pub state: State,
 }
 
@@ -60,7 +59,7 @@ pub type ValidatedRobotAction = Result<Option<Action>, RobotErrorAfterValidation
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CallbackInput {
-    pub state: TurnState,
+    pub state: StateForOutput,
     pub robot_actions: HashMap<Id, ValidatedRobotAction>,
 
     pub logs: HashMap<Team, Vec<String>>,
@@ -76,11 +75,26 @@ type GridMapType = HashMap<Coords, Id>;
 #[serde(from = "SerdeGridMap", into = "SerdeGridMap")]
 pub struct GridMap(GridMapType);
 
+impl From<ObjMap> for GridMap {
+    fn from(obj_map: ObjMap) -> Self {
+        obj_map
+            .values()
+            .map(|Obj(basic, _)| (basic.coords, basic.id))
+            .collect()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
     pub objs: ObjMap,
     pub grid: GridMap,
     pub spawn_points: Vec<Coords>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct StateForOutput {
+    pub objs: ObjMap,
+    pub turn: usize,
 }
 
 pub type TeamMap = HashMap<Team, Vec<Id>>;

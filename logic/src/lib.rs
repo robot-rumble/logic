@@ -402,7 +402,10 @@ where
 
         // but the new state isn't passed until the next cycle
         let turn = CallbackInput {
-            state: old_state,
+            state: StateForOutput {
+                objs: old_state.state.objs,
+                turn: old_state.turn,
+            },
             robot_actions: merged_actions,
             logs: team_logs,
             debug_inspections: team_debug_inspections,
