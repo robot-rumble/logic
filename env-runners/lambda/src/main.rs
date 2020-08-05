@@ -54,6 +54,7 @@ struct LambdaInputRecord {
 
 #[derive(Deserialize, Debug)]
 struct Input {
+    turn_num: usize,
     r1_id: usize,
     pr1_id: usize,
     r1_code: String,
@@ -194,7 +195,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         Team::Blue => r1,
         Team::Red => r2,
     };
-    let run_fut = logic::run(runners, |_| {}, TURN_COUNT);
+    let run_fut = logic::run(runners, |_| {}, input_data.turn_num);
 
     let (mut output, err1, err2) = tokio::join!(run_fut, t1, t2);
 
@@ -258,4 +259,3 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
 }
 
 const TIMEOUT: Duration = Duration::from_secs(60 * 3);
-const TURN_COUNT: usize = 100;
