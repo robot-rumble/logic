@@ -220,6 +220,11 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     };
     let errored = !output.errors.is_empty();
 
+    println!(
+        "RESULT: r1_time {:#?}, r2_time {:#?}, winner {:#?}, errored {:#?}",
+        r1_time, r2_time, winner, errored
+    );
+
     let output = Output {
         r1_id: input_data.r1_id,
         pr1_id: input_data.pr1_id,
@@ -231,8 +236,6 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         winner,
         errored,
     };
-
-    println!("DATA SENT: {:#?}", output);
 
     let client = SqsClient::new(Region::UsEast1);
 
