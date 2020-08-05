@@ -59,6 +59,8 @@ blocks:
 
   - name: wasm-layer
     dependencies: [lang-runners]
+    run:
+      when: "change_in(['/lang-runners/', '/env-runners/lambda-cache/'])"
     task:
       jobs:
         - name: Build and upload lambda wasm cache

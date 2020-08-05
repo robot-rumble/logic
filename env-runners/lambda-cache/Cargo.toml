@@ -1,5 +1,5 @@
 [package]
-name = "build-lambda-cache"
+name = "lambda-cache"
 version = "0.0.0"
 authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
 edition = "2018"

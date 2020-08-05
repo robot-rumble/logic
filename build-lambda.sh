@@ -36,7 +36,7 @@ pids=()
 
 if [[ $WASM_LAYER ]]; then
     {
-        cargo run -p build-lambda-cache --release "$tmpdir/wasmer-cache" wasm-dist/lang-runners/*
+        cargo run -p lambda-cache --release "$tmpdir/wasmer-cache" wasm-dist/lang-runners/*
     } 2>&1 | prepend wasm-layer: &
     pids+=($!)
 fi

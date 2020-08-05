@@ -261,13 +261,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "build-lambda-cache"
-version = "0.0.0"
-dependencies = [
- "wasmer-runtime",
-]
-
-[[package]]
 name = "build_const"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1302,6 +1295,13 @@ dependencies = [
  "proc-macro2 0.4.30",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "lambda-cache"
+version = "0.0.0"
+dependencies = [
+ "wasmer-runtime",
 ]
 
 [[package]]
