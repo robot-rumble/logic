@@ -439,12 +439,25 @@ fn run_turn(robot_actions: &HashMap<Id, ValidatedRobotAction>, state: &mut State
 
     let movement_grid = movement_map
         .iter()
-        .filter_map(|(coords, &id)| {
-            if movement_map.is_vec(coords) {
-                None
-            } else {
-                Some((*coords, *id))
-            }
+        .filter_map(|(coords, &id)| match movement_map.get_vec(coords) {
+            Some(vec) if vec.len() > 1 => vec
+                .into_iter()
+                .map(|id| state.objs.get(&id).unwrap())
+                .min_by_key(|obj| {
+                    match (
+                        coords.0 as isize - obj.coords().0 as isize,
+                        coords.1 as isize - obj.coords().1 as isize,
+                    ) {
+                        (0, 1) => 1,
+                        (-1, 0) => 2,
+                        (0, -1) => 3,
+                        (1, 0) => 4,
+                        _ => 10,
+                    }
+                })
+                .map(|obj| (*coords, obj.id())),
+            Some(_) => Some((*coords, *id)),
+            None => None,
         })
         .collect::<GridMap>();
 
