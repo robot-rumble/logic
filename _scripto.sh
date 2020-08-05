@@ -25,7 +25,7 @@ wait_pids() {
         wait "$pid" || code=1
     done
 
-    exit $code
+    return $code
 }
 
 prepend() {
