@@ -52,7 +52,7 @@ blocks:
         - name: Build Python
           commands:
             - bash build-wasm.sh --python
-        -name: Build and upload lambda wasm cache
+        - name: Build and upload lambda wasm cache
           commands:
             - bash build-lambda.sh --wasm-layer
       epilogue:
