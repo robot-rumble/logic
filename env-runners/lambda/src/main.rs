@@ -155,11 +155,14 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
-    println!("DATA RECEIVED: {}", data);
+    println!("DATA RECEIVED: {:#?}", data);
 
     let input_data = data.Records.into_iter().next().unwrap().body;
 
-    println!("LANGS: {} vs {}", input_data.r1_lang, input_data.r2_lang);
+    println!(
+        "LANGS: {:#?} vs {:#?}",
+        input_data.r1_lang, input_data.r2_lang
+    );
 
     let make_runner = |code, lang: Lang| async move {
         let (module, version) = lang.get_wasm();
@@ -229,7 +232,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         errored,
     };
 
-    println!("DATA SENT: {}", output);
+    println!("DATA SENT: {:#?}", output);
 
     let client = SqsClient::new(Region::UsEast1);
 
