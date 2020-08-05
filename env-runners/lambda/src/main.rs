@@ -41,18 +41,18 @@ SAMPLE EVENT
 }
 */
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct LambdaInput {
     Records: Vec<LambdaInputRecord>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct LambdaInputRecord {
     #[serde(with = "serde_with::json::nested")]
     body: Input,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Input {
     r1_id: usize,
     pr1_id: usize,
@@ -64,13 +64,13 @@ struct Input {
     r2_lang: Lang,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 enum OutputTeam {
     R1,
     R2,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct Output {
     r1_id: usize,
     pr1_id: usize,
@@ -87,7 +87,7 @@ struct Output {
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 // TODO: deduplicate with cli somehow
-#[derive(Copy, Clone, Deserialize)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 enum Lang {
     Python,
     Javascript,
