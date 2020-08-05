@@ -334,7 +334,8 @@ def __main(state, scope=globals()):
             result = {"Err": __format_err(e)}
 
         robot_actions[id] = result
-        debug_tables[id] = debug_table
+        if debug_table:
+            debug_tables[id] = debug_table
 
     if had_stdout:
         sys.stdout = old_stdout

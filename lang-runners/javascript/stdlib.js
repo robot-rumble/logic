@@ -398,7 +398,7 @@ function __main(stateData) {
       result = __format_err(e)
     }
     robot_actions[id] = result
-    debug_tables[id] = debug_table
+    if (Object.keys(debug_table).length) debug_tables[id] = debug_table
   }
   return { Ok: { robot_actions, logs, debug_tables, debug_inspections } }
 }
