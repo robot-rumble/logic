@@ -2,6 +2,11 @@ use std::error::Error;
 use std::fmt;
 use std::path::PathBuf;
 
+#[cfg(not(target_arch = "x86_64"))]
+compile_error!(
+    "can't build wasmer caches for the x86_64-unknown-linux-musl target on a non-x86_64 platform"
+);
+
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args_os().map(PathBuf::from);
     args.next();

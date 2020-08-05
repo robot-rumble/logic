@@ -4,20 +4,26 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+source _scripto.sh
+
 DEPLOY=
 PROD=
+LAMBDA=
+WASM_LAYER=
 for arg in "$@"; do
     case "$arg" in
         --deploy) DEPLOY=1 ;;
-        --prod) PROD=1
+        --prod) PROD=1 ;;
+        --all|--lambda) LAMBDA=1 ;;&
+        --all|--wasm-layer) WASM_LAYER=1 ;;&
     esac
 done
+
+ensure_some_target LAMBDA WASM_LAYER
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT SIGINT
 
-
-TARGET_DIR="$PWD"/target/x86_64-unknown-linux-musl/release
 
 if [[ $PROD ]]; then
     build_command=cargo
@@ -26,23 +32,40 @@ else
 fi
 unset OPENSSL_NO_VENDOR
 
-[[ -x target/release/build-lambda-cache ]] || cargo build -p build-lambda-cache --release
-target/release/build-lambda-cache "$tmpdir/wasmer-cache" wasm-dist/lang-runners/*
-$build_command build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
+pids=()
 
-cd "$tmpdir"
+if [[ $WASM_LAYER ]]; then
+    {
+        cargo run -p build-lambda-cache --release "$tmpdir/wasmer-cache" wasm-dist/lang-runners/*
+    } 2>&1 | prepend wasm-layer: &
+    pids+=($!)
+fi
 
-cp "$TARGET_DIR"/lambda-runner bootstrap
-zip lambda.zip bootstrap
-zip -r wasmer-cache.zip wasmer-cache/
-rm bootstrap
+if [[ $LAMBDA ]]; then
+    {
+        $build_command build --target-dir musl -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
+        cp target/x86_64-unknown-linux-musl/release/lambda-runner "$tmpdir/bootstrap"
+    } 2>&1 | prepend lambda-runner: &
+    pids+=($!)
+fi
+
+wait_pids "${pids[@]}"
+
 
 if [[ $DEPLOY ]]; then
-    aws s3 cp lambda.zip "s3://$S3_BUCKET"
-    aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket="$S3_BUCKET" --s3-key lambda.zip
+    cd "$tmpdir"
 
-    LAYER_NAME=robot-rumble-cached-wasm-runners
-    aws s3 cp wasmer-cache.zip "s3://$S3_BUCKET"
-    LAYER_ARN=$(aws lambda publish-layer-version --layer-name "$LAYER_NAME" --content=S3Bucket="$S3_BUCKET",S3Key=wasmer-cache.zip | jq -r .LayerVersionArn)
-    aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN"
+    if [[ $LAMBDA ]]; then
+        zip lambda.zip bootstrap
+        aws s3 cp lambda.zip "s3://$S3_BUCKET"
+        aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket="$S3_BUCKET" --s3-key lambda.zip
+    fi
+
+    if [[ $WASM_LAYER ]]; then
+        zip -r wasmer-cache.zip wasmer-cache/
+        LAYER_NAME=robot-rumble-cached-wasm-runners
+        aws s3 cp wasmer-cache.zip "s3://$S3_BUCKET"
+        LAYER_ARN=$(aws lambda publish-layer-version --layer-name "$LAYER_NAME" --content=S3Bucket="$S3_BUCKET",S3Key=wasmer-cache.zip | jq -r .LayerVersionArn)
+        aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN"
+    fi
 fi

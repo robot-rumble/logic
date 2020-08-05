@@ -52,6 +52,9 @@ blocks:
         - name: Build Python
           commands:
             - bash build-wasm.sh --python
+        -name: Build and upload lambda wasm cache
+          commands:
+            - bash build-lambda.sh --wasm-layer
       epilogue:
         on_pass:
           commands:
@@ -76,16 +79,14 @@ blocks:
             - aws s3 sync wasm-dist/browser-runner s3://${S3_BUCKET_BUILD}/browser-runner
 
   - name: lambda-runner
-    dependencies: [lang-runners]
     run:
-      when: "change_in(['/logic/', '/lang-runners/', '/env-runners/native/', '/env-runners/lambda/'])"
+      when: "change_in(['/logic/', '/env-runners/native/', '/env-runners/lambda/'])"
     task:
       prologue:
         commands:
           - rustup target install x86_64-unknown-linux-musl
-          - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
       jobs:
         - name: Build and Upload to S3
           commands:
-            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod
+            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
 
