@@ -63,10 +63,10 @@ blocks:
       when: "change_in(['/lang-runners/', '/env-runners/lambda-cache/'])"
     task:
       jobs:
-        - name: Build and upload lambda wasm cache
+        - name: Build and upload to S3
           commands:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
-            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --wasm-layer
+            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
   - name: browser-runner
     dependencies: []
@@ -98,4 +98,3 @@ blocks:
         - name: Build and Upload to S3
           commands:
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
-
