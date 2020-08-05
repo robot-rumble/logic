@@ -43,7 +43,7 @@ fi
 
 if [[ $LAMBDA ]]; then
     {
-        $build_command build --target-dir musl -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
+        $build_command build -p lambda-runner --target=x86_64-unknown-linux-musl --all-features --release
         cp target/x86_64-unknown-linux-musl/release/lambda-runner "$tmpdir/bootstrap"
     } 2>&1 | prepend lambda-runner: &
     pids+=($!)
