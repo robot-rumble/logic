@@ -160,12 +160,12 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
-    println!("DATA RECEIVED: {:#?}", data);
+    println!("DATA RECEIVED: {:?}", data);
 
     let input_data = data.Records.into_iter().next().unwrap().body;
 
     println!(
-        "LANGS: {:#?} vs {:#?}",
+        "LANGS: {:?} vs {:?}",
         input_data.r1_lang, input_data.r2_lang
     );
 
@@ -226,7 +226,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     let errored = !output.errors.is_empty();
 
     println!(
-        "RESULT: r1_time {:#?}, r2_time {:#?}, winner {:#?}, errored {:#?}",
+        "RESULT: r1_time {:?}, r2_time {:?}, winner {:?}, errored {:?}",
         r1_time, r2_time, winner, errored
     );
 
