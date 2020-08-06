@@ -299,7 +299,10 @@ def __main(state, scope=globals()):
         return {"Err": {"InitError": __format_err(e)}}
 
     if callable(init_turn):
-        init_turn(state)
+        try:
+            init_turn(state)
+        except Exception as e:
+            return {"Err": {"InitError": __format_err(e)}}
 
     robot_actions = {}
     debug_tables = {}

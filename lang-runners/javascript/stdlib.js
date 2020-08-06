@@ -300,7 +300,7 @@ class Action {
 const MAP_SIZE = 19
 
 
-function __format_err(err, is_init_err = false) {
+function __format_err(err, isInitError = false) {
   let lineno = null
   if (err) {
     if (err.lineNumber) {
@@ -328,7 +328,7 @@ function __format_err(err, is_init_err = false) {
     summary: String(err),
     details: (err && err.stack) || null,
   }
-  return { Err: is_init_err ? { InitError: e } : e }
+  return { Err: isInitError ? { InitError: e } : e }
 }
 
 function __main(stateData) {
@@ -359,7 +359,11 @@ function __main(stateData) {
   }
 
   if (typeof globalThis.initTurn === 'function') {
-    globalThis.initTurn(state)
+    try {
+      globalThis.initTurn(state)
+    } catch (e)  {
+      return __format_err(e, true)
+    }
   }
 
   const logs = []
