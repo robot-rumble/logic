@@ -80,7 +80,7 @@ class Coords(tuple):
         check_instance(other, Coords, "Coords.walking_distance_to")
         return abs(other.x - self.x) + abs(other.y - self.y)
 
-    def coords_around(self) -> typing.List[Direction]:
+    def coords_around(self) -> typing.List["Coords"]:
         return [self + direction for direction in Direction]
 
     def direction_to(self, other: "Coords") -> Direction:
@@ -146,9 +146,9 @@ class Obj:
 
     def __repr__(self) -> str:
         if self.obj_type == ObjType.Unit:
-            return f"<{self.objType} id={self.id} coords={self.coords} {self.team} health={self.health}>"
+            return f"<{self.obj_type} id={self.id} coords={self.coords} {self.team} health={self.health}>"
         else:
-            return f"<{self.objType} id={self.id} coords={self.coords}>"
+            return f"<{self.obj_type} id={self.id} coords={self.coords}>"
 
     @property
     def coords(self) -> Coords:
@@ -163,14 +163,18 @@ class Obj:
         return ObjType(self.__data["obj_type"])
 
     @property
-    def team(self) -> Team:
+    def team(self) -> typing.Optional[Team]:
         if self.obj_type == ObjType.Unit:
             return Team(self.__data["team"])
+        else:
+            return None
 
     @property
-    def health(self) -> int:
+    def health(self) -> typing.Optional[int]:
         if self.obj_type == ObjType.Unit:
             return self.__data["health"]
+        else:
+            return None
 
 
 class State:
@@ -217,6 +221,8 @@ class State:
         id = self.id_by_coords(coords)
         if id:
             return self.obj_by_id(id)
+        else:
+            return None
 
 
 class ActionType(enum.Enum):
