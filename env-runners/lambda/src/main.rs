@@ -16,9 +16,9 @@ use wasi_process::WasiProcess;
 use wasmer_runtime::{cache::Artifact, Module as WasmModule};
 use wasmer_wasi::{state::WasiState, WasiVersion};
 
+use base64::write::EncoderWriter as Base64Writer;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use std::io::Write;
 
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
@@ -242,11 +242,15 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         errored,
     };
 
-    let body = serde_json::to_string(&output)?;
-
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&body.into_bytes())?;
-    let result = encoder.finish()?;
+    let mut message_body = Vec::<u8>::new();
+    {
+        let mut b64_enc = Base64Writer::new(&mut message_body, base64::STANDARD);
+        let mut gz_enc = GzEncoder::new(&mut b64_enc, Compression::default());
+        serde_json::to_writer(&mut gz_enc, &output)?;
+        gz_enc.finish()?;
+        b64_enc.finish()?;
+    }
+    let message_body = String::from_utf8(message_body)?;
 
     let client = SqsClient::new(Region::UsEast1);
 
@@ -256,7 +260,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     client
         .send_message(SendMessageRequest {
             queue_url: out_queue_url,
-            message_body: String::from_utf8(result)?,
+            message_body,
             delay_seconds: None,
             message_attributes: None,
             message_deduplication_id: None,

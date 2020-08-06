@@ -1308,6 +1308,7 @@ dependencies = [
 name = "lambda-runner"
 version = "0.1.0"
 dependencies = [
+ "base64 0.12.3",
  "flate2",
  "jemallocator",
  "lambda",

@@ -31,6 +31,7 @@ jemallocator = "0.3.2"
 wasmer-runtime-core = "0.17.1"
 
 flate2 = "1.0"
+base64 = "0.12.3"
 
 [features]
 # Force openssl-sys to staticly link in the openssl library. Necessary when
