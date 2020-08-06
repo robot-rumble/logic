@@ -219,8 +219,8 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     let r2_time = handle_res(Team::Blue, err2);
 
     let winner = match output.winner {
-        Some(Team::Red) => Some(OutputTeam::R1),
-        Some(Team::Blue) => Some(OutputTeam::R2),
+        Some(Team::Blue) => Some(OutputTeam::R1),
+        Some(Team::Red) => Some(OutputTeam::R2),
         None => None,
     };
     let errored = !output.errors.is_empty();
