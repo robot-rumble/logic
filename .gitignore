@@ -11,6 +11,7 @@
 *.wasm
 
 __pycache__/
+.mypy_cache
 
 pkg/
 dist/
