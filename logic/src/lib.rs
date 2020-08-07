@@ -7,6 +7,8 @@ use rand::Rng;
 
 pub use types::*;
 
+use strum::IntoEnumIterator;
+
 mod types;
 
 pub fn randrange(low: usize, high: usize) -> usize {
@@ -175,13 +177,18 @@ impl State {
     }
 
     fn create_team_map(objs: &ObjMap) -> TeamMap {
-        objs.values()
-            .filter_map(|obj| match obj.details() {
-                ObjDetails::Unit(unit) => Some((unit.team, obj.id())),
-                _ => None,
+        Team::iter()
+            .map(|team| {
+                (
+                    team,
+                    objs.values()
+                        .filter_map(|obj| match obj.details() {
+                            ObjDetails::Unit(unit) if unit.team == team => Some(obj.id()),
+                            _ => None,
+                        })
+                        .collect(),
+                )
             })
-            .collect::<MultiMap<Team, Id>>()
-            .into_iter()
             .collect()
     }
 
