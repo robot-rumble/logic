@@ -258,7 +258,7 @@ class State {
 
   idByCoords(coords) {
     checkInstance(coords, Coords, 'State.idByCoords')
-    return this.__data.grid[coords.x]?.[coords.y]
+    return this.__data.grid[coords.y]?.[coords.x]
   }
 
   objByCoords(coords) {

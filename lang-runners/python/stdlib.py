@@ -212,7 +212,7 @@ class State:
     def id_by_coords(self, coords: Coords) -> typing.Optional[str]:
         check_instance(coords, Coords, 'State.id_by_coords')
         try:
-            return self.__data["grid"][coords.x][coords.y]
+            return self.__data["grid"][coords.y][coords.x]
         except IndexError:
             return None
 
