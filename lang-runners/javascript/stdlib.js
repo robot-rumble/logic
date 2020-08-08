@@ -67,9 +67,9 @@ class Direction extends Enum {
       case Direction.West:
         return new Coords(-1, 0)
       case Direction.North:
-        return new Coords(0, 1)
-      case Direction.South:
         return new Coords(0, -1)
+      case Direction.South:
+        return new Coords(0, 1)
     }
   }
 
