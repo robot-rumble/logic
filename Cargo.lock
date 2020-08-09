@@ -2278,7 +2278,7 @@ dependencies = [
 [[package]]
 name = "rustpython-bytecode"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "bincode",
  "bitflags",
@@ -2292,7 +2292,7 @@ dependencies = [
 [[package]]
 name = "rustpython-common"
 version = "0.0.0"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "cfg-if",
  "hexf-parse",
@@ -2304,7 +2304,7 @@ dependencies = [
 [[package]]
 name = "rustpython-compiler"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "arrayvec",
  "indexmap",
@@ -2318,7 +2318,7 @@ dependencies = [
 [[package]]
 name = "rustpython-derive"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "maplit",
  "once_cell",
@@ -2332,7 +2332,7 @@ dependencies = [
 [[package]]
 name = "rustpython-parser"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -2347,7 +2347,7 @@ dependencies = [
 [[package]]
 name = "rustpython-pylib"
 version = "0.1.0"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "rustpython-bytecode",
  "rustpython-derive",
@@ -2356,7 +2356,7 @@ dependencies = [
 [[package]]
 name = "rustpython-vm"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#faae6ad04584f8f9d823af10c55a5c7889f411ec"
+source = "git+https://github.com/RustPython/RustPython?branch=coolreader18/no-unimplemented-os#8cd540a3ccba035df2a12c86fae132df423f31a4"
 dependencies = [
  "adler32",
  "arr_macro",
