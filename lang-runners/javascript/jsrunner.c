@@ -73,6 +73,7 @@ static void rr_init(void)
   js_std_eval_binary(ctx, qjsc_stdlib, qjsc_stdlib_size, 0);
 
   JSValue ret = JS_Eval(ctx, io_buf, io_buf_len, "<robot>", JS_EVAL_TYPE_GLOBAL);
+  JS_RunGC(rt);
   RETURN_IF_EXC(ret, write_err(1));
   write_buf("{\"Ok\":null}");
 }
@@ -82,6 +83,7 @@ static void rr_runturn(void)
   JSValue input = JS_ParseJSON(ctx, io_buf, io_buf_len - 1, "rr_input");
   RETURN_IF_EXC(input, js_std_dump_error(ctx); exit(1));
   JSValue ret = JS_Invoke(ctx, globalThis, main_atom, 1, &input);
+  JS_RunGC(rt);
   RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));
   write_json_stringify(ret);
   JS_FreeValue(ctx, ret);
