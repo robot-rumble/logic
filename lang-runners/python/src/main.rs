@@ -20,7 +20,7 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
 
     let attrs = vm.ctx.new_dict();
     let run = || -> PyResult<()> {
-        attrs.set_item("__name__", vm.new_str("<robot>".to_owned()), vm)?;
+        attrs.set_item("__name__", vm.ctx.new_str("<robot>".to_owned()), vm)?;
         vm.run_code_obj(
             vm.ctx.new_code_object(CODE.clone()),
             Scope::with_builtins(None, attrs.clone(), vm),
