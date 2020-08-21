@@ -1,7 +1,7 @@
 use rustpython_vm::obj::objdict::PyDictRef;
 use rustpython_vm::py_compile_bytecode;
 use rustpython_vm::py_serde;
-use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef};
+use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef, PyResult};
 use rustpython_vm::scope::Scope;
 use rustpython_vm::{InitParameter, PySettings, VirtualMachine};
 
@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     static CODE: Lazy<rustpython_vm::bytecode::CodeObject> = Lazy::new(|| {
         let (_, frozen): (String, _) =
-            py_compile_bytecode!(file = "stdlib.py", module_name = "<stdlib>")
+            py_compile_bytecode!(file = "stdlib/rumblelib.py", module_name = "rumblelib")
                 .into_iter()
                 .next()
                 .unwrap();
@@ -19,11 +19,21 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     });
 
     let attrs = vm.ctx.new_dict();
-    vm.unwrap_pyresult(attrs.set_item("__name__", vm.new_str("<robot>".to_owned()), vm));
-    vm.unwrap_pyresult(vm.run_code_obj(
-        vm.ctx.new_code_object(CODE.clone()),
-        Scope::with_builtins(None, attrs.clone(), vm),
-    ));
+    let run = || -> PyResult<()> {
+        attrs.set_item("__name__", vm.new_str("<robot>".to_owned()), vm)?;
+        vm.run_code_obj(
+            vm.ctx.new_code_object(CODE.clone()),
+            Scope::with_builtins(None, attrs.clone(), vm),
+        )?;
+        let sys_modules: PyDictRef = vm
+            .get_attribute(vm.sys_module.clone(), "modules")?
+            .downcast()
+            .ok()
+            .expect("sys.modules should be dict");
+        sys_modules.set_item("rumblelib", attrs.clone().into_object(), vm)?;
+        Ok(())
+    };
+    vm.unwrap_pyresult(run());
     attrs
 }
 
