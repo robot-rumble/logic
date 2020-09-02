@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use futures_util::future::{join_all, FutureExt};
 use multimap::MultiMap;
@@ -263,7 +263,7 @@ fn handle_program_errors(
     errored_players: impl IntoIterator<Item = (Team, Option<ProgramError>)>,
     turns: Vec<CallbackInput>,
 ) -> MainOutput {
-    let mut errors = HashMap::new();
+    let mut errors = BTreeMap::new();
     let mut winner = Some(None);
     for (team, res) in errored_players {
         if let Some(err) = res {
@@ -317,8 +317,8 @@ where
 fn unwrap_result_map<T>(
     map: impl Iterator<Item = (Team, Result<T, ProgramError>)> + ExactSizeIterator,
     mut ok: impl FnMut(Team, T),
-) -> Option<HashMap<Team, Option<ProgramError>>> {
-    let mut errs = HashMap::with_capacity(map.len());
+) -> Option<BTreeMap<Team, Option<ProgramError>>> {
+    let mut errs = BTreeMap::new();
     let mut errored = false;
     for (team, res) in map {
         match res {
@@ -341,7 +341,7 @@ fn unwrap_result_map<T>(
 
 // Team 1: Blue, Team 2: Red
 pub async fn run<TurnCb, R>(
-    runners: HashMap<Team, Result<R, ProgramError>>,
+    runners: BTreeMap<Team, Result<R, ProgramError>>,
     mut turn_cb: TurnCb,
     max_turn: usize,
 ) -> MainOutput
@@ -349,7 +349,7 @@ where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
-    let mut run_funcs = HashMap::with_capacity(runners.len());
+    let mut run_funcs = BTreeMap::new();
     let errs = unwrap_result_map(runners.into_iter(), |team, runner| {
         run_funcs.insert(team, runner);
     });
@@ -377,10 +377,10 @@ where
         }))
         .await;
 
-        let mut merged_actions = HashMap::new();
-        let mut team_logs = HashMap::with_capacity(program_results.len());
-        let mut team_debug_inspections = HashMap::with_capacity(program_results.len());
-        let mut merged_debug_tables = HashMap::new();
+        let mut merged_actions = BTreeMap::new();
+        let mut team_logs = BTreeMap::new();
+        let mut team_debug_inspections = BTreeMap::new();
+        let mut merged_debug_tables = BTreeMap::new();
         let errs = unwrap_result_map(program_results.into_iter(), |team, output| {
             merged_actions.extend(output.robot_actions.into_iter().map(|(id, action)| {
                 (
@@ -425,12 +425,12 @@ where
     let winner = turn_state.state.determine_winner();
     MainOutput {
         winner,
-        errors: HashMap::new(),
+        errors: BTreeMap::new(),
         turns,
     }
 }
 
-fn run_turn(robot_actions: &HashMap<Id, ValidatedRobotAction>, state: &mut State) {
+fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut State) {
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
 

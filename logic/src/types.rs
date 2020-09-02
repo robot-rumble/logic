@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ops::Add;
 use std::time::Duration;
 
@@ -25,6 +25,8 @@ pub enum MapType {
     Hash,
     Copy,
     Clone,
+    PartialOrd,
+    Ord,
 )]
 pub enum Team {
     Red,
@@ -34,11 +36,11 @@ pub enum Team {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MainOutput {
     pub winner: Option<Team>,
-    pub errors: HashMap<Team, ProgramError>,
+    pub errors: BTreeMap<Team, ProgramError>,
     pub turns: Vec<CallbackInput>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 #[serde(transparent)]
 pub struct Id(#[serde(with = "serde_with::rust::display_fromstr")] pub usize);
 
@@ -61,14 +63,14 @@ pub type ValidatedRobotAction = Result<Option<Action>, RobotErrorAfterValidation
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CallbackInput {
     pub state: StateForOutput,
-    pub robot_actions: HashMap<Id, ValidatedRobotAction>,
+    pub robot_actions: BTreeMap<Id, ValidatedRobotAction>,
 
-    pub logs: HashMap<Team, Vec<String>>,
-    pub debug_tables: HashMap<Id, DebugTable>,
-    pub debug_inspections: HashMap<Team, Vec<Id>>,
+    pub logs: BTreeMap<Team, Vec<String>>,
+    pub debug_tables: BTreeMap<Id, DebugTable>,
+    pub debug_inspections: BTreeMap<Team, Vec<Id>>,
 }
 
-pub type ObjMap = HashMap<Id, Obj>;
+pub type ObjMap = BTreeMap<Id, Obj>;
 
 type GridMapType = HashMap<Coords, Id>;
 
@@ -98,7 +100,7 @@ pub struct StateForOutput {
     pub turn: usize,
 }
 
-pub type TeamMap = HashMap<Team, Vec<Id>>;
+pub type TeamMap = BTreeMap<Team, Vec<Id>>;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct StateForProgramInput<'a> {
@@ -166,13 +168,13 @@ pub type ActionResult = Result<Option<Action>, Error>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProgramOutput {
-    pub robot_actions: HashMap<Id, ActionResult>,
+    pub robot_actions: BTreeMap<Id, ActionResult>,
     pub logs: Vec<String>,
-    pub debug_tables: HashMap<Id, DebugTable>,
+    pub debug_tables: BTreeMap<Id, DebugTable>,
     pub debug_inspections: Vec<Id>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Coords(pub usize, pub usize);
 
 impl Add for Coords {
