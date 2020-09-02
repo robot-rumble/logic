@@ -17,3 +17,4 @@ strum = { version = "0.18.0", features = ["derive"] }
 thiserror = "1.0.20"
 futures-util = "0.3.5"
 async-trait = "0.1.36"
+maybe-owned = { version = "0.3", features = ["serde"] }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::time::Duration;
 
+use maybe_owned::MaybeOwned;
 use serde::{Deserialize, Serialize};
 use strum::*;
 use thiserror::Error;
@@ -100,17 +101,17 @@ pub struct StateForOutput {
 pub type TeamMap = HashMap<Team, Vec<Id>>;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
-pub struct StateForProgramInput {
-    pub objs: ObjMap,
-    pub grid: GridMap,
+pub struct StateForProgramInput<'a> {
+    pub objs: MaybeOwned<'a, ObjMap>,
+    pub grid: MaybeOwned<'a, GridMap>,
     pub teams: TeamMap,
     pub turn: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ProgramInput {
+pub struct ProgramInput<'a> {
     #[serde(flatten)]
-    pub state: StateForProgramInput,
+    pub state: StateForProgramInput<'a>,
     pub grid_size: usize,
     pub team: Team,
 }

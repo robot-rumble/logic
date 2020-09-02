@@ -5,7 +5,7 @@ use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef, PyResult};
 use rustpython_vm::scope::Scope;
 use rustpython_vm::{InitParameter, PySettings, VirtualMachine};
 
-use logic::{ProgramError, ProgramInput, ProgramResult};
+use logic::{ProgramError, ProgramResult};
 use once_cell::sync::Lazy;
 
 fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
@@ -37,12 +37,6 @@ fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
     attrs
 }
 
-fn serde_to_py<T: serde::Serialize>(s: &T, vm: &VirtualMachine) -> ProgramResult<PyObjectRef> {
-    let val = serde_json::to_value(s)?;
-    let py = py_serde::deserialize(vm, val)?;
-    Ok(py)
-}
-
 fn py_to_serde<T: serde::de::DeserializeOwned>(
     py: &PyObjectRef,
     vm: &VirtualMachine,
@@ -52,18 +46,17 @@ fn py_to_serde<T: serde::de::DeserializeOwned>(
     Ok(out)
 }
 
-fn invoke_main(main: &PyObjectRef, input: &ProgramInput, vm: &VirtualMachine) -> ProgramResult {
-    let ret = vm
-        .invoke(main, vec![serde_to_py(&input, vm)?])
-        .map_err(|e| {
-            eprintln!("error in stdlib init:");
-            rustpython_vm::exceptions::print_exception(vm, e);
-            ProgramError::InternalError
-        })?;
+fn invoke_main(main: &PyObjectRef, input: serde_json::Value, vm: &VirtualMachine) -> ProgramResult {
+    let input = py_serde::deserialize(vm, input)?;
+    let ret = vm.invoke(main, vec![input]).map_err(|e| {
+        eprintln!("error in stdlib init:");
+        rustpython_vm::exceptions::print_exception(vm, e);
+        ProgramError::InternalError
+    })?;
     py_to_serde(&ret, vm).and_then(|r| r)
 }
 
-pub fn init(code: &str) -> ProgramResult<impl FnMut(ProgramInput) -> ProgramResult> {
+fn __init(code: &str) -> ProgramResult<impl FnMut(serde_json::Value) -> ProgramResult> {
     let vm = VirtualMachine::new(PySettings {
         initialization_parameter: InitParameter::InitializeInternal,
         ..Default::default()
@@ -109,9 +102,7 @@ pub fn init(code: &str) -> ProgramResult<impl FnMut(ProgramInput) -> ProgramResu
         }
     };
 
-    Ok(move |input| invoke_main(&main, &input, &vm))
+    Ok(move |input| invoke_main(&main, input, &vm))
 }
 
 include!("../../lang-common.rs");
-
-lang_runner!(init);

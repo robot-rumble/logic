@@ -43,7 +43,7 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W
 impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotRunner
     for TokioRunner<W, R>
 {
-    async fn run(&mut self, input: logic::ProgramInput) -> ProgramResult {
+    async fn run(&mut self, input: logic::ProgramInput<'_>) -> ProgramResult {
         let mut input = serde_json::to_vec(&input)?;
         input.push(b'\n');
         self.stdin.write(&input).await?;

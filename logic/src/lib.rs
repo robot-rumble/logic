@@ -211,15 +211,15 @@ impl State {
     }
 }
 
-impl ProgramInput {
-    pub fn new(turn_state: TurnState, team: Team, grid_size: usize) -> Self {
-        let TurnState { turn, state } = turn_state;
+impl<'a> ProgramInput<'a> {
+    pub fn new(turn_state: &'a TurnState, team: Team, grid_size: usize) -> Self {
+        let TurnState { turn, ref state } = *turn_state;
         let teams = State::create_team_map(&state.objs);
         Self {
             state: StateForProgramInput {
                 turn,
-                objs: state.objs,
-                grid: state.grid,
+                objs: (&state.objs).into(),
+                grid: (&state.grid).into(),
                 teams,
             },
             team,
@@ -289,7 +289,7 @@ const GRID_SIZE: usize = 19;
 #[cfg_attr(not(feature = "robot-runner-not-send"), async_trait::async_trait)]
 #[cfg_attr(feature = "robot-runner-not-send", async_trait::async_trait(? Send))]
 pub trait RobotRunner {
-    async fn run(&mut self, input: ProgramInput) -> ProgramResult;
+    async fn run(&mut self, input: ProgramInput<'_>) -> ProgramResult;
 }
 
 #[cfg(not(feature = "robot-runner-not-send"))]
@@ -298,7 +298,7 @@ impl<F> RobotRunner for F
 where
     F: FnMut(ProgramInput) -> ProgramResult + Send,
 {
-    async fn run(&mut self, input: ProgramInput) -> ProgramResult {
+    async fn run(&mut self, input: ProgramInput<'_>) -> ProgramResult {
         (self)(input)
     }
 }
@@ -309,7 +309,7 @@ impl<F> RobotRunner for F
 where
     F: FnMut(ProgramInput) -> ProgramResult,
 {
-    async fn run(&mut self, input: ProgramInput) -> ProgramResult {
+    async fn run(&mut self, input: ProgramInput<'_>) -> ProgramResult {
         (self)(input)
     }
 }
@@ -372,7 +372,7 @@ where
 
         let program_results = join_all(run_funcs.iter_mut().map(|(&team, runner)| {
             runner
-                .run(ProgramInput::new(turn_state.clone(), team, GRID_SIZE))
+                .run(ProgramInput::new(&turn_state, team, GRID_SIZE))
                 .map(move |program_result| (team, program_result))
         }))
         .await;
@@ -402,7 +402,8 @@ where
             return handle_program_errors(errs, turns);
         }
 
-        let old_state = turn_state.clone();
+        let old_objs = turn_state.state.objs.clone();
+        let old_turn = turn_state.turn;
 
         // update state
         run_turn(&merged_actions, &mut turn_state.state);
@@ -410,8 +411,8 @@ where
         // but the new state isn't passed until the next cycle
         let turn = CallbackInput {
             state: StateForOutput {
-                objs: old_state.state.objs,
-                turn: old_state.turn,
+                objs: old_objs,
+                turn: old_turn,
             },
             robot_actions: merged_actions,
             logs: team_logs,

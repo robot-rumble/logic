@@ -58,7 +58,7 @@ impl JsRunner {
 
 #[async_trait::async_trait(?Send)]
 impl logic::RobotRunner for JsRunner {
-    async fn run(&mut self, input: logic::ProgramInput) -> ProgramResult {
+    async fn run(&mut self, input: logic::ProgramInput<'_>) -> ProgramResult {
         let input = serde_json::to_vec(&input)?;
         let result = JsFuture::from(self.runner.run_turn(&input))
             .await

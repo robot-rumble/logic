@@ -1400,6 +1400,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "futures-util",
+ "maybe-owned",
  "multimap",
  "rand",
  "serde",
@@ -1426,6 +1427,15 @@ name = "matches"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
+
+[[package]]
+name = "maybe-owned"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "maybe-uninit"
@@ -1738,9 +1748,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b631f7e854af39a1739f401cf34a8a013dfe09eac4fa4dba91e9768bd28168d"
+checksum = "260e51e7efe62b592207e9e13a68e43692a7a279171d6ba57abd208bf23645ad"
 
 [[package]]
 name = "opaque-debug"
@@ -2277,7 +2287,7 @@ dependencies = [
 [[package]]
 name = "rustpython-bytecode"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "bincode",
  "bitflags",
@@ -2291,7 +2301,7 @@ dependencies = [
 [[package]]
 name = "rustpython-common"
 version = "0.0.0"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "cfg-if",
  "hexf-parse",
@@ -2299,12 +2309,15 @@ dependencies = [
  "num-bigint",
  "num-complex",
  "num-traits",
+ "once_cell",
+ "rand",
+ "siphasher",
 ]
 
 [[package]]
 name = "rustpython-compiler"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "arrayvec",
  "indexmap",
@@ -2318,7 +2331,7 @@ dependencies = [
 [[package]]
 name = "rustpython-derive"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "maplit",
  "once_cell",
@@ -2327,12 +2340,13 @@ dependencies = [
  "rustpython-bytecode",
  "rustpython-compiler",
  "syn",
+ "syn-ext",
 ]
 
 [[package]]
 name = "rustpython-parser"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -2347,7 +2361,7 @@ dependencies = [
 [[package]]
 name = "rustpython-pylib"
 version = "0.1.0"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "rustpython-bytecode",
  "rustpython-derive",
@@ -2356,7 +2370,7 @@ dependencies = [
 [[package]]
 name = "rustpython-vm"
 version = "0.1.2"
-source = "git+https://github.com/RustPython/RustPython#87ee4497fd42c729758ad841342a85799ed7e79e"
+source = "git+https://github.com/RustPython/RustPython#3b2a16f3b2d72aa28d2d3c4fe8e3a817c5da631d"
 dependencies = [
  "adler32",
  "arr_macro",
@@ -2377,7 +2391,6 @@ dependencies = [
  "exitcode",
  "flate2",
  "foreign-types-shared",
- "generational-arena",
  "gethostname",
  "getrandom",
  "hex",
@@ -2420,10 +2433,11 @@ dependencies = [
  "sha-1",
  "sha2",
  "sha3",
- "smallbox",
  "socket2",
  "statrs",
+ "thiserror",
  "thread_local",
+ "timsort",
  "uname",
  "unic-char-property",
  "unic-normal",
@@ -2684,12 +2698,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
-name = "smallbox"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa0eec6425219a55511a35afac416a2eecc62f5fa1bec14f9b97de0caa7daebe"
-
-[[package]]
 name = "smallvec"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2844,6 +2852,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "syn-ext"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da910e9ec6f88d3f591893025a3040fe2659b7f7ea4eacce5469b7ebe5287339"
+dependencies = [
+ "syn",
+]
+
+[[package]]
 name = "target-lexicon"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2950,6 +2967,12 @@ dependencies = [
  "standback",
  "syn",
 ]
+
+[[package]]
+name = "timsort"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a035368bf2997adda2f78c1e2683e2b8e8f584e349e8cb7f8adf294b0a4ad70"
 
 [[package]]
 name = "tinyvec"
@@ -3355,9 +3378,9 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "volatile"
-version = "0.2.6"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6af0edf5b4faacc31fc51159244d78d65ec580f021afcef7bd53c04aeabc7f29"
+checksum = "f8e76fae08f03f96e166d2dfda232190638c10e0383841252416f9cfe2ae60e6"
 
 [[package]]
 name = "want"
