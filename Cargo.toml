@@ -7,6 +7,3 @@ members = [
     "env-runners/native", "env-runners/browser", "env-runners/lambda", "env-runners/lambda-cache",
     "lang-runners/python"
 ]
-
-[patch.crates-io]
-instant = { git = "https://github.com/coolreader18/instant", branch = "fix-wasi" }

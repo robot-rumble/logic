@@ -108,6 +108,9 @@ int main(int argc, char **argv)
     robot_run();
     printf("__rr_output:%.*s\n", (int)io_buf_len, io_buf);
     fflush(stdout);
+    free(io_buf);
+    io_buf = NULL;
+    io_buf_len = 0;
   }
   return 0;
 }

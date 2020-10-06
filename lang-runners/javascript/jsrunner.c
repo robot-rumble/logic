@@ -85,12 +85,13 @@ static void rr_runturn(void)
   JSValue input = JS_ParseJSON(ctx, io_buf, io_buf_len - 1, "rr_input");
   RETURN_IF_EXC(input, js_std_dump_error(ctx); exit(1));
   JSValue ret = JS_Invoke(ctx, globalThis, main_atom, 1, &input);
+  JS_FreeValue(ctx, input);
+  RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));
+  write_json_stringify(ret);
+  JS_FreeValue(ctx, ret);
   static int do_gc = 0;
   if (++do_gc == GC_INTERVAL) {
     do_gc = 0;
     JS_RunGC(rt);
   }
-  RETURN_IF_EXC(ret, js_std_dump_error(ctx); exit(1));
-  write_json_stringify(ret);
-  JS_FreeValue(ctx, ret);
 }

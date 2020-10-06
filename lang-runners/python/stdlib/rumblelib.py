@@ -371,6 +371,10 @@ del typing
 if __name__ == "__main__":
     __builtins__.__dict__.update(globals())
     import sys, json, runpy
+    try:
+        json.use_serde_json()
+    except AttributeError:
+        pass
 
     module = sys.argv[1]
     module = runpy.run_path(module)

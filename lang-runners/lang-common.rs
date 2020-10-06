@@ -20,9 +20,15 @@ fn main() {
     let mut run_turn = run_turn.unwrap_or_else(|| std::process::exit(1));
 
     let stdin = std::io::stdin();
-    for input in stdin.lock().lines() {
-        let input = input.expect("couldn't read input");
-        let input = serde_json::from_str(&input).expect("bad input given to lang runner");
+    let mut stdin = stdin.lock();
+    let mut input_buf = Vec::<u8>::new();
+    loop {
+        match stdin.read_until(b'\n', &mut input_buf) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(e) => panic!("couldn't read input: {}", e),
+        }
+        let input = serde_json::from_slice(&input_buf).expect("bad input given to lang runner");
         let output = run_turn(input);
         let stdout = std::io::stdout();
         let mut stdout = stdout.lock();
@@ -30,6 +36,7 @@ fn main() {
         serde_json::to_writer(&mut stdout, &output).unwrap();
         stdout.write(b"\n").unwrap();
         stdout.flush().unwrap();
+        input_buf.clear();
     }
 }
 const _: () = {
