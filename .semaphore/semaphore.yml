@@ -6,7 +6,7 @@ agent:
     type: e1-standard-2
   containers:
     - name: main
-      image: circleci/rust:1.45.2
+      image: circleci/rust:latest
 
 global_job_config:
   env_vars:
@@ -27,9 +27,6 @@ blocks:
     run:
       when: "change_in('/lang-runners/')"
     task:
-      prologue:
-        commands:
-          - rustup target install wasm32-wasi
       jobs:
         - name: Build Javascript
           commands:
@@ -51,6 +48,7 @@ blocks:
             - bash build-wasm.sh --javascript
         - name: Build Python
           commands:
+            - rustup target install wasm32-wasi
             - bash build-wasm.sh --python
       epilogue:
         on_pass:
