@@ -90,7 +90,7 @@ pub fn run(
 ) -> Promise {
     future_to_promise(async move {
         let (r1, r2) = futures_util::join!(JsRunner::new(runner1), JsRunner::new(runner2),);
-        let runners = maplit::hashmap! {
+        let runners = maplit::btreemap! {
             logic::Team::Blue => r1,
             logic::Team::Red => r2,
         };
