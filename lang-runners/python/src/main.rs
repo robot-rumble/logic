@@ -1,4 +1,4 @@
-use rustpython_vm::obj::objdict::PyDictRef;
+use rustpython_vm::builtins::PyDictRef;
 use rustpython_vm::py_compile;
 use rustpython_vm::py_serde;
 use rustpython_vm::pyobject::{ItemProtocol, PyObjectRef, PyResult};
