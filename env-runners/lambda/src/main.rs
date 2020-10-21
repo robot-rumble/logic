@@ -195,7 +195,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         make_runner(&input_data.r2_code, input_data.r2_lang),
     );
 
-    let runners = maplit::hashmap! {
+    let runners = maplit::btreemap! {
         Team::Blue => r1,
         Team::Red => r2,
     };
