@@ -32,7 +32,7 @@ blocks:
           commands:
             - git submodule update --init
             # install https://wasmer.io/
-            - curl https://get.wasmer.io -sSfL | sh
+            - curl https://get.wasmer.io -sSfL | sh -s 0.17.1 # newest alpha has a glibc issue on debian buster
             - source ~/.wasmer/wasmer.sh
             # install https://github.com/wasienv/wasienv#install
             - sudo apt install -y python python-pip python-setuptools
