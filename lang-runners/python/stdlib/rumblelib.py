@@ -355,6 +355,8 @@ def __main(state, scope=globals()):
     logs = logbuf.readlines()
     logbuf.close()
 
+    del state
+
     return {
         "Ok": {
             "robot_actions": robot_actions,
@@ -385,3 +387,4 @@ if __name__ == "__main__":
         sys.stdout.write("__rr_output:")
         json.dump(output, sys.stdout)
         print(flush=True)
+        output.clear()
