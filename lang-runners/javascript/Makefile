@@ -5,7 +5,7 @@ LIBS := $(QUICKJS)/libquickjs.a
 OBJS := jsrunner.o stdlib.js.o lodash.js.o
 
 QJSC := $(QUICKJS)/qjsc.wasm
-run_qjsc = wasmer --dir . -- $(QJSC)
+run_qjsc = wasmer run --dir . -- $(QJSC)
 
 CC := wasicc
 CFLAGS := -I$(QUICKJS)
