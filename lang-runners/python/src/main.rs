@@ -8,7 +8,7 @@ use rustpython_vm::{InitParameter, Interpreter, PySettings, VirtualMachine};
 use logic::{ProgramError, ProgramResult};
 
 fn setup_scope(vm: &VirtualMachine) -> PyDictRef {
-    let code = vm.ctx.new_code_object(py_compile!(
+    let code = vm.new_code_object(py_compile!(
         file = "stdlib/rumblelib.py",
         module_name = "rumblelib"
     ));
@@ -54,7 +54,7 @@ fn __init(code: &str) -> ProgramResult<impl FnMut(serde_json::Value) -> ProgramR
         let code = vm
             .compile(
                 code,
-                rustpython_compiler::compile::Mode::Exec,
+                rustpython_vm::compile::Mode::Exec,
                 "<robot>".to_owned(),
             )
             .map_err(|err| {

@@ -10,7 +10,6 @@ logic = { path = "../../logic" }
 # default-features = false removes 'threading', which might make single-threaded apps faster? but it's wasm
 # which is single-threaded anyway, so who knows
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", default-features = false, features = ["compile-parse", "freeze-stdlib"] }
-rustpython-compiler = { git = "https://github.com/RustPython/RustPython" }
 
 serde = "1.0.114"
 serde_json = "1.0.55"
