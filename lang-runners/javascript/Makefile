@@ -1,4 +1,4 @@
-QUICKJS := quickjs/src
+QUICKJS := quickjs
 LODASH := lodash
 
 LIBS := $(QUICKJS)/libquickjs.a
@@ -32,7 +32,7 @@ lodash.js:
 
 
 $(QUICKJS)/%:
-	$(MAKE) -C $(QUICKJS) $(@:$(QUICKJS)/%=%) AR=$(AR)
+	$(MAKE) -C $(QUICKJS) $(@:$(QUICKJS)/%=%) CONFIG_WASI=y AR=$(AR)
 
 .PHONY: clean
 clean:
