@@ -3,26 +3,13 @@ use std::collections::BTreeMap;
 
 use futures_util::future::{join_all, FutureExt};
 use multimap::MultiMap;
-use rand::Rng;
+use rand::seq::SliceRandom;
 
 pub use types::*;
 
 use strum::IntoEnumIterator;
 
 mod types;
-
-pub fn randrange(low: usize, high: usize) -> usize {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(low, high)
-}
-
-pub fn randchoose<T: Copy>(v: &Vec<T>) -> T {
-    match v.len() {
-        0 => panic!("Cannot randomly choose from empty list"),
-        1 => v[0],
-        _ => v[randrange(0, v.len() - 1)],
-    }
-}
 
 pub fn new_id() -> Id {
     use std::sync::atomic;
@@ -169,11 +156,10 @@ impl State {
                 !self.grid.contains_key(&loc) && !self.grid.contains_key(&Self::mirror_loc(&loc))
             })
             .collect::<Vec<_>>();
-        if available_points.is_empty() {
-            None
-        } else {
-            Some(*randchoose(&available_points))
-        }
+        available_points
+            .choose(&mut rand::thread_rng())
+            .copied()
+            .copied()
     }
 
     fn create_team_map(objs: &ObjMap) -> TeamMap {

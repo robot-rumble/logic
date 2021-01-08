@@ -1,6 +1,5 @@
 use std::process::Stdio;
-use tokio::io;
-use tokio::prelude::*;
+use tokio::io::{self, AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::process::{ChildStdin, ChildStdout, Command};
 
 use logic::{ProgramError, ProgramResult};

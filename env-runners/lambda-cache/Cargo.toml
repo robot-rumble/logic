@@ -5,4 +5,7 @@ authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-wasmer-runtime = "*"
+wasmer = { version = "1.0", default-features = false }
+wasmer-engine = "1.0"
+wasmer-engine-native = { version = "1.0", features = ["compiler"] }
+wasmer-compiler-llvm = "1.0"

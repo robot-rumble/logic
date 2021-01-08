@@ -13,8 +13,7 @@ use tokio::time::{self, Duration, Instant};
 use tokio::{io, task};
 
 use wasi_process::WasiProcess;
-use wasmer_runtime::{cache::Artifact, Module as WasmModule};
-use wasmer_wasi::{state::WasiState, WasiVersion};
+use wasmer_wasi::{WasiState, WasiVersion};
 
 use base64::write::EncoderWriter as Base64Writer;
 use flate2::write::GzEncoder;
@@ -98,23 +97,26 @@ enum Lang {
     Javascript,
 }
 
+static STORE: Lazy<wasmer::Store> = Lazy::new(|| {
+    let mut engine = wasmer::NativeEngine::headless();
+    let seed = rand::random();
+    engine.set_deterministic_prefixer(move |bytes| {
+        let mut hasher = crc32fast::Hasher::new_with_initial(seed);
+        hasher.update(bytes);
+        format!("{:08x}", hasher.finalize())
+    });
+    wasmer::Store::new(&engine)
+});
+
 impl Lang {
-    fn get_wasm(self) -> (&'static WasmModule, WasiVersion) {
+    fn get_wasm(self) -> (&'static wasmer::Module, WasiVersion) {
         macro_rules! load_cache {
             ($name:literal) => {{
-                static MODULE: Lazy<(WasmModule, WasiVersion)> = Lazy::new(|| {
+                static MODULE: Lazy<(wasmer::Module, WasiVersion)> = Lazy::new(|| {
                     let artifact_path = concat!("/opt/wasmer-cache/", $name);
-                    let wasm_bytes = std::fs::read(artifact_path).unwrap_or_else(|e| {
-                        panic!("couldn't read wasm artifact {:?}: {}", artifact_path, e)
-                    });
-                    let artifact =
-                        Artifact::deserialize(&wasm_bytes).expect("couldn't deserialize artifact");
                     let module = unsafe {
-                        wasmer_runtime_core::load_cache_with(
-                            artifact,
-                            &wasmer_runtime::default_compiler(),
-                        )
-                        .expect("couldn't load module from cache")
+                        wasmer::Module::deserialize_from_file(&STORE, artifact_path)
+                            .expect("couldn't load module from cache")
                     };
                     let version = wasmer_wasi::get_wasi_version(&module, false)
                         .unwrap_or(WasiVersion::Latest);
@@ -169,12 +171,13 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         input_data.r1_lang, input_data.r2_lang
     );
 
-    let make_runner = |code, lang: Lang| async move {
+    let make_runner = |code, lang: Lang| {
         let (module, version) = lang.get_wasm();
         let (state, sourcedir) = make_state(code);
-        let imports = wasmer_wasi::generate_import_object_from_state(state, version);
-        let instance = module.instantiate(&imports).unwrap();
-        let mut proc = WasiProcess::new(instance);
+        let env = wasmer_wasi::WasiEnv::new(state);
+        let imports = wasmer_wasi::generate_import_object_from_env(&STORE, env, version);
+        let instance = wasmer::Instance::new(&module, &imports).unwrap();
+        let mut proc = WasiProcess::new(&instance, 256).expect("modules have start");
         let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
         let stdout = io::BufReader::new(proc.stdout.take().unwrap());
         proc.stdout.take();
@@ -187,7 +190,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
             };
             (start_t.elapsed(), res)
         });
-        (TokioRunner::new(stdin, stdout).await, t, sourcedir)
+        async move { (TokioRunner::new(stdin, stdout).await, t, sourcedir) }
     };
 
     let ((r1, t1, _d1), (r2, t2, _d2)) = tokio::join!(
