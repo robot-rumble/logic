@@ -91,6 +91,7 @@ impl From<ObjMap> for GridMap {
 pub struct State {
     pub objs: ObjMap,
     pub grid: GridMap,
+    /// Should be sorted
     pub spawn_points: Vec<Coords>,
 }
 
