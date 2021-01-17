@@ -78,8 +78,8 @@ type GridMapType = HashMap<Coords, Id>;
 #[serde(from = "SerdeGridMap", into = "SerdeGridMap")]
 pub struct GridMap(GridMapType);
 
-impl From<ObjMap> for GridMap {
-    fn from(obj_map: ObjMap) -> Self {
+impl From<&ObjMap> for GridMap {
+    fn from(obj_map: &ObjMap) -> Self {
         obj_map
             .values()
             .map(|Obj(basic, _)| (basic.coords, basic.id))

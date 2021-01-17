@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use futures_util::{stream, FutureExt, StreamExt};
@@ -172,21 +171,26 @@ impl State {
     }
 
     fn determine_winner(self) -> Option<Team> {
-        let mut reds = 0;
-        let mut blues = 0;
+        let mut units_count = BTreeMap::new();
+        // the highest score any of the teams have
+        let mut max = 0;
         for (_, obj) in self.objs {
             if let ObjDetails::Unit(unit) = obj.details() {
-                match unit.team {
-                    Team::Red => reds += 1,
-                    Team::Blue => blues += 1,
+                let count = units_count.entry(unit.team).or_insert(0);
+                *count += 1;
+                if *count > max {
+                    max = *count
                 }
             }
         }
-        match reds.cmp(&blues) {
-            Ordering::Less => Some(Team::Blue),
-            Ordering::Greater => Some(Team::Red),
-            Ordering::Equal => None,
+        // find the team that has the high score
+        let mut winners = units_count.into_iter().filter(|(_, c)| *c == max);
+        let mut winner = winners.next();
+        // if there are multiple teams tied for `max` score, no-one wins
+        if winners.next().is_some() {
+            winner = None
         }
+        winner.map(|(team, _)| team)
     }
 }
 
@@ -262,7 +266,7 @@ fn handle_program_errors(
     }
 }
 
-const GRID_SIZE: usize = 19;
+pub const GRID_SIZE: usize = 19;
 
 #[cfg_attr(not(feature = "robot-runner-not-send"), async_trait::async_trait)]
 #[cfg_attr(feature = "robot-runner-not-send", async_trait::async_trait(? Send))]
