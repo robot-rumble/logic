@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-use futures_util::future::{join_all, FutureExt};
+use futures_util::{stream, FutureExt, StreamExt};
 use multimap::MultiMap;
 use rand::seq::SliceRandom;
 
@@ -235,8 +235,10 @@ fn is_id_valid(team: Team, id: Id, objs: &ObjMap) -> bool {
     }
 }
 
+type ErrorMap = BTreeMap<Team, ProgramError>;
+
 fn handle_program_errors(
-    errors: BTreeMap<Team, ProgramError>,
+    errors: ErrorMap,
     all_teams: &[Team],
     turns: Vec<CallbackInput>,
 ) -> MainOutput {
@@ -291,27 +293,21 @@ where
 }
 
 #[inline]
-fn unwrap_result_map<T>(
-    map: impl Iterator<Item = (Team, Result<T, ProgramError>)>,
-    mut ok: impl FnMut(Team, T),
-) -> Option<BTreeMap<Team, ProgramError>> {
-    let mut errors = BTreeMap::new();
-    for (team, res) in map {
-        match res {
-            Ok(t) => ok(team, t),
-            Err(e) => {
-                errors.insert(team, e);
-            }
+fn check_runner_error<T>(
+    errors: &mut ErrorMap,
+    team: Team,
+    result: Result<T, ProgramError>,
+) -> Option<T> {
+    match result {
+        Ok(t) if errors.is_empty() => Some(t),
+        Ok(_) => None,
+        Err(e) => {
+            errors.insert(team, e);
+            None
         }
-    }
-    if errors.is_empty() {
-        None
-    } else {
-        Some(errors)
     }
 }
 
-// Team 1: Blue, Team 2: Red
 pub async fn run<TurnCb, R>(
     runners: BTreeMap<Team, Result<R, ProgramError>>,
     mut turn_cb: TurnCb,
@@ -322,12 +318,16 @@ where
     R: RobotRunner,
 {
     let all_teams = runners.keys().copied().collect::<Box<[_]>>();
+
     let mut run_funcs = BTreeMap::new();
-    let errs = unwrap_result_map(runners.into_iter(), |team, runner| {
-        run_funcs.insert(team, runner);
-    });
-    if let Some(errs) = errs {
-        return handle_program_errors(errs, &all_teams, vec![]);
+    let mut errors = ErrorMap::new();
+    for (team, res) in runners {
+        if let Some(f) = check_runner_error(&mut errors, team, res) {
+            run_funcs.insert(team, f);
+        }
+    }
+    if !errors.is_empty() {
+        return handle_program_errors(errors, &all_teams, vec![]);
     }
 
     let mut turns = Vec::with_capacity(max_turn);
@@ -336,62 +336,27 @@ where
         turn: 0,
         state: State::new(MapType::Circle, GRID_SIZE),
     };
-    while turn_state.turn < max_turn {
-        if turn_state.turn % State::SPAWN_EVERY == 0 {
-            turn_state.state.spawn_units();
-        }
-
+    let mut spawn_interval = State::SPAWN_EVERY;
+    for _ in 0..max_turn {
         turn_state.turn += 1;
 
-        let program_results = join_all(run_funcs.iter_mut().map(|(&team, runner)| {
-            runner
-                .run(ProgramInput::new(&turn_state, team, GRID_SIZE))
-                .map(move |program_result| (team, program_result))
-        }))
-        .await;
-
-        let mut merged_actions = BTreeMap::new();
-        let mut team_logs = BTreeMap::new();
-        let mut team_debug_inspections = BTreeMap::new();
-        let mut merged_debug_tables = BTreeMap::new();
-        let errs = unwrap_result_map(program_results.into_iter(), |team, output| {
-            merged_actions.extend(output.robot_actions.into_iter().map(|(id, action)| {
-                (
-                    id,
-                    validate_robot_action(action, team, id, &turn_state.state.objs),
-                )
-            }));
-            team_logs.insert(team, output.logs);
-            team_debug_inspections.insert(team, output.debug_inspections);
-            if output
-                .debug_tables
-                .keys()
-                .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
-            {
-                merged_debug_tables.extend(output.debug_tables)
-            }
-        });
-        if let Some(errs) = errs {
-            return handle_program_errors(errs, &all_teams, turns);
+        if spawn_interval == State::SPAWN_EVERY {
+            turn_state.state.spawn_units();
+            spawn_interval = 0
+        } else {
+            spawn_interval += 1
         }
 
-        let old_objs = turn_state.state.objs.clone();
-        let old_turn = turn_state.turn;
+        let runners = run_funcs.iter_mut().map(|(&t, r)| (t, r));
+        let turn = match get_turn_data(runners, &turn_state).await {
+            Ok(t) => t,
+            Err(errors) => return handle_program_errors(errors, &all_teams, turns),
+        };
 
         // update state
-        run_turn(&merged_actions, &mut turn_state.state);
+        run_turn(&turn.robot_actions, &mut turn_state.state);
 
         // but the new state isn't passed until the next cycle
-        let turn = CallbackInput {
-            state: StateForOutput {
-                objs: old_objs,
-                turn: old_turn,
-            },
-            robot_actions: merged_actions,
-            logs: team_logs,
-            debug_inspections: team_debug_inspections,
-            debug_tables: merged_debug_tables,
-        };
         turn_cb(&turn);
         turns.push(turn);
     }
@@ -400,6 +365,62 @@ where
         winner,
         errors: BTreeMap::new(),
         turns,
+    }
+}
+
+async fn get_turn_data<'r, R: RobotRunner + 'r>(
+    runners: impl Iterator<Item = (Team, &'r mut R)>,
+    turn_state: &TurnState,
+) -> Result<CallbackInput, ErrorMap> {
+    let mut errors = ErrorMap::new();
+
+    let mut turn = CallbackInput {
+        state: StateForOutput {
+            objs: turn_state.state.objs.clone(),
+            turn: turn_state.turn,
+        },
+        robot_actions: BTreeMap::new(),
+        logs: BTreeMap::new(),
+        debug_inspections: BTreeMap::new(),
+        debug_tables: BTreeMap::new(),
+    };
+
+    let mut results: stream::FuturesUnordered<_> = runners
+        .map(|(team, runner)| {
+            runner
+                .run(ProgramInput::new(&turn_state, team, GRID_SIZE))
+                .map(move |program_result| (team, program_result))
+        })
+        .collect();
+
+    while let Some((team, result)) = results.next().await {
+        let runner_output = match check_runner_error(&mut errors, team, result) {
+            Some(o) => o,
+            None => continue,
+        };
+        turn.robot_actions
+            .extend(runner_output.robot_actions.into_iter().map(|(id, action)| {
+                (
+                    id,
+                    validate_robot_action(action, team, id, &turn_state.state.objs),
+                )
+            }));
+        turn.logs.insert(team, runner_output.logs);
+        turn.debug_inspections
+            .insert(team, runner_output.debug_inspections);
+        if runner_output
+            .debug_tables
+            .keys()
+            .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
+        {
+            turn.debug_tables.extend(runner_output.debug_tables)
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(turn)
+    } else {
+        Err(errors)
     }
 }
 
