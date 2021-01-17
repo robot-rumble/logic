@@ -16,7 +16,6 @@ pub enum MapType {
 #[derive(
     Serialize,
     Deserialize,
-    EnumIter,
     EnumString,
     IntoStaticStr,
     Debug,

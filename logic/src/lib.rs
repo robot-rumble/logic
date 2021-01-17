@@ -6,8 +6,6 @@ use rand::seq::SliceRandom;
 
 pub use types::*;
 
-use strum::IntoEnumIterator;
-
 mod types;
 
 #[inline]
@@ -51,13 +49,13 @@ impl Obj {
         }
     }
 
-    fn id(&self) -> Id {
+    pub fn id(&self) -> Id {
         self.0.id
     }
-    fn coords(&self) -> Coords {
+    pub fn coords(&self) -> Coords {
         self.0.coords
     }
-    fn details(&self) -> &ObjDetails {
+    pub fn details(&self) -> &ObjDetails {
         &self.1
     }
 }
@@ -154,20 +152,14 @@ impl State {
         objs.extend(it);
     }
 
-    fn create_team_map(objs: &ObjMap) -> TeamMap {
-        Team::iter()
-            .map(|team| {
-                (
-                    team,
-                    objs.values()
-                        .filter_map(|obj| match obj.details() {
-                            ObjDetails::Unit(unit) if unit.team == team => Some(obj.id()),
-                            _ => None,
-                        })
-                        .collect(),
-                )
-            })
-            .collect()
+    fn create_team_map(objs: &ObjMap, all_teams: &[Team]) -> TeamMap {
+        let mut map: TeamMap = all_teams.iter().map(|&team| (team, Vec::new())).collect();
+        for obj in objs.values() {
+            if let ObjDetails::Unit(unit) = obj.details() {
+                map.entry(unit.team).or_default().push(obj.id())
+            }
+        }
+        map
     }
 
     fn determine_winner(self) -> Option<Team> {
@@ -195,9 +187,14 @@ impl State {
 }
 
 impl<'a> ProgramInput<'a> {
-    pub fn new(turn_state: &'a TurnState, team: Team, grid_size: usize) -> Self {
+    pub fn new(
+        turn_state: &'a TurnState,
+        all_teams: &[Team],
+        team: Team,
+        grid_size: usize,
+    ) -> Self {
         let TurnState { turn, ref state } = *turn_state;
-        let teams = State::create_team_map(&state.objs);
+        let teams = State::create_team_map(&state.objs, all_teams);
         Self {
             state: StateForProgramInput {
                 turn,
@@ -321,7 +318,9 @@ where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
+    // all_teams is the list of all the teams participating in the battle
     let all_teams = runners.keys().copied().collect::<Box<[_]>>();
+    let all_teams = &*all_teams;
 
     let mut run_funcs = BTreeMap::new();
     let mut errors = ErrorMap::new();
@@ -331,7 +330,7 @@ where
         }
     }
     if !errors.is_empty() {
-        return handle_program_errors(errors, &all_teams, vec![]);
+        return handle_program_errors(errors, all_teams, vec![]);
     }
 
     let mut turns = Vec::with_capacity(max_turn);
@@ -352,9 +351,9 @@ where
         }
 
         let runners = run_funcs.iter_mut().map(|(&t, r)| (t, r));
-        let turn = match get_turn_data(runners, &turn_state).await {
+        let turn = match get_turn_data(runners, all_teams, &turn_state).await {
             Ok(t) => t,
-            Err(errors) => return handle_program_errors(errors, &all_teams, turns),
+            Err(errors) => return handle_program_errors(errors, all_teams, turns),
         };
 
         // update state
@@ -374,6 +373,7 @@ where
 
 async fn get_turn_data<'r, R: RobotRunner + 'r>(
     runners: impl Iterator<Item = (Team, &'r mut R)>,
+    all_teams: &[Team],
     turn_state: &TurnState,
 ) -> Result<CallbackInput, ErrorMap> {
     let mut errors = ErrorMap::new();
@@ -392,7 +392,7 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
     let mut results: stream::FuturesUnordered<_> = runners
         .map(|(team, runner)| {
             runner
-                .run(ProgramInput::new(&turn_state, team, GRID_SIZE))
+                .run(ProgramInput::new(&turn_state, all_teams, team, GRID_SIZE))
                 .map(move |program_result| (team, program_result))
         })
         .collect();
