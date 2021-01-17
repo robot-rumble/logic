@@ -1,7 +1,6 @@
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-use futures_util::future::{join_all, FutureExt};
+use futures_util::{stream, FutureExt, StreamExt};
 use multimap::MultiMap;
 use rand::seq::SliceRandom;
 
@@ -10,6 +9,12 @@ pub use types::*;
 use strum::IntoEnumIterator;
 
 mod types;
+
+#[inline]
+fn binary_remove<T: Ord>(v: &mut Vec<T>, el: &T) {
+    let idx = v.binary_search(el).expect("element to remove not in vec");
+    v.remove(idx);
+}
 
 pub fn new_id() -> Id {
     use std::sync::atomic;
@@ -73,39 +78,27 @@ impl State {
         }
     }
 
-    fn create_raw_grid(size: usize) -> Vec<Coords> {
-        (0..size)
-            .map(|x| (0..size).map(move |y| Coords(x, y)))
-            .flatten()
-            .collect()
-    }
     fn init(type_: MapType, size: usize) -> (ObjMap, Vec<Coords>) {
         let distance_from_center = |Coords(x, y)| {
             ((size / 2) as i32 - x as i32).pow(2) + ((size / 2) as i32 - y as i32).pow(2)
         };
 
-        let grid = Self::create_raw_grid(size);
+        let grid = (0..size).flat_map(|x| (0..size).map(move |y| Coords(x, y)));
         let objs = grid
-            .iter()
-            .filter(|coords| {
-                let coords = *coords;
-                match type_ {
-                    MapType::Rect => {
-                        coords.0 == 0
-                            || coords.0 == size - 1
-                            || coords.1 == 0
-                            || coords.1 == size - 1
-                    }
-                    MapType::Circle => distance_from_center(*coords) >= (size / 2).pow(2) as i32,
+            .clone()
+            .filter(|&coords| match type_ {
+                MapType::Rect => {
+                    coords.0 == 0 || coords.0 == size - 1 || coords.1 == 0 || coords.1 == size - 1
                 }
+                MapType::Circle => distance_from_center(coords) >= (size / 2).pow(2) as i32,
             })
             .map(|coords| {
-                let obj = Obj::new_terrain(TerrainType::Wall, *coords);
+                let obj = Obj::new_terrain(TerrainType::Wall, coords);
                 (obj.id(), obj)
             })
             .collect();
+        // spawn_points is sorted, since grid generates coords sorted first by x, then y
         let spawn_points = grid
-            .into_iter()
             .filter(|coords| match type_ {
                 MapType::Rect => {
                     coords.0 == 1 || coords.0 == size - 2 || coords.1 == 1 || coords.1 == size - 2
@@ -120,46 +113,45 @@ impl State {
         objs.values().map(|obj| (obj.coords(), obj.id())).collect()
     }
 
-    fn mirror_loc(loc: &Coords) -> Coords {
+    #[inline]
+    fn mirror_loc(loc: Coords) -> Coords {
         Coords(GRID_SIZE - loc.0 - 1, GRID_SIZE - loc.1 - 1)
     }
 
     fn spawn_units(&mut self) {
-        let objs = (0..Self::TEAM_UNIT_NUM)
-            .map(|_| {
-                self.random_spawn_loc().map(|spawn_loc| {
-                    [
-                        (Team::Blue, spawn_loc),
-                        (Team::Red, Self::mirror_loc(&spawn_loc)),
-                    ]
-                    .iter()
-                    .map(|(team, loc)| {
-                        let obj = Obj::new_unit(UnitType::Soldier, *loc, *team);
-                        // update the grid continuously so random_grid_loc can account for new units
-                        self.grid.insert(obj.coords(), obj.id());
-                        (obj.id(), obj)
-                    })
-                    .collect::<Vec<_>>()
+        let Self {
+            spawn_points,
+            grid,
+            objs,
+        } = self;
+        let mut available_points = spawn_points
+            .iter()
+            .copied()
+            .filter(|loc| !grid.contains_key(loc) && !grid.contains_key(&Self::mirror_loc(*loc)))
+            .collect::<Vec<_>>();
+        let it = (0..Self::TEAM_UNIT_NUM).flat_map(|_| {
+            let point = available_points.choose(&mut rand::thread_rng()).copied();
+            let mirrors = point.map(|point| {
+                binary_remove(&mut available_points, &point);
+                let mirror = Self::mirror_loc(point);
+                binary_remove(&mut available_points, &mirror);
+                (point, mirror)
+            });
+            mirrors.into_iter().flat_map(|(blue_spawn, red_spawn)| {
+                Iterator::chain(
+                    std::iter::once((Team::Blue, blue_spawn)),
+                    std::iter::once((Team::Red, red_spawn)),
+                )
+                .map(|(team, loc)| {
+                    let obj = Obj::new_unit(UnitType::Soldier, loc, team);
+                    (obj.id(), obj)
                 })
             })
-            .flatten()
-            .flatten()
-            .collect::<Vec<_>>();
-        self.objs.extend(objs);
-    }
-
-    fn random_spawn_loc(&self) -> Option<Coords> {
-        let available_points = self
-            .spawn_points
-            .iter()
-            .filter(|loc| {
-                !self.grid.contains_key(&loc) && !self.grid.contains_key(&Self::mirror_loc(&loc))
-            })
-            .collect::<Vec<_>>();
-        available_points
-            .choose(&mut rand::thread_rng())
-            .copied()
-            .copied()
+        });
+        let it = it.inspect(|(id, obj)| {
+            grid.insert(obj.coords(), *id);
+        });
+        objs.extend(it);
     }
 
     fn create_team_map(objs: &ObjMap) -> TeamMap {
@@ -179,21 +171,26 @@ impl State {
     }
 
     fn determine_winner(self) -> Option<Team> {
-        let mut reds = 0;
-        let mut blues = 0;
+        let mut units_count = BTreeMap::new();
+        // the highest score any of the teams have
+        let mut max = 0;
         for (_, obj) in self.objs {
             if let ObjDetails::Unit(unit) = obj.details() {
-                match unit.team {
-                    Team::Red => reds += 1,
-                    Team::Blue => blues += 1,
+                let count = units_count.entry(unit.team).or_insert(0);
+                *count += 1;
+                if *count > max {
+                    max = *count
                 }
             }
         }
-        match reds.cmp(&blues) {
-            Ordering::Less => Some(Team::Blue),
-            Ordering::Greater => Some(Team::Red),
-            Ordering::Equal => None,
+        // find the team that has the high score
+        let mut winners = units_count.into_iter().filter(|(_, c)| *c == max);
+        let mut winner = winners.next();
+        // if there are multiple teams tied for `max` score, no-one wins
+        if winners.next().is_some() {
+            winner = None
         }
+        winner.map(|(team, _)| team)
     }
 }
 
@@ -222,19 +219,16 @@ fn validate_robot_action(
 ) -> ValidatedRobotAction {
     action
         .map_err(RobotErrorAfterValidation::RuntimeError)
-        .and_then(|action| match objs.get(&id).map(|obj| obj.details()) {
-            Some(ObjDetails::Unit(unit)) if unit.team != team => {
-                Err(RobotErrorAfterValidation::InvalidAction(
-                    "Action ID points to unit on other team".into(),
-                ))
-            }
-            Some(ObjDetails::Terrain(_)) => Err(RobotErrorAfterValidation::InvalidAction(
-                "Action ID points to terrain".into(),
-            )),
-            None => Err(RobotErrorAfterValidation::InvalidAction(
-                "Action ID points to nonexistent object".into(),
-            )),
-            _ => Ok(action),
+        .and_then(|action| {
+            let err_msg = match objs.get(&id).map(|obj| obj.details()) {
+                Some(ObjDetails::Unit(unit)) if unit.team != team => {
+                    "Action ID points to unit on other team"
+                }
+                Some(ObjDetails::Terrain(_)) => "Action ID points to terrain",
+                None => "Action ID points to nonexistent object",
+                _ => return Ok(action),
+            };
+            Err(RobotErrorAfterValidation::InvalidAction(err_msg.to_owned()))
         })
 }
 
@@ -245,22 +239,24 @@ fn is_id_valid(team: Team, id: Id, objs: &ObjMap) -> bool {
     }
 }
 
+type ErrorMap = BTreeMap<Team, ProgramError>;
+
 fn handle_program_errors(
-    errored_players: impl IntoIterator<Item = (Team, Option<ProgramError>)>,
+    errors: ErrorMap,
+    all_teams: &[Team],
     turns: Vec<CallbackInput>,
 ) -> MainOutput {
-    let mut errors = BTreeMap::new();
     let mut winner = Some(None);
-    for (team, res) in errored_players {
-        if let Some(err) = res {
-            errors.insert(team, err);
-        } else {
-            // basically, we only want a winner if there's only one
-            if let Some(None) = winner {
-                winner = Some(Some(team))
+    for team in all_teams {
+        if !errors.contains_key(team) {
+            // `team` didn't error
+            // try to declare `team` the winner, but not if someone else is already "winner" - then
+            // it's a tie w/ no winner
+            winner = if let Some(None) = winner {
+                Some(Some(*team))
             } else {
-                winner = None
-            }
+                None
+            };
         }
     }
     MainOutput {
@@ -270,7 +266,7 @@ fn handle_program_errors(
     }
 }
 
-const GRID_SIZE: usize = 19;
+pub const GRID_SIZE: usize = 19;
 
 #[cfg_attr(not(feature = "robot-runner-not-send"), async_trait::async_trait)]
 #[cfg_attr(feature = "robot-runner-not-send", async_trait::async_trait(? Send))]
@@ -300,32 +296,22 @@ where
     }
 }
 
-fn unwrap_result_map<T>(
-    map: impl Iterator<Item = (Team, Result<T, ProgramError>)> + ExactSizeIterator,
-    mut ok: impl FnMut(Team, T),
-) -> Option<BTreeMap<Team, Option<ProgramError>>> {
-    let mut errs = BTreeMap::new();
-    let mut errored = false;
-    for (team, res) in map {
-        match res {
-            Ok(t) => {
-                ok(team, t);
-                errs.insert(team, None);
-            }
-            Err(e) => {
-                errored = true;
-                errs.insert(team, Some(e));
-            }
+#[inline]
+fn check_runner_error<T>(
+    errors: &mut ErrorMap,
+    team: Team,
+    result: Result<T, ProgramError>,
+) -> Option<T> {
+    match result {
+        Ok(t) if errors.is_empty() => Some(t),
+        Ok(_) => None,
+        Err(e) => {
+            errors.insert(team, e);
+            None
         }
-    }
-    if errored {
-        Some(errs)
-    } else {
-        None
     }
 }
 
-// Team 1: Blue, Team 2: Red
 pub async fn run<TurnCb, R>(
     runners: BTreeMap<Team, Result<R, ProgramError>>,
     mut turn_cb: TurnCb,
@@ -335,12 +321,17 @@ where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
+    let all_teams = runners.keys().copied().collect::<Box<[_]>>();
+
     let mut run_funcs = BTreeMap::new();
-    let errs = unwrap_result_map(runners.into_iter(), |team, runner| {
-        run_funcs.insert(team, runner);
-    });
-    if let Some(errs) = errs {
-        return handle_program_errors(errs, vec![]);
+    let mut errors = ErrorMap::new();
+    for (team, res) in runners {
+        if let Some(f) = check_runner_error(&mut errors, team, res) {
+            run_funcs.insert(team, f);
+        }
+    }
+    if !errors.is_empty() {
+        return handle_program_errors(errors, &all_teams, vec![]);
     }
 
     let mut turns = Vec::with_capacity(max_turn);
@@ -349,62 +340,27 @@ where
         turn: 0,
         state: State::new(MapType::Circle, GRID_SIZE),
     };
-    while turn_state.turn < max_turn {
-        if turn_state.turn % State::SPAWN_EVERY == 0 {
-            turn_state.state.spawn_units();
-        }
-
+    let mut spawn_interval = State::SPAWN_EVERY;
+    for _ in 0..max_turn {
         turn_state.turn += 1;
 
-        let program_results = join_all(run_funcs.iter_mut().map(|(&team, runner)| {
-            runner
-                .run(ProgramInput::new(&turn_state, team, GRID_SIZE))
-                .map(move |program_result| (team, program_result))
-        }))
-        .await;
-
-        let mut merged_actions = BTreeMap::new();
-        let mut team_logs = BTreeMap::new();
-        let mut team_debug_inspections = BTreeMap::new();
-        let mut merged_debug_tables = BTreeMap::new();
-        let errs = unwrap_result_map(program_results.into_iter(), |team, output| {
-            merged_actions.extend(output.robot_actions.into_iter().map(|(id, action)| {
-                (
-                    id,
-                    validate_robot_action(action, team, id, &turn_state.state.objs),
-                )
-            }));
-            team_logs.insert(team, output.logs);
-            team_debug_inspections.insert(team, output.debug_inspections);
-            if output
-                .debug_tables
-                .keys()
-                .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
-            {
-                merged_debug_tables.extend(output.debug_tables)
-            }
-        });
-        if let Some(errs) = errs {
-            return handle_program_errors(errs, turns);
+        if spawn_interval == State::SPAWN_EVERY {
+            turn_state.state.spawn_units();
+            spawn_interval = 0
+        } else {
+            spawn_interval += 1
         }
 
-        let old_objs = turn_state.state.objs.clone();
-        let old_turn = turn_state.turn;
+        let runners = run_funcs.iter_mut().map(|(&t, r)| (t, r));
+        let turn = match get_turn_data(runners, &turn_state).await {
+            Ok(t) => t,
+            Err(errors) => return handle_program_errors(errors, &all_teams, turns),
+        };
 
         // update state
-        run_turn(&merged_actions, &mut turn_state.state);
+        run_turn(&turn.robot_actions, &mut turn_state.state);
 
         // but the new state isn't passed until the next cycle
-        let turn = CallbackInput {
-            state: StateForOutput {
-                objs: old_objs,
-                turn: old_turn,
-            },
-            robot_actions: merged_actions,
-            logs: team_logs,
-            debug_inspections: team_debug_inspections,
-            debug_tables: merged_debug_tables,
-        };
         turn_cb(&turn);
         turns.push(turn);
     }
@@ -413,6 +369,62 @@ where
         winner,
         errors: BTreeMap::new(),
         turns,
+    }
+}
+
+async fn get_turn_data<'r, R: RobotRunner + 'r>(
+    runners: impl Iterator<Item = (Team, &'r mut R)>,
+    turn_state: &TurnState,
+) -> Result<CallbackInput, ErrorMap> {
+    let mut errors = ErrorMap::new();
+
+    let mut turn = CallbackInput {
+        state: StateForOutput {
+            objs: turn_state.state.objs.clone(),
+            turn: turn_state.turn,
+        },
+        robot_actions: BTreeMap::new(),
+        logs: BTreeMap::new(),
+        debug_inspections: BTreeMap::new(),
+        debug_tables: BTreeMap::new(),
+    };
+
+    let mut results: stream::FuturesUnordered<_> = runners
+        .map(|(team, runner)| {
+            runner
+                .run(ProgramInput::new(&turn_state, team, GRID_SIZE))
+                .map(move |program_result| (team, program_result))
+        })
+        .collect();
+
+    while let Some((team, result)) = results.next().await {
+        let runner_output = match check_runner_error(&mut errors, team, result) {
+            Some(o) => o,
+            None => continue,
+        };
+        turn.robot_actions
+            .extend(runner_output.robot_actions.into_iter().map(|(id, action)| {
+                (
+                    id,
+                    validate_robot_action(action, team, id, &turn_state.state.objs),
+                )
+            }));
+        turn.logs.insert(team, runner_output.logs);
+        turn.debug_inspections
+            .insert(team, runner_output.debug_inspections);
+        if runner_output
+            .debug_tables
+            .keys()
+            .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
+        {
+            turn.debug_tables.extend(runner_output.debug_tables)
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(turn)
+    } else {
+        Err(errors)
     }
 }
 
@@ -465,20 +477,15 @@ fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut Stat
 
     for (coords, attacks) in attack_map.iter_all() {
         let attack_power = attacks.len() * Obj::ATTACK_POWER;
-        match state.grid.get(coords) {
-            Some(id) => {
-                if let Some(ObjDetails::Unit(ref mut unit)) =
-                    state.objs.get_mut(id).map(|obj| &mut obj.1)
-                {
-                    unit.health = unit.health.saturating_sub(attack_power);
-                    if unit.health == 0 {
-                        state.objs.remove(id).unwrap();
-                        state.grid.remove(coords).unwrap();
-                    }
+        if let Some(id) = state.grid.get(coords) {
+            if let Some(Obj(_, ObjDetails::Unit(unit))) = state.objs.get_mut(id) {
+                unit.health = unit.health.saturating_sub(attack_power);
+                if unit.health == 0 {
+                    state.objs.remove(id).unwrap();
+                    state.grid.remove(coords).unwrap();
                 }
             }
-            None => (),
-        };
+        }
     }
 }
 
