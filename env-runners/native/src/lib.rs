@@ -45,7 +45,7 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotR
     async fn run(&mut self, input: logic::ProgramInput<'_>) -> ProgramResult {
         let mut input = serde_json::to_vec(&input)?;
         input.push(b'\n');
-        self.stdin.write(&input).await?;
+        self.stdin.write_all(&input).await?;
         self.stdin.flush().await?;
 
         let mut logs = Vec::new();
