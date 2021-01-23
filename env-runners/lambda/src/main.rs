@@ -177,7 +177,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         let env = wasmer_wasi::WasiEnv::new(state);
         let imports = wasmer_wasi::generate_import_object_from_env(&STORE, env, version);
         let instance = wasmer::Instance::new(&module, &imports).unwrap();
-        let mut proc = WasiProcess::new(&instance, 256).expect("modules have start");
+        let mut proc = WasiProcess::new(&instance, Default::default()).expect("modules have start");
         let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
         let stdout = io::BufReader::new(proc.stdout.take().unwrap());
         proc.stdout.take();

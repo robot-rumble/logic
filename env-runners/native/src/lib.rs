@@ -31,7 +31,9 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> TokioRunner<W
             .next_line()
             .await?
             .ok_or(ProgramError::NoData)?;
-        let init_result = strip_prefix(&line, "__rr_init:").ok_or(ProgramError::NoInitError)?;
+        let init_result = line
+            .strip_prefix("__rr_init:")
+            .ok_or(ProgramError::NoInitError)?;
         serde_json::from_str::<ProgramResult<()>>(init_result)??;
 
         Ok(Self { stdin, stdout })
@@ -53,7 +55,7 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotR
         let mut res = loop {
             let maybe_line = lines.next_line().await?;
             let line = maybe_line.ok_or(ProgramError::NoData)?;
-            if let Some(output) = strip_prefix(&line, "__rr_output:") {
+            if let Some(output) = line.strip_prefix("__rr_output:") {
                 break serde_json::from_str::<ProgramResult>(output)?;
             } else {
                 logs.push(line)
@@ -63,13 +65,5 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotR
             output.logs.extend(logs);
         }
         res
-    }
-}
-
-fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
-    if s.starts_with(prefix) {
-        Some(&s[prefix.len()..])
-    } else {
-        None
     }
 }

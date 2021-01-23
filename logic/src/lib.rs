@@ -450,7 +450,7 @@ fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut Stat
         .iter()
         .filter_map(|(coords, &id)| match movement_map.get_vec(coords) {
             Some(vec) if vec.len() > 1 => vec
-                .into_iter()
+                .iter()
                 .map(|id| state.objs.get(&id).unwrap())
                 .min_by_key(|obj| {
                     match (

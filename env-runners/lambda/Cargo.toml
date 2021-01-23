@@ -22,7 +22,7 @@ maplit = "1.0"
 
 wasmer = { version = "1.0", default-features = false, features = ["native"] }
 wasmer-engine = "1.0"
-wasi-process = "0.2"
+wasi-process = "0.3"
 wasmer-wasi = "1.0"
 native-runner = { path = "../native" }
 crc32fast = "1.2"
