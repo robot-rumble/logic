@@ -12,6 +12,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "x86_64-unknown-linux-musl".parse().unwrap(),
         Default::default(),
     );
+    let ext = wasmer_engine_jit::JITArtifact::get_default_extension(target.triple());
+    assert_eq!(ext, "wjit");
     let tunables = wasmer::BaseTunables::for_target(&target);
     let compiler_config = wasmer_compiler_llvm::LLVM::new();
     let engine = wasmer_engine_jit::JIT::new(compiler_config)
@@ -20,10 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     for path in args {
         let bytes = std::fs::read(&path)?;
         let artifact = wasmer_engine_jit::JITArtifact::new(&engine, &bytes, &tunables)?;
-        std::fs::write(
-            cache_dir.join(path.file_name().unwrap()),
-            artifact.serialize()?,
-        )?
+        let mut artifact_path = cache_dir.join(path.file_name().unwrap());
+        artifact_path.set_extension(ext);
+        std::fs::write(artifact_path, artifact.serialize()?)?
     }
 
     Ok(())

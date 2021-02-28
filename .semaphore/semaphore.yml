@@ -66,8 +66,7 @@ blocks:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
             # install llvm
             - sudo apt-get install -y lsb-release wget software-properties-common
-            - wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
-            - sudo ./llvm.sh 11 && sudo ./llvm.sh 10
+            - sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
   - name: browser-runner
