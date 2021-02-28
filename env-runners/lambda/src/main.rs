@@ -98,13 +98,13 @@ enum Lang {
 }
 
 static STORE: Lazy<wasmer::Store> = Lazy::new(|| {
-    let mut engine = wasmer::NativeEngine::headless();
-    let seed = rand::random();
-    engine.set_deterministic_prefixer(move |bytes| {
-        let mut hasher = crc32fast::Hasher::new_with_initial(seed);
-        hasher.update(bytes);
-        format!("{:08x}", hasher.finalize())
-    });
+    let engine = wasmer::JITEngine::headless();
+    // let seed = rand::random();
+    // engine.set_deterministic_prefixer(move |bytes| {
+    //     let mut hasher = crc32fast::Hasher::new_with_initial(seed);
+    //     hasher.update(bytes);
+    //     format!("{:08x}", hasher.finalize())
+    // });
     wasmer::Store::new(&engine)
 });
 

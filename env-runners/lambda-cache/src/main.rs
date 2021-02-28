@@ -14,12 +14,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     let tunables = wasmer::BaseTunables::for_target(&target);
     let compiler_config = wasmer_compiler_llvm::LLVM::new();
-    let engine = wasmer_engine_native::Native::new(compiler_config)
+    let engine = wasmer_engine_jit::JIT::new(compiler_config)
         .target(target)
         .engine();
     for path in args {
         let bytes = std::fs::read(&path)?;
-        let artifact = wasmer_engine_native::NativeArtifact::new(&engine, &bytes, &tunables)?;
+        let artifact = wasmer_engine_jit::JITArtifact::new(&engine, &bytes, &tunables)?;
         std::fs::write(
             cache_dir.join(path.file_name().unwrap()),
             artifact.serialize()?,

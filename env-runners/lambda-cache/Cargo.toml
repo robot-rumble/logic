@@ -7,5 +7,5 @@ edition = "2018"
 [dependencies]
 wasmer = { version = "1.0", default-features = false }
 wasmer-engine = "1.0"
-wasmer-engine-native = { version = "1.0", features = ["compiler"] }
+wasmer-engine-jit = { version = "1.0", features = ["compiler"] }
 wasmer-compiler-llvm = "1.0"
