@@ -32,7 +32,7 @@ blocks:
           commands:
             - git submodule update --init
             # install llvm
-            - apt install -y lsb-release wget software-properties-common
+            - sudo apt install -y lsb-release wget software-properties-common
             - bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             # install https://wasmer.io/
             - curl https://get.wasmer.io -sSfL | sh -s 0.17.1 # newest alpha has a glibc issue on debian buster
@@ -68,7 +68,7 @@ blocks:
           commands:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
             # install llvm
-            - apt install -y lsb-release wget software-properties-common
+            - sudo apt install -y lsb-release wget software-properties-common
             - bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 

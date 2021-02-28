@@ -3602,9 +3602,9 @@ checksum = "93c6c3420963c5c64bca373b25e77acb562081b9bb4dd5bb864187742186cea9"
 
 [[package]]
 name = "wasi-process"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c3439f28902d8cb2512170681b47ed32af39fce6cfbcdd56cb5fbb3b003ed2d"
+checksum = "cc20fe23489c06613c2fe78f08c3fb8d9bd0d90929b6daecd33da9ddc789ce7c"
 dependencies = [
  "bytes",
  "futures-executor",
