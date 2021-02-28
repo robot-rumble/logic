@@ -31,9 +31,6 @@ blocks:
         - name: Build Javascript
           commands:
             - git submodule update --init
-            # install llvm
-            - sudo apt install -y lsb-release wget software-properties-common
-            - sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             # install https://wasmer.io/
             - curl https://get.wasmer.io -sSfL | sh -s 0.17.1 # newest alpha has a glibc issue on debian buster
             - source ~/.wasmer/wasmer.sh
@@ -47,7 +44,7 @@ blocks:
             # install yarn
             - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
             - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-            - sudo apt install -y yarn
+            - sudo apt update && sudo apt install -y yarn
             - bash build-wasm.sh --javascript
         - name: Build Python
           commands:
