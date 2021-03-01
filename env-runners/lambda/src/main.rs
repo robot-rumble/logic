@@ -66,6 +66,7 @@ struct Input {
     pr2_id: usize,
     r2_code: String,
     r2_lang: Lang,
+    board_id: usize,
 }
 
 #[derive(Serialize, Debug)]
@@ -86,6 +87,7 @@ struct Output {
     data: logic::MainOutput,
     winner: Option<OutputTeam>,
     errored: bool,
+    board_id: usize,
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -243,6 +245,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         data: output,
         winner,
         errored,
+        board_id: input_data.board_id,
     };
 
     let mut message_body = Vec::<u8>::new();
