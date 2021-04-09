@@ -5,13 +5,17 @@ use wasm_bindgen_futures::{future_to_promise, JsFuture};
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn debug(s: &str);
+    #[allow(unused)]
+    #[wasm_bindgen(js_namespace = console, js_name = debug)]
+    fn console_debug(s: &str);
+    #[wasm_bindgen(js_namespace = console, js_name = error)]
+    fn console_error(s: JsValue);
 }
+#[allow(unused)]
 macro_rules! dbg {
     ($x:expr) => {{
         let x = $x;
-        debug(&format!("{} : {:?}", stringify!($x), x));
+        console_debug(&format!("{} : {:?}", stringify!($x), x));
         x
     }};
 }
@@ -27,7 +31,7 @@ extern "C" {
     #[wasm_bindgen(method, getter)]
     fn init_result(this: &WasiRunner) -> Promise;
     #[wasm_bindgen(method)]
-    fn run_turn(this: &WasiRunner, input: &[u8]) -> Promise;
+    fn run_turn(this: &WasiRunner, input: Uint8Array) -> Promise;
 
     pub type WasiResult;
     #[wasm_bindgen(method, getter)]
@@ -43,7 +47,7 @@ struct JsRunner {
 impl JsRunner {
     async fn new(runner: WasiRunner) -> ProgramResult<Self> {
         let res = JsFuture::from(runner.init_result()).await.map_err(|err| {
-            dbg!(err);
+            console_error(err);
             ProgramError::InternalError
         })?;
         let res = res
@@ -60,10 +64,10 @@ impl JsRunner {
 impl logic::RobotRunner for JsRunner {
     async fn run(&mut self, input: logic::ProgramInput<'_>) -> ProgramResult {
         let input = serde_json::to_vec(&input)?;
-        let result = JsFuture::from(self.runner.run_turn(&input))
+        let result = JsFuture::from(self.runner.run_turn(Uint8Array::from(&*input)))
             .await
             .map_err(|err| {
-                dbg!(err);
+                console_error(err);
                 ProgramError::InternalError
             })?
             .unchecked_into::<WasiResult>();
