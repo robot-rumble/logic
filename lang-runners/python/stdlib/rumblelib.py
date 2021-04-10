@@ -311,21 +311,21 @@ def __main(state, scope=globals()):
             return {"Err": {"InitError": __format_err(e)}}
 
     robot_actions = {}
-    debug_tables = {}
-    debug_inspections = []
+    debug_inspect_tables = {}
+    debug_locate_queries = []
 
     for id in state.ids_by_team(state.our_team):
         global debug
-        debug_table = {}
+        debug_inspect_table = {}
 
         class Debug:
-            def log(self, key: str, val: typing.Any) -> None:
-                check_instance(key, str, "Debug.log 'key'")
-                debug_table[key] = str(val)
+            def inspect(self, key: str, val: typing.Any) -> None:
+                check_instance(key, str, "Debug.inspect 'key'")
+                debug_inspect_table[key] = str(val)
 
-            def inspect(self, unit: Obj) -> None:
-                check_instance(unit, Obj, "Debug.inspect")
-                debug_inspections.append(unit.id)
+            def locate(self, unit: Obj) -> None:
+                check_instance(unit, Obj, "Debug.locate")
+                debug_locate_queries.append(unit.id)
 
         debug = Debug()
 
@@ -343,8 +343,8 @@ def __main(state, scope=globals()):
             result = {"Err": __format_err(e)}
 
         robot_actions[id] = result
-        if debug_table:
-            debug_tables[id] = debug_table
+        if debug_inspect_table:
+            debug_inspect_tables[id] = debug_inspect_table
 
     if had_stdout:
         sys.stdout = old_stdout
@@ -361,8 +361,8 @@ def __main(state, scope=globals()):
         "Ok": {
             "robot_actions": robot_actions,
             "logs": logs,
-            "debug_tables": debug_tables,
-            "debug_inspections": debug_inspections
+            "debug_inspect_tables": debug_inspect_tables,
+            "debug_locate_queries": debug_locate_queries
         }
     }
 

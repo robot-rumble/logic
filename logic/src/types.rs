@@ -65,8 +65,8 @@ pub struct CallbackInput {
     pub robot_actions: BTreeMap<Id, ValidatedRobotAction>,
 
     pub logs: BTreeMap<Team, Vec<String>>,
-    pub debug_tables: BTreeMap<Id, DebugTable>,
-    pub debug_inspections: BTreeMap<Team, Vec<Id>>,
+    pub debug_inspect_tables: BTreeMap<Id, DebugTable>,
+    pub debug_locate_queries: BTreeMap<Team, Vec<Id>>,
 }
 
 pub type ObjMap = BTreeMap<Id, Obj>;
@@ -170,8 +170,8 @@ pub type ActionResult = Result<Option<Action>, Error>;
 pub struct ProgramOutput {
     pub robot_actions: BTreeMap<Id, ActionResult>,
     pub logs: Vec<String>,
-    pub debug_tables: BTreeMap<Id, DebugTable>,
-    pub debug_inspections: Vec<Id>,
+    pub debug_inspect_tables: BTreeMap<Id, DebugTable>,
+    pub debug_locate_queries: Vec<Id>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]

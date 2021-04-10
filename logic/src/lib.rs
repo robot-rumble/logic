@@ -385,8 +385,8 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
         },
         robot_actions: BTreeMap::new(),
         logs: BTreeMap::new(),
-        debug_inspections: BTreeMap::new(),
-        debug_tables: BTreeMap::new(),
+        debug_locate_queries: BTreeMap::new(),
+        debug_inspect_tables: BTreeMap::new(),
     };
 
     let mut results: stream::FuturesUnordered<_> = runners
@@ -410,14 +410,14 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
                 )
             }));
         turn.logs.insert(team, runner_output.logs);
-        turn.debug_inspections
-            .insert(team, runner_output.debug_inspections);
+        turn.debug_locate_queries
+            .insert(team, runner_output.debug_locate_queries);
         if runner_output
-            .debug_tables
+            .debug_inspect_tables
             .keys()
             .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
         {
-            turn.debug_tables.extend(runner_output.debug_tables)
+            turn.debug_inspect_tables.extend(runner_output.debug_inspect_tables)
         }
     }
 

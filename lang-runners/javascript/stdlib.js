@@ -373,20 +373,20 @@ function __main(stateData) {
     },
   }
   const robot_actions = {}
-  const debug_tables = {}
-  const debug_inspections = []
+  const debug_inspect_tables = {}
+  const debug_locate_queries_queries = []
   for (const id of state.idsByTeam(state.ourTeam)) {
-    const debug_table = {}
+    const debug_inspect_table = {}
 
     class Debug {
-      log(key, val) {
-        checkType(key, 'string', 'Debug.log "key"')
-        debug_table[key] = String(val)
+      inspect(key, val) {
+        checkType(key, 'string', 'Debug.inspect "key"')
+        debug_inspect_table[key] = String(val)
       }
 
-      inspect(unit) {
-        checkInstance(unit, Obj, 'Debug.inspect')
-        debug_inspections.push(unit.id)
+      locate(unit) {
+        checkInstance(unit, Obj, 'Debug.locate')
+        debug_locate_queries.push(unit.id)
       }
     }
 
@@ -402,7 +402,7 @@ function __main(stateData) {
       result = __format_err(e)
     }
     robot_actions[id] = result
-    if (Object.keys(debug_table).length) debug_tables[id] = debug_table
+    if (Object.keys(debug_inspect_table).length) debug_inspect_tables[id] = debug_inspect_table
   }
-  return { Ok: { robot_actions, logs, debug_tables, debug_inspections } }
+  return { Ok: { robot_actions, logs, debug_inspect_tables, debug_locate_queries } }
 }
