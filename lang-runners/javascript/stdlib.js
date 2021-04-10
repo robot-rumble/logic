@@ -374,7 +374,7 @@ function __main(stateData) {
   }
   const robot_actions = {}
   const debug_inspect_tables = {}
-  const debug_locate_queries_queries = []
+  const debug_locate_queries = []
   for (const id of state.idsByTeam(state.ourTeam)) {
     const debug_inspect_table = {}
 
