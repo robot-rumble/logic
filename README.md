@@ -1,5 +1,7 @@
 # robot rumble - logic backend
 
+![][https://d3kx2398yo1gg8.cloudfront.net/images/demo.gif]
+
 > https://robotrumble.org
 
 Robot Rumble is a game where you code robots to battle other users' bots in an
