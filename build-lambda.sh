@@ -63,7 +63,7 @@ if [[ $DEPLOY ]]; then
 
     if [[ $WASM_LAYER ]]; then
         zip -r wasmer-cache.zip wasmer-cache/
-        LAYER_NAME=robot-rumble-cached-wasm-runners
+        LAYER_NAME=wasmer-cache
         aws s3 cp wasmer-cache.zip "s3://$S3_BUCKET"
         LAYER_ARN=$(aws lambda publish-layer-version --layer-name "$LAYER_NAME" --content=S3Bucket="$S3_BUCKET",S3Key=wasmer-cache.zip | jq -r .LayerVersionArn)
         aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN"
