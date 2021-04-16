@@ -158,6 +158,7 @@ fn make_state(code: &str) -> (WasiState, tempfile::TempDir) {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let _sentry = sentry::init(std::env::var("SENTRY_DSN"));
     let func = lambda::handler_fn(run);
     lambda::run(func).await?;
     Ok(())
