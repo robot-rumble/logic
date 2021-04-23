@@ -4,7 +4,7 @@
 
 ![](https://d3kx2398yo1gg8.cloudfront.net/images/demo.gif)
 
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/YOUR_SAUCE_USERNAME.svg)](https://saucelabs.com/u/YOUR_SAUCE_USERNAME)
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/outkine.svg)](https://saucelabs.com/u/outkine)
 
 Robot Rumble is a game where you code robots to battle other users' bots in an
 arena. This is the logic backend, which is primarily written in Rust (using
