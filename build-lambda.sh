@@ -60,8 +60,6 @@ if [[ $DEPLOY ]]; then
         zip lambda.zip bootstrap
         aws s3 cp lambda.zip "s3://$S3_BUCKET"
         aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket="$S3_BUCKET" --s3-key lambda.zip
-        LAYER_ARN=$(aws lambda publish-layer-version --layer-name "$LAYER_NAME" --content=S3Bucket="$S3_BUCKET",S3Key=wasmer-cache.zip | jq -r .LayerVersionArn)
-        aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN"
     fi
 
     if [[ $WASM_LAYER ]]; then
