@@ -44,12 +44,12 @@ SAMPLE EVENT
 }
 */
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct LambdaInput {
     Records: Vec<LambdaInputRecord>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize Debug)]
 struct LambdaInputRecord {
     #[serde(with = "serde_with::json::nested")]
     body: Input,
@@ -165,7 +165,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
-    println!("DATA RECEIVED: {:?}", data);
+    println!("DATA RECEIVED: {:?}", data.to_string());
 
     let input_data = data.Records.into_iter().next().unwrap().body;
 
