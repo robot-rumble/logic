@@ -36,7 +36,7 @@ request = json.loads("""
 """)
 
 body = json.loads("""
-    {"turn_num": 30, "r1_id":0, "pr1_id":0, "r1_lang": "Python", "r1_code":"","r2_id":0,"pr2_id":0, "r2_lang": "Python", "r2_code":""}
+    {"turn_num": 100, "board_id": 0, "r1_id":0, "pr1_id":0, "r1_lang": "Python", "r1_code":"","r2_id":0,"pr2_id":0, "r2_lang": "Python", "r2_code":""}
 """)
 
 body["r1_code"] = code1
