@@ -101,7 +101,9 @@ impl State {
                 MapType::Rect => {
                     coords.0 == 1 || coords.0 == size - 2 || coords.1 == 1 || coords.1 == size - 2
                 }
-                MapType::Circle => distance_from_center(*coords) as f32 >= ((size / 2) as f32 - 0.5).powf(2.0),
+                MapType::Circle => {
+                    distance_from_center(*coords) as f32 >= ((size / 2) as f32 - 0.5).powf(2.0)
+                }
             })
             .collect();
         (objs, spawn_points)
@@ -120,7 +122,7 @@ impl State {
         let Self {
             grid,
             objs,
-            spawn_points
+            spawn_points,
         } = self;
         for coords in spawn_points.iter() {
             if let Some(id) = grid.get(coords) {
@@ -329,6 +331,7 @@ pub async fn run<TurnCb, R>(
     runners: BTreeMap<Team, Result<R, ProgramError>>,
     mut turn_cb: TurnCb,
     max_turn: usize,
+    dev_mode: bool,
 ) -> MainOutput
 where
     TurnCb: FnMut(&CallbackInput),
@@ -362,7 +365,7 @@ where
         }
 
         let runners = run_funcs.iter_mut().map(|(&t, r)| (t, r));
-        let turn = match get_turn_data(runners, all_teams, &turn_state).await {
+        let turn = match get_turn_data(runners, all_teams, &turn_state, dev_mode).await {
             Ok(t) => t,
             Err(errors) => return handle_program_errors(errors, all_teams, turns),
         };
@@ -388,6 +391,7 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
     runners: impl Iterator<Item = (Team, &'r mut R)>,
     all_teams: &[Team],
     turn_state: &TurnState,
+    dev_mode: bool,
 ) -> Result<CallbackInput, ErrorMap> {
     let mut errors = ErrorMap::new();
 
@@ -425,12 +429,14 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
         turn.logs.insert(team, runner_output.logs);
         turn.debug_locate_queries
             .insert(team, runner_output.debug_locate_queries);
-        if runner_output
-            .debug_inspect_tables
-            .keys()
-            .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
+        if dev_mode
+            && runner_output
+                .debug_inspect_tables
+                .keys()
+                .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
         {
-            turn.debug_inspect_tables.extend(runner_output.debug_inspect_tables)
+            turn.debug_inspect_tables
+                .extend(runner_output.debug_inspect_tables)
         }
     }
 

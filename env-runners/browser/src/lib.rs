@@ -109,6 +109,7 @@ pub fn run(
                     .expect("Turn callback function failed");
             },
             turn_num,
+            true,
         )
         .await;
         Ok(JsValue::from_serde(&output).unwrap())
