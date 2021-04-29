@@ -101,7 +101,7 @@ impl State {
                 MapType::Rect => {
                     coords.0 == 1 || coords.0 == size - 2 || coords.1 == 1 || coords.1 == size - 2
                 }
-                MapType::Circle => distance_from_center(*coords) >= (size / 2 - 1).pow(2) as i32,
+                MapType::Circle => distance_from_center(*coords) as f32 >= ((size / 2) as f32 - 0.5).powf(2.0),
             })
             .collect();
         (objs, spawn_points)
