@@ -116,6 +116,22 @@ impl State {
         Coords(GRID_SIZE - loc.0 - 1, GRID_SIZE - loc.1 - 1)
     }
 
+    fn clear_spawn(&mut self) {
+        let Self {
+            grid,
+            objs,
+            spawn_points
+        } = self;
+        for coords in spawn_points.iter() {
+            if let Some(id) = grid.get(coords) {
+                if let Some(Obj(_, ObjDetails::Unit(_))) = objs.get_mut(id) {
+                    objs.remove(id).unwrap();
+                    grid.remove(coords).unwrap();
+                }
+            }
+        }
+    }
+
     fn spawn_units(&mut self) {
         let Self {
             spawn_points,
@@ -339,15 +355,10 @@ where
         turn: 0,
         state: State::new(MapType::Circle, GRID_SIZE),
     };
-    let mut spawn_interval = State::SPAWN_EVERY;
-    for _ in 0..max_turn {
-        turn_state.turn += 1;
-
-        if spawn_interval == State::SPAWN_EVERY {
+    while turn_state.turn < max_turn {
+        if turn_state.turn % State::SPAWN_EVERY == 0 && turn_state.turn != max_turn {
+            turn_state.state.clear_spawn();
             turn_state.state.spawn_units();
-            spawn_interval = 0
-        } else {
-            spawn_interval += 1
         }
 
         let runners = run_funcs.iter_mut().map(|(&t, r)| (t, r));
@@ -362,6 +373,8 @@ where
         // but the new state isn't passed until the next cycle
         turn_cb(&turn);
         turns.push(turn);
+
+        turn_state.turn += 1;
     }
     let winner = turn_state.state.determine_winner();
     MainOutput {
