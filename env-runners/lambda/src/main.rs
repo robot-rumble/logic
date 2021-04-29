@@ -49,13 +49,13 @@ struct LambdaInput {
     Records: Vec<LambdaInputRecord>,
 }
 
-#[derive(Deserialize, Serialize Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct LambdaInputRecord {
     #[serde(with = "serde_with::json::nested")]
     body: Input,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Input {
     turn_num: usize,
     r1_id: usize,
@@ -93,7 +93,7 @@ struct Output {
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 // TODO: deduplicate with cli somehow
-#[derive(Copy, Clone, Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 enum Lang {
     Python,
     Javascript,
@@ -165,7 +165,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
-    println!("DATA RECEIVED: {:?}", data.to_string());
+    println!("DATA RECEIVED: {}", serde_json::to_string(&data)?);
 
     let input_data = data.Records.into_iter().next().unwrap().body;
 
