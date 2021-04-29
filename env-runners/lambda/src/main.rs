@@ -160,7 +160,7 @@ fn make_state(code: &str) -> (WasiState, tempfile::TempDir) {
 async fn main() -> Result<(), Error> {
     let _sentry = sentry::init(std::env::var("SENTRY_DSN").unwrap());
     let func = lambda::handler_fn(run);
-    lambda::run(func).await?;
+    lambda::run(func).await.unwrap();
     Ok(())
 }
 
