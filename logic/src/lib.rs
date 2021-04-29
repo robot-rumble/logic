@@ -61,7 +61,7 @@ impl Obj {
 }
 
 impl State {
-    const TEAM_UNIT_NUM: usize = 5;
+    const TEAM_UNIT_NUM: usize = 4;
     const SPAWN_EVERY: usize = 10;
 
     pub fn new(grid_type: MapType, grid_size: usize) -> Self {
