@@ -16,8 +16,8 @@ use wasi_process::WasiProcess;
 use wasmer_wasi::{WasiState, WasiVersion};
 
 use base64::write::EncoderWriter as Base64Writer;
-use flate2::write::GzEncoder;
-use flate2::Compression;
+use brotli::enc::BrotliEncoderParams;
+use std::io::Write;
 
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
@@ -83,8 +83,7 @@ struct Output {
     r2_id: usize,
     pr2_id: usize,
     r2_time: f64,
-    #[serde(with = "serde_with::json::nested")]
-    data: logic::MainOutput,
+    data: String,
     winner: Option<OutputTeam>,
     errored: bool,
     board_id: usize,
@@ -236,28 +235,34 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         r1_time, r2_time, winner, errored
     );
 
-    let output = Output {
+    let mut data = Vec::<u8>::new();
+    {
+        let mut b64_enc = Base64Writer::new(&mut data, base64::STANDARD);
+        {
+            let params = BrotliEncoderParams {
+                quality: 10,
+                ..Default::default()
+            };
+            let mut enc = brotli::CompressorWriter::with_params(&mut b64_enc, 4096, &params);
+            serde_json::to_writer(&mut enc, &output)?;
+            enc.flush()?;
+        }
+        b64_enc.finish()?;
+    }
+    let data = String::from_utf8(data)?;
+
+    let final_output = Output {
         r1_id: input_data.r1_id,
         pr1_id: input_data.pr1_id,
         r1_time,
         r2_id: input_data.r2_id,
         pr2_id: input_data.pr2_id,
         r2_time,
-        data: output,
+        data,
         winner,
         errored,
         board_id: input_data.board_id,
     };
-
-    let mut message_body = Vec::<u8>::new();
-    {
-        let mut b64_enc = Base64Writer::new(&mut message_body, base64::STANDARD);
-        let mut gz_enc = GzEncoder::new(&mut b64_enc, Compression::default());
-        serde_json::to_writer(&mut gz_enc, &output)?;
-        gz_enc.finish()?;
-        b64_enc.finish()?;
-    }
-    let message_body = String::from_utf8(message_body)?;
 
     let client = SqsClient::new(Region::UsEast1);
 
@@ -267,7 +272,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     client
         .send_message(SendMessageRequest {
             queue_url: out_queue_url,
-            message_body,
+            message_body: serde_json::to_string(&final_output)?,
             delay_seconds: None,
             message_attributes: None,
             message_deduplication_id: None,

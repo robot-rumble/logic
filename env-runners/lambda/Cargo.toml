@@ -35,10 +35,11 @@ openssl-sys = "0.9.58"
 tempfile = "3.1.0"
 jemallocator = "0.3.2"
 
-flate2 = "1.0"
+brotli = "3.3.0"
 base64 = "0.12.3"
 
 sentry = "0.22.0"
+
 
 [features]
 # Force openssl-sys to staticly link in the openssl library. Necessary when
