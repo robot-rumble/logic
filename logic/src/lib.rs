@@ -61,7 +61,7 @@ impl Obj {
 }
 
 impl State {
-    const TEAM_UNIT_NUM: usize = 4;
+    const TEAM_UNIT_NUM: usize = 100;
     const SPAWN_EVERY: usize = 10;
 
     pub fn new(grid_type: MapType, grid_size: usize) -> Self {
@@ -427,16 +427,17 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
                 )
             }));
         turn.logs.insert(team, runner_output.logs);
-        turn.debug_locate_queries
-            .insert(team, runner_output.debug_locate_queries);
-        if dev_mode
-            && runner_output
+        if dev_mode {
+            turn.debug_locate_queries
+                .insert(team, runner_output.debug_locate_queries);
+            if runner_output
                 .debug_inspect_tables
                 .keys()
                 .all(|id| is_id_valid(team, *id, &turn_state.state.objs))
-        {
-            turn.debug_inspect_tables
-                .extend(runner_output.debug_inspect_tables)
+            {
+                turn.debug_inspect_tables
+                    .extend(runner_output.debug_inspect_tables);
+            }
         }
     }
 
