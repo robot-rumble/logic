@@ -355,11 +355,11 @@ where
     let mut turns = Vec::with_capacity(max_turn);
 
     let mut turn_state = TurnState {
-        turn: 0,
+        turn: 1,
         state: State::new(MapType::Circle, GRID_SIZE),
     };
-    while turn_state.turn < max_turn {
-        if turn_state.turn % State::SPAWN_EVERY == 0 && turn_state.turn != max_turn {
+    while turn_state.turn <= max_turn {
+        if (turn_state.turn - 1) % State::SPAWN_EVERY == 0 {
             turn_state.state.clear_spawn();
             turn_state.state.spawn_units();
         }
