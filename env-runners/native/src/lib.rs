@@ -1,6 +1,7 @@
 use std::process::Stdio;
 use tokio::io::{self, AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::process::{ChildStdin, ChildStdout, Command};
+use tokio::time;
 
 use logic::{ProgramError, ProgramResult};
 
@@ -65,5 +66,30 @@ impl<W: AsyncWrite + Unpin + Send, R: AsyncBufRead + Unpin + Send> logic::RobotR
             output.logs.extend(logs);
         }
         res
+    }
+}
+
+pub struct TimeoutRunner<R: logic::RobotRunner> {
+    inner: R,
+    timeout: Option<time::Duration>,
+}
+
+impl<R: logic::RobotRunner> TimeoutRunner<R> {
+    pub fn new(inner: R, timeout: Option<time::Duration>) -> Self {
+        Self { inner, timeout }
+    }
+}
+
+#[async_trait::async_trait]
+impl<R: logic::RobotRunner + Send> logic::RobotRunner for TimeoutRunner<R> {
+    async fn run(&mut self, input: logic::ProgramInput<'_>) -> ProgramResult {
+        let fut = self.inner.run(input);
+        if let Some(dur) = self.timeout {
+            time::timeout(dur, fut)
+                .await
+                .unwrap_or(Err(ProgramError::Timeout(dur)))
+        } else {
+            fut.await
+        }
     }
 }

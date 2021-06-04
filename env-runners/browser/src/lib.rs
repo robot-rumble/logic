@@ -1,5 +1,8 @@
+use futures_util::future::{self, FutureExt};
 use js_sys::{Function as JsFunction, Promise, Uint8Array};
 use logic::{ProgramError, ProgramResult};
+use std::time::Duration;
+use std::{pin::Pin, task};
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::{future_to_promise, JsFuture};
 
@@ -10,6 +13,8 @@ extern "C" {
     fn console_debug(s: &str);
     #[wasm_bindgen(js_namespace = console, js_name = error)]
     fn console_error(s: JsValue);
+    #[wasm_bindgen(js_name = clearTimeout)]
+    fn clear_timeout(id: u32);
 }
 #[allow(unused)]
 macro_rules! dbg {
@@ -18,6 +23,58 @@ macro_rules! dbg {
         console_debug(&format!("{} : {:?}", stringify!($x), x));
         x
     }};
+}
+
+#[wasm_bindgen(inline_js = "
+export function timeout_promise(secs, id_slot) {
+    return new Promise(resolve => {
+        id_slot[0] = setTimeout(resolve, secs * 1000);
+    });
+}
+")]
+extern "C" {
+    fn timeout_promise(secs: f64, id_slot: &mut [u32]) -> Promise;
+}
+
+struct Sleep {
+    inner: Option<JsFuture>,
+    timeout_id: u32,
+}
+impl std::marker::Unpin for Sleep {}
+
+impl future::Future for Sleep {
+    type Output = ();
+    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> task::Poll<()> {
+        if let Some(fut) = &mut self.inner {
+            match fut.poll_unpin(cx) {
+                task::Poll::Ready(Ok(_)) => self.inner = None,
+                task::Poll::Ready(Err(err)) => wasm_bindgen::throw_val(err),
+                task::Poll::Pending => return task::Poll::Pending,
+            }
+        }
+        task::Poll::Ready(())
+    }
+}
+impl future::FusedFuture for Sleep {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_none()
+    }
+}
+impl Drop for Sleep {
+    fn drop(&mut self) {
+        if self.inner.is_some() {
+            clear_timeout(self.timeout_id)
+        }
+    }
+}
+
+fn sleep(dur: Duration) -> Sleep {
+    let mut id = 0;
+    let prom = timeout_promise(dur.as_secs_f64(), std::slice::from_mut(&mut id));
+    Sleep {
+        inner: Some(JsFuture::from(prom)),
+        timeout_id: id,
+    }
 }
 
 #[wasm_bindgen(start)]
@@ -82,6 +139,32 @@ impl logic::RobotRunner for JsRunner {
             }
         }
         res
+    }
+}
+
+pub struct TimeoutRunner<R: logic::RobotRunner> {
+    inner: R,
+    timeout: Option<Duration>,
+}
+
+impl<R: logic::RobotRunner> TimeoutRunner<R> {
+    pub fn new(inner: R, timeout: Option<Duration>) -> Self {
+        Self { inner, timeout }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl<R: logic::RobotRunner> logic::RobotRunner for TimeoutRunner<R> {
+    async fn run(&mut self, input: logic::ProgramInput<'_>) -> ProgramResult {
+        let fut = self.inner.run(input);
+        if let Some(dur) = self.timeout {
+            futures_util::select_biased! {
+                res = fut.fuse() => res,
+                () = sleep(dur) => Err(ProgramError::Timeout(dur)),
+            }
+        } else {
+            fut.await
+        }
     }
 }
 

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use logic::{ProgramError, Team};
 use native_runner::TokioRunner;
-use tokio::time::{self, Duration, Instant};
+use tokio::time::{Duration, Instant};
 use tokio::{io, task};
 
 use wasi_process::WasiProcess;
@@ -185,14 +185,15 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         proc.stdout.take();
         let t = task::spawn(async move {
             let start_t = Instant::now();
-            let res = match time::timeout(TIMEOUT, proc).await {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(_wasm_err)) => Err(ProgramError::InternalError),
-                Err(_timeout) => Err(ProgramError::Timeout(TIMEOUT)),
-            };
+            let res = proc.await.map_err(|_wasm_err| ProgramError::InternalError);
             (start_t.elapsed(), res)
         });
-        async move { (TokioRunner::new(stdin, stdout).await, t, sourcedir) }
+        async move {
+            let runner = TokioRunner::new(stdin, stdout)
+                .await
+                .map(|runner| native_runner::TimeoutRunner::new(runner, Some(TURN_TIMEOUT)));
+            (runner, t, sourcedir)
+        }
     };
 
     let ((r1, t1, _d1), (r2, t2, _d2)) = tokio::join!(
@@ -208,14 +209,15 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
 
     let (mut output, err1, err2) = tokio::join!(run_fut, t1, t2);
 
-    let mut handle_res = |team, res: Result<_, task::JoinError>| match res {
+    let mut handle_res = |team, res: Result<(Duration, _), task::JoinError>| match res {
         Ok((dur, res)) => {
             if let Err(e) = res {
                 output.errors.insert(team, e);
             }
-            Duration::as_secs_f64(&dur)
+            dur.as_secs_f64()
         }
-        Err(_) => {
+        Err(err) => {
+            eprintln!("PANIC: {}", err);
             output.errors.insert(team, ProgramError::InternalError);
             -1.0
         }
@@ -284,4 +286,4 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     Ok(())
 }
 
-const TIMEOUT: Duration = Duration::from_secs(60);
+const TURN_TIMEOUT: Duration = Duration::from_secs(1);

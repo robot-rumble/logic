@@ -289,28 +289,6 @@ pub trait RobotRunner {
     async fn run(&mut self, input: ProgramInput<'_>) -> ProgramResult;
 }
 
-#[cfg(not(feature = "robot-runner-not-send"))]
-#[async_trait::async_trait]
-impl<F> RobotRunner for F
-where
-    F: FnMut(ProgramInput) -> ProgramResult + Send,
-{
-    async fn run(&mut self, input: ProgramInput<'_>) -> ProgramResult {
-        (self)(input)
-    }
-}
-
-#[cfg(feature = "robot-runner-not-send")]
-#[async_trait::async_trait(? Send)]
-impl<F> RobotRunner for F
-where
-    F: FnMut(ProgramInput) -> ProgramResult,
-{
-    async fn run(&mut self, input: ProgramInput<'_>) -> ProgramResult {
-        (self)(input)
-    }
-}
-
 #[inline]
 fn check_runner_error<T>(
     errors: &mut ErrorMap,
