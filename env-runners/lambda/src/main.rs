@@ -169,8 +169,8 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     let input_data = data.Records.into_iter().next().unwrap().body;
 
     println!(
-        "LANGS: {:?} vs {:?}",
-        input_data.r1_lang, input_data.r2_lang
+        "pr1_id {:?} vs pr2_id {:?}",
+        input_data.pr1_id, input_data.pr2_id
     );
 
     let make_runner = |code, lang: Lang| {
