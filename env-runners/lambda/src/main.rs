@@ -207,23 +207,15 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     };
     let run_fut = logic::run(runners, |_| {}, input_data.turn_num, false);
 
-    let (mut output, err1, err2) = tokio::join!(run_fut, t1, t2);
-
-    let mut handle_res = |team, res: Result<(Duration, _), task::JoinError>| match res {
-        Ok((dur, res)) => {
-            if let Err(e) = res {
-                output.errors.insert(team, e);
-            }
-            dur.as_secs_f64()
-        }
-        Err(err) => {
-            eprintln!("PANIC: {}", err);
-            output.errors.insert(team, ProgramError::InternalError);
-            -1.0
-        }
+    let output = tokio::select! {
+        output = run_fut => output,
+        Err(err) = t1 => panic!("t1 error: {:?}", err),
+        Err(err) = t2 => panic!("t2 error: {:?}", err),
+        else => panic!("Runner executed earlier than logic")
     };
-    let r1_time = handle_res(Team::Red, err1);
-    let r2_time = handle_res(Team::Blue, err2);
+
+    let r1_time = 0f64;
+    let r2_time = 0f64;
 
     let winner = match output.winner {
         Some(Team::Blue) => Some(OutputTeam::R1),
