@@ -92,6 +92,24 @@ pub struct State {
     pub grid: GridMap,
     /// Should be sorted
     pub spawn_points: Vec<Coords>,
+    pub settings: Settings,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Settings {
+    pub initial_unit_num: usize,
+    pub recurrent_unit_num: usize,
+    pub spawn_every: usize,
+}
+
+impl Default for Settings {
+    fn default() -> Settings {
+        Settings {
+            initial_unit_num: 4,
+            recurrent_unit_num: 4,
+            spawn_every: 10,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

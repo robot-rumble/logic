@@ -61,10 +61,7 @@ impl Obj {
 }
 
 impl State {
-    const TEAM_UNIT_NUM: usize = 4;
-    const SPAWN_EVERY: usize = 10;
-
-    pub fn new(grid_type: MapType, grid_size: usize) -> Self {
+    pub fn new(grid_type: MapType, grid_size: usize, settings: Settings) -> Self {
         // create initial objs/map combination
         let (objs, spawn_points) = Self::init(grid_type, grid_size);
         let grid = Self::create_grid_map(&objs);
@@ -73,6 +70,7 @@ impl State {
             objs,
             grid,
             spawn_points,
+            settings,
         }
     }
 
@@ -123,6 +121,7 @@ impl State {
             grid,
             objs,
             spawn_points,
+            settings: _settings,
         } = self;
         for coords in spawn_points.iter() {
             if let Some(id) = grid.get(coords) {
@@ -134,18 +133,24 @@ impl State {
         }
     }
 
-    fn spawn_units(&mut self) {
+    fn spawn_units(&mut self, is_initial: bool) {
         let Self {
             spawn_points,
             grid,
             objs,
+            settings,
         } = self;
         let mut available_points = spawn_points
             .iter()
             .copied()
             .filter(|loc| !grid.contains_key(loc) && !grid.contains_key(&Self::mirror_loc(*loc)))
             .collect::<Vec<_>>();
-        let it = (0..Self::TEAM_UNIT_NUM).flat_map(|_| {
+        let unit_num = if is_initial {
+            settings.initial_unit_num
+        } else {
+            settings.recurrent_unit_num
+        };
+        let it = (0..unit_num).flat_map(|_| {
             let point = available_points.choose(&mut rand::thread_rng()).copied();
             let mirrors = point.map(|point| {
                 binary_remove(&mut available_points, &point);
@@ -310,11 +315,14 @@ pub async fn run<TurnCb, R>(
     mut turn_cb: TurnCb,
     max_turn: usize,
     dev_mode: bool,
+    settings_option: Option<Settings>,
 ) -> MainOutput
 where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
+    let settings = settings_option.unwrap_or_default();
+
     // all_teams is the list of all the teams participating in the battle
     let all_teams = runners.keys().copied().collect::<Box<[_]>>();
     let all_teams = &*all_teams;
@@ -334,12 +342,16 @@ where
 
     let mut turn_state = TurnState {
         turn: 1,
-        state: State::new(MapType::Circle, GRID_SIZE),
+        state: State::new(MapType::Circle, GRID_SIZE, settings.clone()),
     };
     while turn_state.turn <= max_turn {
-        if (turn_state.turn - 1) % State::SPAWN_EVERY == 0 {
-            turn_state.state.clear_spawn();
-            turn_state.state.spawn_units();
+        if turn_state.turn == 1 {
+            turn_state.state.spawn_units(true);
+        } else if settings.spawn_every != 0 {
+            if (turn_state.turn - 1) % settings.spawn_every == 0 {
+                turn_state.state.clear_spawn();
+                turn_state.state.spawn_units(false);
+            }
         }
 
         let runners = run_funcs.iter_mut().map(|(&t, r)| (t, r));

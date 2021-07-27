@@ -205,7 +205,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         Team::Blue => r1,
         Team::Red => r2,
     };
-    let run_fut = logic::run(runners, |_| {}, input_data.turn_num, false);
+    let run_fut = logic::run(runners, |_| {}, input_data.turn_num, false, None);
 
     let output = tokio::select! {
         output = run_fut => output,
