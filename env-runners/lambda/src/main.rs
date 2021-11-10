@@ -278,4 +278,4 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     Ok(())
 }
 
-const TURN_TIMEOUT: Duration = Duration::from_secs(1);
+const TURN_TIMEOUT: Duration = Duration::from_secs(2);
