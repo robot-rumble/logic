@@ -19,7 +19,7 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      - sudo apt install -y awscli
+      - sudo apt update && sudo apt install -y awscli
 
 blocks:
   - name: lang-runners
@@ -44,7 +44,7 @@ blocks:
             # install yarn
             - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
             - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-            - sudo apt update && sudo apt install -y yarn
+            - sudo apt install -y yarn
             - bash build-wasm.sh --javascript
         - name: Build Python
           commands:
@@ -65,7 +65,7 @@ blocks:
           commands:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
             # install llvm
-            - sudo apt-get install -y lsb-release wget software-properties-common
+            - sudo apt install -y lsb-release wget software-properties-common
             - sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" -- 11
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
