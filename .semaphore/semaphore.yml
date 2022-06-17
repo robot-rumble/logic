@@ -48,6 +48,7 @@ blocks:
             - bash build-wasm.sh --javascript
         - name: Build Python
           commands:
+            - rustup update
             - rustup target install wasm32-wasi
             - bash build-wasm.sh --python
       epilogue:
@@ -94,6 +95,7 @@ blocks:
     task:
       prologue:
         commands:
+          - rustup update
           - rustup target install x86_64-unknown-linux-musl
       jobs:
         - name: Build and Upload to S3
