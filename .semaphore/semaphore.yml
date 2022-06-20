@@ -46,11 +46,11 @@ blocks:
             - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
             - sudo apt update && sudo apt install -y yarn
             - bash build-wasm.sh --javascript
-        - name: Build Python
-          commands:
-            - rustup update
-            - rustup target install wasm32-wasi
-            - bash build-wasm.sh --python
+#        - name: Build Python
+#          commands:
+#            - rustup update
+#            - rustup target install wasm32-wasi
+#            - bash build-wasm.sh --python
       epilogue:
         on_pass:
           commands:
