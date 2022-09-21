@@ -1,7 +1,7 @@
 [package]
 name = "lambda-cache"
 version = "0.0.0"
-authors = ["Noah <33094578+coolreader18@users.noreply.github.com>"]
+authors = ["Noa <coolreader18@gmail.com>"]
 edition = "2018"
 
 [dependencies]
