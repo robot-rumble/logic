@@ -20,6 +20,15 @@ pub fn new_id() -> Id {
     Id(COUNTER.fetch_add(1, atomic::Ordering::Relaxed))
 }
 
+fn init_obj_to_obj(InitObj(coords, details): InitObj) -> Obj {
+    let basic_obj = BasicObj {
+        id: new_id(),
+        coords,
+    };
+
+    Obj(basic_obj, details)
+}
+
 impl Obj {
     const UNIT_HEALTH: usize = 5;
     const ATTACK_POWER: usize = 1;
@@ -63,8 +72,20 @@ impl Obj {
 impl State {
     pub fn new(grid_type: MapType, grid_size: usize, settings: Settings) -> Self {
         // create initial objs/map combination
-        let (objs, spawn_points) = Self::init(grid_type, grid_size);
-        let grid = Self::create_grid_map(&objs);
+        let (mut objs, spawn_points) = Self::init(grid_type, grid_size);
+        let mut grid = Self::create_grid_map(&objs);
+
+        let it = settings
+            .grid_init
+            .clone()
+            .into_iter()
+            .map(init_obj_to_obj)
+            .inspect(|obj| {
+                grid.insert(obj.coords(), obj.id());
+            });
+        objs.extend(it.map(|obj| (obj.id(), obj)));
+
+        dbg!(&objs);
 
         Self {
             objs,
@@ -140,39 +161,44 @@ impl State {
             objs,
             settings,
         } = self;
-        let mut available_points = spawn_points
-            .iter()
-            .copied()
-            .filter(|loc| !grid.contains_key(loc) && !grid.contains_key(&Self::mirror_loc(*loc)))
-            .collect::<Vec<_>>();
-        let unit_num = if is_initial {
-            settings.initial_unit_num
-        } else {
-            settings.recurrent_unit_num
-        };
-        let it = (0..unit_num).flat_map(|_| {
-            let point = available_points.choose(&mut rand::thread_rng()).copied();
-            let mirrors = point.map(|point| {
-                binary_remove(&mut available_points, &point);
-                let mirror = Self::mirror_loc(point);
-                binary_remove(&mut available_points, &mirror);
-                (point, mirror)
-            });
-            mirrors.into_iter().flat_map(|(blue_spawn, red_spawn)| {
-                Iterator::chain(
-                    std::iter::once((Team::Blue, blue_spawn)),
-                    std::iter::once((Team::Red, red_spawn)),
-                )
-                .map(|(team, loc)| {
-                    let obj = Obj::new_unit(UnitType::Soldier, loc, team);
-                    (obj.id(), obj)
+        if let Some(spawn_settings) = &settings.spawn_settings {
+            let mut available_points = spawn_points
+                .iter()
+                .copied()
+                .filter(|loc| {
+                    !grid.contains_key(loc) && !grid.contains_key(&Self::mirror_loc(*loc))
                 })
-            })
-        });
-        let it = it.inspect(|(id, obj)| {
-            grid.insert(obj.coords(), *id);
-        });
-        objs.extend(it);
+                .collect::<Vec<_>>();
+
+            let unit_num = if is_initial {
+                spawn_settings.initial_unit_num
+            } else {
+                spawn_settings.recurrent_unit_num
+            };
+            let it = (0..unit_num).flat_map(|_| {
+                let point = available_points.choose(&mut rand::thread_rng()).copied();
+                let mirrors = point.map(|point| {
+                    binary_remove(&mut available_points, &point);
+                    let mirror = Self::mirror_loc(point);
+                    binary_remove(&mut available_points, &mirror);
+                    (point, mirror)
+                });
+                mirrors.into_iter().flat_map(|(blue_spawn, red_spawn)| {
+                    Iterator::chain(
+                        std::iter::once((Team::Blue, blue_spawn)),
+                        std::iter::once((Team::Red, red_spawn)),
+                    )
+                    .map(|(team, loc)| {
+                        let obj = Obj::new_unit(UnitType::Soldier, loc, team);
+                        (obj.id(), obj)
+                    })
+                })
+            });
+            let it = it.inspect(|(id, obj)| {
+                grid.insert(obj.coords(), *id);
+            });
+            objs.extend(it);
+        }
     }
 
     fn create_team_map(objs: &ObjMap, all_teams: &[Team]) -> TeamMap {
@@ -345,12 +371,14 @@ where
         state: State::new(MapType::Circle, GRID_SIZE, settings.clone()),
     };
     while turn_state.turn <= max_turn {
-        if turn_state.turn == 1 {
-            turn_state.state.spawn_units(true);
-        } else if settings.spawn_every != 0 {
-            if (turn_state.turn - 1) % settings.spawn_every == 0 {
-                turn_state.state.clear_spawn();
-                turn_state.state.spawn_units(false);
+        if let Some(spawn_settings) = &settings.spawn_settings {
+            if turn_state.turn == 1 {
+                turn_state.state.spawn_units(true);
+            } else if spawn_settings.spawn_every != 0 {
+                if (turn_state.turn - 1) % spawn_settings.spawn_every == 0 {
+                    turn_state.state.clear_spawn();
+                    turn_state.state.spawn_units(false);
+                }
             }
         }
 
