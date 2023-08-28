@@ -15,4 +15,5 @@ setup(
     project_urls={
         "Documentation": "https://rr-docs.readthedocs.io/en/latest/api.html",
     },
+    py_modules = ["rumblelib",],
 )
