@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="robot-rumble-stdlib",
-    version="0.1.0",
+    version="0.1.1",
     license="GNU GPL3",
     author="Robot Rumble Team",
     author_email="antonoutkine@gmail.com",
