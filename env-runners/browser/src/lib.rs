@@ -1,6 +1,6 @@
 use futures_util::future::{self, FutureExt};
 use js_sys::{Function as JsFunction, Promise, Uint8Array};
-use logic::{ProgramError, ProgramResult};
+use logic::{GridInitType, ProgramError, ProgramResult};
 use std::time::Duration;
 use std::{pin::Pin, task};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -169,42 +169,14 @@ impl<R: logic::RobotRunner> logic::RobotRunner for TimeoutRunner<R> {
 }
 
 #[wasm_bindgen]
-pub struct Settings {
-    pub initial_unit_num: usize,
-    pub recurrent_unit_num: usize,
-    pub spawn_every: usize,
-}
-
-#[wasm_bindgen]
-impl Settings {
-    #[wasm_bindgen(constructor)]
-    pub fn new(initial_unit_num: usize, recurrent_unit_num: usize, spawn_every: usize) -> Settings {
-        Settings {
-            initial_unit_num,
-            recurrent_unit_num,
-            spawn_every,
-        }
-    }
-}
-
-impl Into<logic::Settings> for Settings {
-    fn into(self) -> logic::Settings {
-        logic::Settings {
-            initial_unit_num: self.initial_unit_num,
-            recurrent_unit_num: self.recurrent_unit_num,
-            spawn_every: self.spawn_every,
-        }
-    }
-}
-
-#[wasm_bindgen]
 pub fn run(
     runner1: WasiRunner,
     runner2: WasiRunner,
     turn_callback: JsFunction,
     turn_num: usize,
-    settings: Option<Settings>,
+    settings_string: Option<String>,
 ) -> Promise {
+    let settings = settings_string.map(|v| serde_json::from_str::<logic::Settings>(&v).unwrap());
     future_to_promise(async move {
         let (r1, r2) = futures_util::join!(JsRunner::new(runner1), JsRunner::new(runner2),);
         let runners = maplit::btreemap! {
@@ -223,7 +195,7 @@ pub fn run(
             },
             turn_num,
             true,
-            settings.map(|v| v.into()),
+            settings,
         )
         .await;
         Ok(JsValue::from_serde(&output).unwrap())

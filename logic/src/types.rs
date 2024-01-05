@@ -95,19 +95,36 @@ pub struct State {
     pub settings: Settings,
 }
 
+pub type GridInitType = Vec<InitObj>;
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct Settings {
+pub struct SpawnSettings {
     pub initial_unit_num: usize,
     pub recurrent_unit_num: usize,
     pub spawn_every: usize,
 }
 
-impl Default for Settings {
-    fn default() -> Settings {
-        Settings {
+impl Default for SpawnSettings {
+    fn default() -> SpawnSettings {
+        SpawnSettings {
             initial_unit_num: 4,
             recurrent_unit_num: 4,
             spawn_every: 10,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Settings {
+    pub grid_init: GridInitType,
+    pub spawn_settings: Option<SpawnSettings>,
+}
+
+impl Default for Settings {
+    fn default() -> Settings {
+        Settings {
+            grid_init: Default::default(),
+            spawn_settings: Some(Default::default()),
         }
     }
 }
@@ -233,6 +250,10 @@ pub struct BasicObj {
     pub coords: Coords,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(from = "SerdeInitObj", into = "SerdeInitObj")]
+pub struct InitObj(pub Coords, pub ObjDetails);
+
 #[derive(Serialize, Deserialize, IntoStaticStr, Debug, Clone)]
 #[serde(tag = "obj_type")]
 pub enum ObjDetails {
@@ -313,6 +334,24 @@ impl From<Obj> for SerdeObj {
 impl From<SerdeObj> for Obj {
     fn from(SerdeObj { basic, details }: SerdeObj) -> Self {
         Obj(basic, details)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct SerdeInitObj {
+    coords: Coords,
+    #[serde(flatten)]
+    details: ObjDetails,
+}
+
+impl From<InitObj> for SerdeInitObj {
+    fn from(InitObj(coords, details): InitObj) -> Self {
+        Self { coords, details }
+    }
+}
+impl From<SerdeInitObj> for InitObj {
+    fn from(SerdeInitObj { coords, details }: SerdeInitObj) -> Self {
+        InitObj(coords, details)
     }
 }
 
