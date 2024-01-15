@@ -175,29 +175,54 @@ pub fn run(
     turn_callback: JsFunction,
     turn_num: usize,
     settings_string: Option<String>,
+    timeout_enabled: bool,
 ) -> Promise {
     let settings = settings_string.map(|v| serde_json::from_str::<logic::Settings>(&v).unwrap());
     future_to_promise(async move {
         let (r1, r2) = futures_util::join!(JsRunner::new(runner1), JsRunner::new(runner2),);
-        let runners = maplit::btreemap! {
-            logic::Team::Blue => r1,
-            logic::Team::Red => r2,
+        let output = if timeout_enabled {
+            let runners = maplit::btreemap! {
+                logic::Team::Blue => r1.map(|r| TimeoutRunner::new(r, Some(TURN_TIMEOUT))),
+                logic::Team::Red => r2.map(|r| TimeoutRunner::new(r, Some(TURN_TIMEOUT))),
+            };
+            logic::run(
+                runners,
+                move |turn_state| {
+                    turn_callback
+                        .call1(
+                            &JsValue::UNDEFINED,
+                            &JsValue::from_serde(&turn_state).unwrap(),
+                        )
+                        .expect("Turn callback function failed");
+                },
+                turn_num,
+                true,
+                settings,
+            )
+            .await
+        } else {
+            let runners = maplit::btreemap! {
+                logic::Team::Blue => r1,
+                logic::Team::Red => r2
+            };
+            logic::run(
+                runners,
+                move |turn_state| {
+                    turn_callback
+                        .call1(
+                            &JsValue::UNDEFINED,
+                            &JsValue::from_serde(&turn_state).unwrap(),
+                        )
+                        .expect("Turn callback function failed");
+                },
+                turn_num,
+                true,
+                settings,
+            )
+            .await
         };
-        let output = logic::run(
-            runners,
-            move |turn_state| {
-                turn_callback
-                    .call1(
-                        &JsValue::UNDEFINED,
-                        &JsValue::from_serde(&turn_state).unwrap(),
-                    )
-                    .expect("Turn callback function failed");
-            },
-            turn_num,
-            true,
-            settings,
-        )
-        .await;
         Ok(JsValue::from_serde(&output).unwrap())
     })
 }
+
+const TURN_TIMEOUT: Duration = Duration::from_secs(2);
