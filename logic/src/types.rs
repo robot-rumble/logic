@@ -307,13 +307,23 @@ pub enum Direction {
 }
 
 impl Direction {
-    fn to_tuple(self) -> (isize, isize) {
+    pub fn to_tuple(self) -> (isize, isize) {
         use Direction::*;
         match self {
             West => (-1, 0),
             North => (0, -1),
             East => (1, 0),
             South => (0, 1),
+        }
+    }
+
+    pub fn opposite(self) -> Direction {
+        use Direction::*;
+        match self {
+            West => East,
+            North => South,
+            East => West,
+            South => North,
         }
     }
 }

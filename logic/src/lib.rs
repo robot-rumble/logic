@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use futures_util::{stream, FutureExt, StreamExt};
 use multimap::MultiMap;
@@ -479,31 +479,36 @@ fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut Stat
             ActionType::Attack => &mut attack_map,
         };
         let obj = state.objs.get(&id).unwrap();
-        map.insert(obj.coords() + action.direction, id);
+        map.insert(obj.coords() + action.direction, (*id, action.direction));
     }
 
     let movement_grid = movement_map
-        .iter()
-        .filter_map(|(coords, &id)| match movement_map.get_vec(coords) {
-            Some(vec) if vec.len() > 1 => vec
-                .iter()
-                .map(|id| state.objs.get(&id).unwrap())
-                .min_by_key(|obj| {
-                    match (
-                        coords.0 as isize - obj.coords().0 as isize,
-                        coords.1 as isize - obj.coords().1 as isize,
-                    ) {
-                        (0, 1) => 1,
-                        (-1, 0) => 2,
-                        (0, -1) => 3,
-                        (1, 0) => 4,
-                        _ => 10,
-                    }
+        .iter_all()
+        .filter_map(|(coords, robots)| {
+            let robot_chosen_to_move = if robots.len() > 1 {
+                robots.iter().min_by_key(|(_, direction)| match direction {
+                    Direction::North => 1,
+                    Direction::East => 2,
+                    Direction::South => 3,
+                    Direction::West => 4,
                 })
-                .map(|obj| (*coords, obj.id())),
-            Some(_) => Some((*coords, *id)),
-            None => None,
+            } else {
+                robots.get(0)
+            };
+            robot_chosen_to_move.map(|r| (coords, r))
         })
+        .collect::<HashMap<_, _>>();
+
+    let movement_grid = movement_grid
+        .into_iter()
+        .filter(|(&coords, &(_, direction))| {
+            let origin_coords = coords + direction.opposite();
+            match movement_map.get(&origin_coords) {
+                Some((_, direction2)) => direction != direction2.opposite(),
+                None => true,
+            }
+        })
+        .map(|(&coords, &(id, _))| (coords, id))
         .collect::<GridMap>();
 
     state
