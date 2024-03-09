@@ -59,7 +59,7 @@ pub enum RobotErrorAfterValidation {
 
 pub type ValidatedRobotAction = Result<Option<Action>, RobotErrorAfterValidation>;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CallbackInput {
     pub state: StateForOutput,
     pub robot_actions: BTreeMap<Id, ValidatedRobotAction>,
@@ -129,7 +129,7 @@ impl Default for Settings {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct StateForOutput {
     pub objs: ObjMap,
     pub turn: usize,

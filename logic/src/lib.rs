@@ -386,15 +386,34 @@ where
             Err(errors) => return handle_program_errors(errors, all_teams, turns),
         };
 
-        // update state
+        // update turn_state
         run_turn(&turn.robot_actions, &mut turn_state.state);
 
-        // but the new state isn't passed until the next cycle
+        // but the new state isn't passed until the next cycle since it's not yet reflected in `turn`
         turn_cb(&turn);
         turns.push(turn);
 
         turn_state.turn += 1;
     }
+
+    let final_turn = CallbackInput {
+        state: StateForOutput {
+            objs: turn_state.state.objs.clone(),
+            turn: turn_state.turn,
+        },
+        robot_actions: turn_state
+            .state
+            .objs
+            .iter()
+            .map(|(k, _)| (*k, Ok(None)))
+            .collect::<BTreeMap<_, _>>(),
+        ..Default::default()
+    };
+
+    // add the final turn after the last robot actions
+    turn_cb(&final_turn);
+    turns.push(final_turn);
+
     let winner = turn_state.state.determine_winner();
     MainOutput {
         winner,
