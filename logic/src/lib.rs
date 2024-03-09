@@ -531,20 +531,24 @@ fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut Stat
 }
 
 pub fn update_grid_with_movement(objs: &mut ObjMap, grid: &mut GridMap, movement_grid: GridMap) {
-    let (illegal_moves, legal_moves): (GridMap, GridMap) = movement_grid
-        .into_iter()
-        .partition(|(coords, _)| grid.contains_key(coords));
+    let mut legal_moves = movement_grid;
+    loop {
+        let (illegal_moves, new_legal_moves): (GridMap, GridMap) = legal_moves
+            .into_iter()
+            .partition(|(coords, _)| grid.contains_key(coords));
+        legal_moves = new_legal_moves;
 
-    if illegal_moves.is_empty() {
-        for (&coords, id) in legal_moves.iter() {
-            objs.get_mut(id).unwrap().0.coords = coords
+        if illegal_moves.is_empty() {
+            for (&coords, id) in legal_moves.iter() {
+                objs.get_mut(id).unwrap().0.coords = coords
+            }
+            grid.extend(legal_moves);
+            break;
+        } else {
+            // insert the units with illegal moves back in their original location
+            for (_, id) in illegal_moves.into_iter() {
+                grid.insert(objs.get(&id).unwrap().0.coords, id);
+            }
         }
-        grid.extend(legal_moves)
-    } else {
-        // insert the units with illegal moves back in their original location
-        for (_, id) in illegal_moves.into_iter() {
-            grid.insert(objs.get(&id).unwrap().0.coords, id);
-        }
-        update_grid_with_movement(objs, grid, legal_moves);
     }
 }
