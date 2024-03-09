@@ -1,6 +1,6 @@
 use futures_util::future::{self, FutureExt};
 use js_sys::{Function as JsFunction, Promise, Uint8Array};
-use logic::{GridInitType, ProgramError, ProgramResult};
+use logic::{ProgramError, ProgramResult};
 use std::time::Duration;
 use std::{pin::Pin, task};
 use wasm_bindgen::{prelude::*, JsCast};
