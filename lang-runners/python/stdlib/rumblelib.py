@@ -228,6 +228,7 @@ class State:
 class ActionType(enum.Enum):
     Attack = "Attack"
     Move = "Move"
+    Heal = "Heal"
 
     __repr__ = lambda self: self.__str__()
 
@@ -251,6 +252,11 @@ class Action:
     def attack(direction: Direction) -> "Action":
         check_instance(direction, Direction, 'Action.attack')
         return Action(ActionType.Attack, direction)
+
+    @staticmethod
+    def heal(direction: Direction) -> "Action":
+        check_instance(direction, Direction, 'Action.heal')
+        return Action(ActionType.Heal, direction)
 
 
 MAP_SIZE = 19

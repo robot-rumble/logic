@@ -75,14 +75,14 @@ class Direction extends Enum {
 
   get rotateCw() {
     switch (this) {
-        case Direction.North:
-          return Direction.East
-        case Direction.East:
-          return Direction.South
-        case Direction.South:
-          return Direction.West
-        case Direction.West:
-          return Direction.North
+      case Direction.North:
+        return Direction.East
+      case Direction.East:
+        return Direction.South
+      case Direction.South:
+        return Direction.West
+      case Direction.West:
+        return Direction.North
     }
   }
 
@@ -179,7 +179,7 @@ Team.Red = new Team()
 Team.Blue = new Team()
 Team.closeEnum()
 
-class ObjType extends Enum {}
+class ObjType extends Enum { }
 ObjType.Unit = new ObjType()
 ObjType.Terrain = new ObjType()
 ObjType.closeEnum()
@@ -268,9 +268,10 @@ class State {
   }
 }
 
-class ActionType extends Enum {}
+class ActionType extends Enum { }
 ActionType.Attack = new ActionType()
 ActionType.Move = new ActionType()
+ActionType.Heal = new ActionType()
 ActionType.closeEnum()
 
 class Action {
@@ -293,6 +294,11 @@ class Action {
   static attack(direction) {
     checkInstance(direction, Direction, 'Action.attack')
     return new Action(ActionType.Attack, direction)
+  }
+
+  static heal(direction) {
+    checkInstance(direction, Direction, 'Action.heal')
+    return new Action(ActionType.Heal, direction)
   }
 }
 
@@ -322,9 +328,9 @@ function __format_err(err, isInitError = false) {
       lineno == null
         ? null
         : {
-            start: [lineno, null],
-            end: null,
-          },
+          start: [lineno, null],
+          end: null,
+        },
     summary: String(err),
     details: (err && err.stack) || null,
   }
@@ -361,7 +367,7 @@ function __main(stateData) {
   if (typeof globalThis.initTurn === 'function') {
     try {
       globalThis.initTurn(state)
-    } catch (e)  {
+    } catch (e) {
       return __format_err(e, true)
     }
   }

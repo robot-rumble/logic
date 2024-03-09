@@ -67,6 +67,7 @@ struct Input {
     r2_code: String,
     r2_lang: Lang,
     board_id: usize,
+    gamemode: logic::GameMode,
 }
 
 #[derive(Serialize, Debug)]
@@ -205,7 +206,14 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         Team::Blue => r1,
         Team::Red => r2,
     };
-    let run_fut = logic::run(runners, |_| {}, input_data.turn_num, false, None);
+    let run_fut = logic::run(
+        runners,
+        |_| {},
+        input_data.turn_num,
+        false,
+        None,
+        input_data.gamemode,
+    );
 
     let output = tokio::select! {
         output = run_fut => output,
