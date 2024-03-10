@@ -67,7 +67,7 @@ struct Input {
     r2_code: String,
     r2_lang: Lang,
     board_id: usize,
-    gamemode: logic::GameMode,
+    game_mode: logic::GameMode,
 }
 
 #[derive(Serialize, Debug)]
@@ -212,7 +212,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         input_data.turn_num,
         false,
         None,
-        input_data.gamemode,
+        input_data.game_mode,
     );
 
     let output = tokio::select! {
