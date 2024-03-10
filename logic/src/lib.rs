@@ -99,7 +99,7 @@ impl State {
         };
 
         let grid = (0..size).flat_map(|x| (0..size).map(move |y| Coords(x, y)));
-        let objs = grid
+        let objs: ObjMap = grid
             .clone()
             .filter(|&coords| match type_ {
                 MapType::Rect => {
@@ -112,17 +112,23 @@ impl State {
                 (obj.id(), obj)
             })
             .collect();
+
         // spawn_points is sorted, since grid generates coords sorted first by x, then y
         let spawn_points = grid
-            .filter(|coords| match type_ {
-                MapType::Rect => {
-                    coords.0 == 1 || coords.0 == size - 2 || coords.1 == 1 || coords.1 == size - 2
-                }
+            .filter(|&Coords(x, y)| match type_ {
+                MapType::Rect => x == 1 || x == size - 2 || y == 1 || y == size - 2,
                 MapType::Circle => {
-                    distance_from_center(*coords) as f32 >= ((size / 2) as f32 - 0.5).powf(2.0)
+                    distance_from_center(Coords(x, y)) < (size / 2).pow(2) as i32
+                        && objs.values().any(|obj| {
+                            Coords(x + 1, y) == obj.coords()
+                                || Coords(x, y + 1) == obj.coords()
+                                || Coords(x.saturating_sub(1), y) == obj.coords()
+                                || Coords(x, y.saturating_sub(1)) == obj.coords()
+                        })
                 }
             })
             .collect();
+
         (objs, spawn_points)
     }
 
