@@ -30,8 +30,9 @@ fn init_obj_to_obj(InitObj(coords, details): InitObj) -> Obj {
 }
 
 impl Obj {
-    const UNIT_HEALTH: usize = 5;
-    const ATTACK_POWER: usize = 1;
+    const UNIT_HEALTH: usize = 10;
+    const ATTACK_POWER: usize = 2;
+    const HEAL_POWER: usize = 1;
 
     pub fn new_terrain(type_: TerrainType, coords: Coords) -> Self {
         Self(
@@ -346,6 +347,7 @@ pub async fn run<TurnCb, R>(
     max_turn: usize,
     dev_mode: bool,
     settings_option: Option<Settings>,
+    gamemode: GameMode,
 ) -> MainOutput
 where
     TurnCb: FnMut(&CallbackInput),
@@ -393,7 +395,7 @@ where
         };
 
         // update turn_state
-        run_turn(&turn.robot_actions, &mut turn_state.state);
+        run_turn(&turn.robot_actions, &mut turn_state.state, gamemode);
 
         // but the new state isn't passed until the next cycle since it's not yet reflected in `turn`
         turn_cb(&turn);
@@ -489,9 +491,14 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
     }
 }
 
-fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut State) {
+fn run_turn(
+    robot_actions: &BTreeMap<Id, ValidatedRobotAction>,
+    state: &mut State,
+    gamemode: GameMode,
+) {
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
+    let mut heal_map = MultiMap::new();
 
     for (id, action) in robot_actions.iter().filter_map(|(id, action)| {
         action
@@ -502,6 +509,13 @@ fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut Stat
         let map = match action.type_ {
             ActionType::Move => &mut movement_map,
             ActionType::Attack => &mut attack_map,
+            ActionType::Heal => {
+                if gamemode == GameMode::NormalHeal {
+                    &mut heal_map
+                } else {
+                    continue;
+                }
+            }
         };
         let obj = state.objs.get(&id).unwrap();
         map.insert(obj.coords() + action.direction, (*id, action.direction));
@@ -542,14 +556,26 @@ fn run_turn(robot_actions: &BTreeMap<Id, ValidatedRobotAction>, state: &mut Stat
     update_grid_with_movement(&mut state.objs, &mut state.grid, movement_grid);
 
     for (coords, attacks) in attack_map.iter_all() {
-        let attack_power = attacks.len() * Obj::ATTACK_POWER;
         if let Some(id) = state.grid.get(coords) {
             if let Some(Obj(_, ObjDetails::Unit(unit))) = state.objs.get_mut(id) {
-                unit.health = unit.health.saturating_sub(attack_power);
+                unit.health = unit
+                    .health
+                    .saturating_sub(attacks.len() * Obj::ATTACK_POWER);
                 if unit.health == 0 {
                     state.objs.remove(id).unwrap();
                     state.grid.remove(coords).unwrap();
                 }
+            }
+        }
+    }
+
+    for (coords, heals) in heal_map.iter_all() {
+        if let Some(id) = state.grid.get(coords) {
+            if let Some(Obj(_, ObjDetails::Unit(unit))) = state.objs.get_mut(id) {
+                unit.health = usize::min(
+                    Obj::UNIT_HEALTH,
+                    unit.health + heals.len() * Obj::HEAL_POWER,
+                );
             }
         }
     }

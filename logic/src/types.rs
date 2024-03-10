@@ -7,6 +7,12 @@ use serde::{Deserialize, Serialize};
 use strum::*;
 use thiserror::Error;
 
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
+pub enum GameMode {
+    Normal,
+    NormalHeal,
+}
+
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum MapType {
     Rect,
@@ -296,6 +302,7 @@ pub struct Action {
 pub enum ActionType {
     Move,
     Attack,
+    Heal,
 }
 
 #[derive(Serialize, Deserialize, EnumString, Debug, PartialEq, Copy, Clone)]
