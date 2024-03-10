@@ -176,10 +176,10 @@ pub fn run(
     turn_num: usize,
     settings_string: Option<String>,
     timeout_enabled: bool,
-    gamemode_string: String,
+    game_mode_string: String,
 ) -> Promise {
     let settings = settings_string.map(|v| serde_json::from_str::<logic::Settings>(&v).unwrap());
-    let gamemode = serde_json::from_str::<logic::GameMode>(&gamemode_string).unwrap();
+    let game_mode = serde_json::from_str::<logic::GameMode>(&game_mode_string).unwrap();
     future_to_promise(async move {
         let (r1, r2) = futures_util::join!(JsRunner::new(runner1), JsRunner::new(runner2),);
         let output = if timeout_enabled {
@@ -200,7 +200,7 @@ pub fn run(
                 turn_num,
                 true,
                 settings,
-                gamemode,
+                game_mode,
             )
             .await
         } else {
@@ -221,7 +221,7 @@ pub fn run(
                 turn_num,
                 true,
                 settings,
-                gamemode,
+                game_mode,
             )
             .await
         };

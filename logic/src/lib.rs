@@ -347,7 +347,7 @@ pub async fn run<TurnCb, R>(
     max_turn: usize,
     dev_mode: bool,
     settings_option: Option<Settings>,
-    gamemode: GameMode,
+    game_mode: GameMode,
 ) -> MainOutput
 where
     TurnCb: FnMut(&CallbackInput),
@@ -395,7 +395,7 @@ where
         };
 
         // update turn_state
-        run_turn(&turn.robot_actions, &mut turn_state.state, gamemode);
+        run_turn(&turn.robot_actions, &mut turn_state.state, game_mode);
 
         // but the new state isn't passed until the next cycle since it's not yet reflected in `turn`
         turn_cb(&turn);
@@ -494,7 +494,7 @@ async fn get_turn_data<'r, R: RobotRunner + 'r>(
 fn run_turn(
     robot_actions: &BTreeMap<Id, ValidatedRobotAction>,
     state: &mut State,
-    gamemode: GameMode,
+    game_mode: GameMode,
 ) {
     let mut movement_map = MultiMap::new();
     let mut attack_map = MultiMap::new();
@@ -510,7 +510,7 @@ fn run_turn(
             ActionType::Move => &mut movement_map,
             ActionType::Attack => &mut attack_map,
             ActionType::Heal => {
-                if gamemode == GameMode::NormalHeal {
+                if game_mode == GameMode::NormalHeal {
                     &mut heal_map
                 } else {
                     continue;
