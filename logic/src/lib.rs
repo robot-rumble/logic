@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use futures_util::{stream, FutureExt, StreamExt};
 use multimap::MultiMap;
 use rand::seq::SliceRandom;
+use std::sync::atomic;
 
 pub use types::*;
 
@@ -14,9 +15,13 @@ fn binary_remove<T: Ord>(v: &mut Vec<T>, el: &T) {
     v.remove(idx);
 }
 
+static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(1);
+
+pub fn reset_id() -> () {
+    COUNTER.store(1, atomic::Ordering::Relaxed);
+}
+
 pub fn new_id() -> Id {
-    use std::sync::atomic;
-    static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(1);
     Id(COUNTER.fetch_add(1, atomic::Ordering::Relaxed))
 }
 
@@ -353,6 +358,7 @@ where
     TurnCb: FnMut(&CallbackInput),
     R: RobotRunner,
 {
+    reset_id();
     let settings = settings_option.unwrap_or_default();
 
     // all_teams is the list of all the teams participating in the battle

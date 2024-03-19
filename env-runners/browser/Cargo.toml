@@ -13,7 +13,7 @@ futures-util = "0.3.5"
 maplit = "1.0"
 
 wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }
-wasm-bindgen-futures = "0.4.13"
+wasm-bindgen-futures = "0.4.42"
 js-sys = "0.3.40"
 
 serde = "1.0.114"
