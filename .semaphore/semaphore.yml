@@ -6,7 +6,7 @@ agent:
     type: e1-standard-2
   containers:
     - name: main
-      image: circleci/rust:latest
+      image: 'registry.semaphoreci.com/rust:1.75'
 
 global_job_config:
   env_vars:
