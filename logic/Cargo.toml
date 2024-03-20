@@ -19,3 +19,4 @@ thiserror = "1.0.58"
 futures-util = "0.3.30"
 async-trait = "0.1.78"
 maybe-owned = { version = "0.3", features = ["serde"] }
+sha2 = "0.10.8"

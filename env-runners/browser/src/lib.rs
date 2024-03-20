@@ -201,6 +201,7 @@ pub fn run(
                 true,
                 settings,
                 game_mode,
+                None,
             )
             .await
         } else {
@@ -222,6 +223,7 @@ pub fn run(
                 true,
                 settings,
                 game_mode,
+                None,
             )
             .await
         };

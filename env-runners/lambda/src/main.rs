@@ -213,6 +213,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         false,
         None,
         input_data.game_mode,
+        None,
     );
 
     let output = tokio::select! {

@@ -1,8 +1,10 @@
-use std::collections::{BTreeMap, HashMap};
-
 use futures_util::{stream, FutureExt, StreamExt};
 use multimap::MultiMap;
+use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
+use rand::SeedableRng;
+use sha2::{Digest, Sha256};
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic;
 
 pub use types::*;
@@ -17,7 +19,7 @@ fn binary_remove<T: Ord>(v: &mut Vec<T>, el: &T) {
 
 static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(1);
 
-pub fn reset_id() -> () {
+pub fn reset_id() {
     COUNTER.store(1, atomic::Ordering::Relaxed);
 }
 
@@ -75,8 +77,25 @@ impl Obj {
     }
 }
 
+fn string_to_seed(seed_str: &str) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(seed_str.as_bytes());
+    let result = hasher.finalize();
+    let result_bytes = result.as_slice();
+
+    let mut seed = [0; 32];
+    let len = result_bytes.len().min(32);
+    seed[..len].copy_from_slice(&result_bytes[..len]);
+    seed
+}
+
 impl State {
-    pub fn new(grid_type: MapType, grid_size: usize, settings: Settings) -> Self {
+    pub fn new(
+        grid_type: MapType,
+        grid_size: usize,
+        settings: Settings,
+        seed: Option<&str>,
+    ) -> Self {
         // create initial objs/map combination
         let (mut objs, spawn_points) = Self::init(grid_type, grid_size);
         let mut grid = Self::create_grid_map(&objs);
@@ -96,6 +115,7 @@ impl State {
             grid,
             spawn_points,
             settings,
+            rng: seed.map(|s| StdRng::from_seed(string_to_seed(s))),
         }
     }
 
@@ -153,6 +173,7 @@ impl State {
             objs,
             spawn_points,
             settings: _settings,
+            rng: _rng,
         } = self;
         for coords in spawn_points.iter() {
             if let Some(id) = grid.get(coords) {
@@ -170,6 +191,7 @@ impl State {
             grid,
             objs,
             settings,
+            rng: _rng,
         } = self;
         if let Some(spawn_settings) = &settings.spawn_settings {
             let mut available_points = spawn_points
@@ -185,8 +207,12 @@ impl State {
             } else {
                 spawn_settings.recurrent_unit_num
             };
+            let mut rng = self
+                .rng
+                .take()
+                .unwrap_or(StdRng::from_rng(rand::thread_rng()).unwrap());
             let it = (0..unit_num).flat_map(|_| {
-                let point = available_points.choose(&mut rand::thread_rng()).copied();
+                let point = available_points.choose(&mut rng).copied();
                 let mirrors = point.map(|point| {
                     binary_remove(&mut available_points, &point);
                     let mirror = Self::mirror_loc(point);
@@ -353,6 +379,7 @@ pub async fn run<TurnCb, R>(
     dev_mode: bool,
     settings_option: Option<Settings>,
     game_mode: GameMode,
+    seed: Option<&str>,
 ) -> MainOutput
 where
     TurnCb: FnMut(&CallbackInput),
@@ -380,7 +407,7 @@ where
 
     let mut turn_state = TurnState {
         turn: 1,
-        state: State::new(MapType::Circle, GRID_SIZE, settings.clone()),
+        state: State::new(MapType::Circle, GRID_SIZE, settings.clone(), seed),
     };
     while turn_state.turn <= max_turn {
         if let Some(spawn_settings) = &settings.spawn_settings {

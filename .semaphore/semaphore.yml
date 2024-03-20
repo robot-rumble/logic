@@ -36,6 +36,7 @@ blocks:
             - source ~/.wasmer/wasmer.sh
             # install https://github.com/wasienv/wasienv#install
             - sudo apt install -y python3 python3-pip python3-venv python3-setuptools
+            # it's necessary to create the venv because python is managed by the system pip cannot be used to install wasienv 
             - python3 -m venv env
             - source env/bin/activate
             - pip install git+https://github.com/wasienv/wasienv

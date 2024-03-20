@@ -3,6 +3,7 @@ use std::ops::Add;
 use std::time::Duration;
 
 use maybe_owned::MaybeOwned;
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use strum::*;
 use thiserror::Error;
@@ -99,6 +100,8 @@ pub struct State {
     /// Should be sorted
     pub spawn_points: Vec<Coords>,
     pub settings: Settings,
+    #[serde(skip)]
+    pub rng: Option<StdRng>,
 }
 
 pub type GridInitType = Vec<InitObj>;
