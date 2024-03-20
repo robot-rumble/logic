@@ -36,6 +36,8 @@ blocks:
             - source ~/.wasmer/wasmer.sh
             # install https://github.com/wasienv/wasienv#install
             - sudo apt install -y python3 python3-pip python3-setuptools
+            - python -m venv env
+            - source env/bin/activate
             - pip install git+https://github.com/wasienv/wasienv
             - wasienv install-sdk latest
             # install nodejs
@@ -100,5 +102,4 @@ blocks:
       jobs:
         - name: Build and Upload to S3
           commands:
-            - rm -rf ~/.cargo/registry
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
