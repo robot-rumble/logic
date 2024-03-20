@@ -100,4 +100,5 @@ blocks:
       jobs:
         - name: Build and Upload to S3
           commands:
+            - cargo update
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
