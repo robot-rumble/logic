@@ -3,8 +3,9 @@ use multimap::MultiMap;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use sha2::{Digest, Sha256};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
 use std::sync::atomic;
 
 pub use types::*;
@@ -78,14 +79,15 @@ impl Obj {
 }
 
 fn string_to_seed(seed_str: &str) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    hasher.update(seed_str.as_bytes());
-    let result = hasher.finalize();
-    let result_bytes = result.as_slice();
+    let mut hasher = DefaultHasher::new();
+    seed_str.hash(&mut hasher);
+    let result = hasher.finish().to_ne_bytes();
 
+    // Convert the hash result into a fixed-size seed
     let mut seed = [0; 32];
-    let len = result_bytes.len().min(32);
-    seed[..len].copy_from_slice(&result_bytes[..len]);
+    for i in 0..4 {
+        seed[i * 8..(i + 1) * 8].copy_from_slice(&result);
+    }
     seed
 }
 
@@ -115,7 +117,10 @@ impl State {
             grid,
             spawn_points,
             settings,
-            rng: seed.map(|s| StdRng::from_seed(string_to_seed(s))),
+            rng: match seed {
+                Some(s) => StdRng::from_seed(string_to_seed(s)),
+                None => types::init_rng(),
+            },
         }
     }
 
@@ -207,10 +212,7 @@ impl State {
             } else {
                 spawn_settings.recurrent_unit_num
             };
-            let mut rng = self
-                .rng
-                .take()
-                .unwrap_or(StdRng::from_rng(rand::thread_rng()).unwrap());
+            let mut rng = self.rng.clone();
             let it = (0..unit_num).flat_map(|_| {
                 let point = available_points.choose(&mut rng).copied();
                 let mirrors = point.map(|point| {
@@ -234,6 +236,7 @@ impl State {
                 grid.insert(obj.coords(), *id);
             });
             objs.extend(it);
+            self.rng = rng;
         }
     }
 

@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use maybe_owned::MaybeOwned;
 use rand::rngs::StdRng;
+use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 use strum::*;
 use thiserror::Error;
@@ -100,8 +101,12 @@ pub struct State {
     /// Should be sorted
     pub spawn_points: Vec<Coords>,
     pub settings: Settings,
-    #[serde(skip)]
-    pub rng: Option<StdRng>,
+    #[serde(skip, default = "init_rng")]
+    pub rng: StdRng,
+}
+
+pub fn init_rng() -> StdRng {
+    StdRng::from_rng(rand::thread_rng()).unwrap()
 }
 
 pub type GridInitType = Vec<InitObj>;
