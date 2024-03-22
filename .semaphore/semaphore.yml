@@ -6,7 +6,7 @@ agent:
     type: e1-standard-2
   containers:
     - name: main
-      image: 'registry.semaphoreci.com/rust:1.75'
+      image: 'registry.semaphoreci.com/rust:1.75-bookworm'
 
 global_job_config:
   env_vars:
@@ -22,42 +22,42 @@ global_job_config:
       - sudo apt update && sudo apt install -y awscli
 
 blocks:
-  - name: lang-runners
-    dependencies: []
-    run:
-      when: "change_in('/lang-runners/')"
-    task:
-      jobs:
-        - name: Build Javascript
-          commands:
-            - git submodule update --init
-            # install https://wasmer.io/
-            - curl https://get.wasmer.io -sSfL | sh -s 0.17.1 # newest alpha has a glibc issue on debian buster
-            - source ~/.wasmer/wasmer.sh
-            # install https://github.com/wasienv/wasienv#install
-            - sudo apt install -y python3 python3-pip python3-venv python3-setuptools
-            # it's necessary to create the venv because python is managed by the system pip cannot be used to install wasienv 
-            - python3 -m venv env
-            - source env/bin/activate
-            - pip install git+https://github.com/wasienv/wasienv
-            - wasienv install-sdk latest
-            # install nodejs
-            - curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-            - sudo apt install -y nodejs
-            # install yarn
-            - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-            - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-            - sudo apt update && sudo apt install -y yarn
-            - bash build-wasm.sh --javascript
-#        - name: Build Python
-#          commands:
-#            - rustup update
-#            - rustup target install wasm32-wasi
-#            - bash build-wasm.sh --python
-      epilogue:
-        on_pass:
-          commands:
-            - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
+#   - name: lang-runners
+#     dependencies: []
+#     run:
+#       when: "change_in('/lang-runners/')"
+#     task:
+#       jobs:
+#         - name: Build Javascript
+#           commands:
+#             - git submodule update --init
+#             # install https://wasmer.io/
+#             - curl https://get.wasmer.io -sSfL | sh -s 0.17.1 # newest alpha has a glibc issue on debian buster
+#             - source ~/.wasmer/wasmer.sh
+#             # install https://github.com/wasienv/wasienv#install
+#             - sudo apt install -y python3 python3-pip python3-venv python3-setuptools
+#             # it's necessary to create the venv because python is managed by the system pip cannot be used to install wasienv 
+#             - python3 -m venv env
+#             - source env/bin/activate
+#             - pip install git+https://github.com/wasienv/wasienv
+#             - wasienv install-sdk latest
+#             # install nodejs
+#             - curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+#             - sudo apt install -y nodejs
+#             # install yarn
+#             - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+#             - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+#             - sudo apt update && sudo apt install -y yarn
+#             - bash build-wasm.sh --javascript
+# #        - name: Build Python
+# #          commands:
+# #            - rustup update
+# #            - rustup target install wasm32-wasi
+# #            - bash build-wasm.sh --python
+#       epilogue:
+#         on_pass:
+#           commands:
+#             - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
 
   - name: wasm-layer
     dependencies: [lang-runners]
@@ -69,38 +69,38 @@ blocks:
           commands:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
             # install llvm
-            - sudo apt install -y lsb-release wget software-properties-common
-            - wget -O - https://apt.llvm.org/llvm.sh | sudo bash -s 
+            - sudo deb http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm main
+            - sudo deb-src http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm main
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
-  - name: browser-runner
-    dependencies: []
-    run:
-      when: "change_in(['/logic/', '/env-runners/browser/'])"
-    task:
-      prologue:
-        commands:
-          # install https://rustwasm.github.io/wasm-pack/installer/
-          - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      jobs:
-        - name: Build
-          commands:
-            - bash build-wasm.sh --browser
-      epilogue:
-        on_pass:
-          commands:
-            - aws s3 sync wasm-dist/browser-runner s3://${S3_BUCKET_BUILD}/browser-runner
+  # - name: browser-runner
+  #   dependencies: []
+  #   run:
+  #     when: "change_in(['/logic/', '/env-runners/browser/'])"
+  #   task:
+  #     prologue:
+  #       commands:
+  #         # install https://rustwasm.github.io/wasm-pack/installer/
+  #         - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+  #     jobs:
+  #       - name: Build
+  #         commands:
+  #           - bash build-wasm.sh --browser
+  #     epilogue:
+  #       on_pass:
+  #         commands:
+  #           - aws s3 sync wasm-dist/browser-runner s3://${S3_BUCKET_BUILD}/browser-runner
 
-  - name: lambda-runner
-    dependencies: []
-    run:
-      when: "change_in(['/logic/', '/env-runners/native/', '/env-runners/lambda/'])"
-    task:
-      prologue:
-        commands:
-          - rustup update
-          - rustup target install x86_64-unknown-linux-musl
-      jobs:
-        - name: Build and Upload to S3
-          commands:
-            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
+  # - name: lambda-runner
+  #   dependencies: []
+  #   run:
+  #     when: "change_in(['/logic/', '/env-runners/native/', '/env-runners/lambda/'])"
+  #   task:
+  #     prologue:
+  #       commands:
+  #         - rustup update
+  #         - rustup target install x86_64-unknown-linux-musl
+  #     jobs:
+  #       - name: Build and Upload to S3
+  #         commands:
+  #           - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
