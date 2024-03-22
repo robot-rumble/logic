@@ -6,7 +6,7 @@ agent:
     type: e1-standard-2
   containers:
     - name: main
-      image: 'registry.semaphoreci.com/rust:1.75-bookworm'
+      image: cimg/rust:1.76.0
 
 global_job_config:
   env_vars:
@@ -60,20 +60,18 @@ blocks:
 #             - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
 
   - name: wasm-layer
-    # dependencies: [lang-runners]
+    #dependencies: [lang-runners]
     run:
       when: "change_in(['/lang-runners/', '/env-runners/lambda-cache/'])"
     task:
       jobs:
         - name: Build and Upload to S3
           commands:
-            - wget "https://mirrors.kernel.org/ubuntu/pool/main/libf/libffi/libffi6_3.2.1-8_amd64.deb"
-            - sudo apt install ./libffi6_3.2.1-8_amd64.deb
-            - wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-            - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main' -y
-            - sudo apt update
-            - sudo apt install llvm
-            - sudo apt-get install llvm-11 llvm-11-dev libllvm10 llvm-11-runtime
+            - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
+            # install llvm
+            - sudo apt install -y lsb-release wget software-properties-common
+            - sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" -- 11
+            - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
   # - name: browser-runner
   #   dependencies: []
