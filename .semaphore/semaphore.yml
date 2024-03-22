@@ -72,7 +72,8 @@ blocks:
             - wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
             - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main' -y
             - sudo apt update
-            - sudo apt install llvm-11 llvm-11-dev libllvm10 llvm-11-runtime
+            - sudo apt install llvm
+            - sudo apt-get install llvm-11 llvm-11-dev libllvm10 llvm-11-runtime
 
   # - name: browser-runner
   #   dependencies: []
