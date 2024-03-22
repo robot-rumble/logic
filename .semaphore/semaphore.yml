@@ -6,7 +6,7 @@ agent:
     type: e1-standard-2
   containers:
     - name: main
-      image: cimg/rust:1.65.0
+      image: cimg/rust:1.76.0
 
 global_job_config:
   env_vars:
