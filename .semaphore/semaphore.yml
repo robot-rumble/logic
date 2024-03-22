@@ -105,4 +105,5 @@ blocks:
       jobs:
         - name: Build and Upload to S3
           commands:
+            - sudo apt update && sudo apt install musl musl-tools musl-dev
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --lambda
