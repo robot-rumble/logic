@@ -72,7 +72,7 @@ blocks:
             - wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
             - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main' -y
             - sudo apt update
-            - sudo apt install llvm-11 llvm-11-dev libllvm11 llvm-11-runtime
+            - sudo apt install clang-format clang-tidy clang-tools clang clangd libc++-dev libc++1 libc++abi-dev libc++abi1 libclang-dev libclang1 liblldb-dev libllvm-ocaml-dev libomp-dev libomp5 lld lldb llvm-dev llvm-runtime llvm python3-clang 
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
   # - name: browser-runner
