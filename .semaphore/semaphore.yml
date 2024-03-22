@@ -70,7 +70,7 @@ blocks:
             - wget "https://mirrors.kernel.org/ubuntu/pool/main/libf/libffi/libffi6_3.2.1-8_amd64.deb"
             - sudo apt install ./libffi6_3.2.1-8_amd64.deb
             - wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-            - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main'
+            - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main' -y
             - sudo apt update
             - sudo apt install llvm-11 llvm-11-dev libllvm10 llvm-11-runtime
 
