@@ -70,7 +70,7 @@ blocks:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
             # install llvm
             - wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-            - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main'
+            - sudo add-apt-repository 'deb http://apt.llvm.org/focal/   llvm-toolchain-focal-11  main' -y
             - sudo apt update
             - sudo apt install llvm-11 llvm-11-dev libllvm11 llvm-11-runtime
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
