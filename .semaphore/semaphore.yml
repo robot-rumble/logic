@@ -60,7 +60,7 @@ blocks:
 #             - aws s3 sync wasm-dist/lang-runners s3://${S3_BUCKET_PUBLIC}/lang-runners
 
   - name: wasm-layer
-    dependencies: [lang-runners]
+    # dependencies: [lang-runners]
     run:
       when: "change_in(['/lang-runners/', '/env-runners/lambda-cache/'])"
     task:
@@ -69,7 +69,7 @@ blocks:
           commands:
             - aws s3 sync s3://${S3_BUCKET_PUBLIC}/lang-runners wasm-dist/lang-runners
             # install llvm
-            - sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+            - bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             - S3_BUCKET=${S3_BUCKET_BUILD} FUNCTION_NAME=battle-runner bash build-lambda.sh --deploy --prod --wasm-layer
 
   # - name: browser-runner
