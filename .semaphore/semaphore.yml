@@ -6,7 +6,7 @@ agent:
     type: e1-standard-2
   containers:
     - name: main
-      image: cimg/rust:1.73.0
+      image: cimg/rust:1.70.0
 
 global_job_config:
   env_vars:
@@ -49,11 +49,11 @@ blocks:
             - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
             - sudo apt update && sudo apt install -y yarn
             - bash build-wasm.sh --javascript
-#        - name: Build Python
-#          commands:
-#            - rustup update
-#            - rustup target install wasm32-wasi
-#            - bash build-wasm.sh --python
+        - name: Build Python
+          commands:
+            - rustup update
+            - rustup target install wasm32-wasi
+            - bash build-wasm.sh --python
       epilogue:
         on_pass:
           commands:
