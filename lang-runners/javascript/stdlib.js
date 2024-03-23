@@ -105,12 +105,18 @@ Direction.South = new Direction()
 Direction.North = new Direction()
 Direction.closeEnum()
 
+SPAWN_COORDS = new Set(['(1, 5)', '(1, 6)', '(1, 7)', '(1, 8)', '(1, 9)', '(1, 10)', '(1, 11)', '(1, 12)', '(1, 13)', '(2, 4)', '(2, 14)', '(3, 3)', '(3, 15)', '(4, 2)', '(4, 16)', '(5, 1)', '(5, 17)', '(6, 1)', '(6, 17)', '(7, 1)', '(7, 17)', '(8, 1)', '(8, 17)', '(9, 1)', '(9, 17)', '(10, 1)', '(10, 17)', '(11, 1)', '(11, 17)', '(12, 1)', '(12, 17)', '(13, 1)', '(13, 17)', '(14, 2)', '(14, 16)', '(15, 3)', '(15, 15)', '(16, 4)', '(16, 14)', '(17, 5)', '(17, 6)', '(17, 7)', '(17, 8)', '(17, 9)', '(17, 10)', '(17, 11)', '(17, 12)', '(17, 13)'])
+
 class Coords {
   constructor(x, y) {
     checkType(x, 'number', 'Coords constructor')
     checkType(y, 'number', 'Coords constructor')
     this.x = x
     this.y = y
+  }
+
+  isSpawn() {
+    return SPAWN_COORDS.has(this.toString())
   }
 
   toString() {

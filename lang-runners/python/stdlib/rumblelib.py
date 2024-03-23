@@ -52,6 +52,7 @@ class Direction(enum.Enum):
             Direction.East: Direction.North,
         }[self]
 
+SPAWN_COORDS = set([(1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10), (1, 11), (1, 12), (1, 13), (2, 4), (2, 14), (3, 3), (3, 15), (4, 2), (4, 16), (5, 1), (5, 17), (6, 1), (6, 17), (7, 1), (7, 17), (8, 1), (8, 17), (9, 1), (9, 17), (10, 1), (10, 17), (11, 1), (11, 17), (12, 1), (12, 17), (13, 1), (13, 17), (14, 2), (14, 16), (15, 3), (15, 15), (16, 4), (16, 14), (17, 5), (17, 6), (17, 7), (17, 8), (17, 9), (17, 10), (17, 11), (17, 12), (17, 13)])
 
 class Coords(tuple):
     def __new__(cls, x: int, y: int) -> "Coords":
@@ -70,6 +71,9 @@ class Coords(tuple):
     @property
     def y(self) -> int:
         return self[1]
+
+    def is_spawn(self) -> int:
+        return (self.x, self.y) in SPAWN_COORDS
 
     def distance_to(self, other: "Coords") -> float:
         import math
