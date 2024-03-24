@@ -6,6 +6,7 @@ use maybe_owned::MaybeOwned;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use strum::*;
 use thiserror::Error;
 
@@ -47,9 +48,10 @@ pub struct MainOutput {
     pub turns: Vec<CallbackInput>,
 }
 
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 #[serde(transparent)]
-pub struct Id(#[serde(with = "serde_with::rust::display_fromstr")] pub usize);
+pub struct Id(#[serde_as(as = "serde_with::DisplayFromStr")] pub usize);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TurnState {

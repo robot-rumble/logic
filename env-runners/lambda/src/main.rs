@@ -15,6 +15,9 @@ use tokio::{io, task};
 use wasi_process2::WasiProcess;
 use wasmer_wasi::{WasiState, WasiVersion};
 use wasmer::Instance;
+use base64::engine::general_purpose::STANDARD;
+use serde_with::serde_as;
+use serde_with::json::JsonString;
 
 use base64::write::EncoderWriter as Base64Writer;
 use brotli::enc::BrotliEncoderParams;
@@ -50,9 +53,10 @@ struct LambdaInput {
     Records: Vec<LambdaInputRecord>,
 }
 
+#[serde_as]
 #[derive(Deserialize, Serialize, Debug)]
 struct LambdaInputRecord {
-    #[serde(with = "serde_with::json::nested")]
+    #[serde_as(as = "JsonString")]
     body: Input,
 }
 
@@ -240,7 +244,7 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
 
     let mut data = Vec::<u8>::new();
     {
-        let mut b64_enc = Base64Writer::new(&mut data, base64::STANDARD);
+        let mut b64_enc = Base64Writer::new(&mut data, &STANDARD);
         {
             let params = BrotliEncoderParams {
                 quality: 10,

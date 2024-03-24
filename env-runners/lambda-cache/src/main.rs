@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::path::PathBuf;
-use wasmer_engine::Artifact;
 use wasmer_engine::ArtifactCreate;
 
 fn main() -> Result<(), Box<dyn Error>> {
