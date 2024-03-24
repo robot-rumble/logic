@@ -20,10 +20,10 @@ tokio = "1.0"
 once_cell = "1.4.0"
 maplit = "1.0"
 
-wasmer = { version = "1.0", default-features = false, features = ["jit"] }
-wasmer-engine = "1.0"
-wasi-process = "0.3"
-wasmer-wasi = "1.0"
+wasmer = { version = "2.0", default-features = false, features = ["jit"] }
+wasmer-engine = "2.0"
+wasi-process2 = "0.3"
+wasmer-wasi = "2.0"
 native-runner = { path = "../native" }
 # crc32fast = "1.2"
 # rand = "0.8"
