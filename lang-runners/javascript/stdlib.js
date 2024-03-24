@@ -105,8 +105,6 @@ Direction.South = new Direction()
 Direction.North = new Direction()
 Direction.closeEnum()
 
-SPAWN_COORDS = new Set(['(1, 5)', '(1, 6)', '(1, 7)', '(1, 8)', '(1, 9)', '(1, 10)', '(1, 11)', '(1, 12)', '(1, 13)', '(2, 4)', '(2, 14)', '(3, 3)', '(3, 15)', '(4, 2)', '(4, 16)', '(5, 1)', '(5, 17)', '(6, 1)', '(6, 17)', '(7, 1)', '(7, 17)', '(8, 1)', '(8, 17)', '(9, 1)', '(9, 17)', '(10, 1)', '(10, 17)', '(11, 1)', '(11, 17)', '(12, 1)', '(12, 17)', '(13, 1)', '(13, 17)', '(14, 2)', '(14, 16)', '(15, 3)', '(15, 15)', '(16, 4)', '(16, 14)', '(17, 5)', '(17, 6)', '(17, 7)', '(17, 8)', '(17, 9)', '(17, 10)', '(17, 11)', '(17, 12)', '(17, 13)'])
-
 class Coords {
   constructor(x, y) {
     checkType(x, 'number', 'Coords constructor')
@@ -116,7 +114,7 @@ class Coords {
   }
 
   isSpawn() {
-    return SPAWN_COORDS.has(this.toString())
+    return SPAWN_COORDS_STRINGS.has(this.toString())
   }
 
   toString() {
@@ -173,6 +171,9 @@ class Coords {
     return new Coords(this.x * n, this.y * n)
   }
 }
+
+SPAWN_COORDS = new Set([new Coords(1, 5), new Coords(1, 6), new Coords(1, 7), new Coords(1, 8), new Coords(1, 9), new Coords(1, 10), new Coords(1, 11), new Coords(1, 12), new Coords(1, 13), new Coords(2, 4), new Coords(2, 14), new Coords(3, 3), new Coords(3, 15), new Coords(4, 2), new Coords(4, 16), new Coords(5, 1), new Coords(5, 17), new Coords(6, 1), new Coords(6, 17), new Coords(7, 1), new Coords(7, 17), new Coords(8, 1), new Coords(8, 17), new Coords(9, 1), new Coords(9, 17), new Coords(10, 1), new Coords(10, 17), new Coords(11, 1), new Coords(11, 17), new Coords(12, 1), new Coords(12, 17), new Coords(13, 1), new Coords(13, 17), new Coords(14, 2), new Coords(14, 16), new Coords(15, 3), new Coords(15, 15), new Coords(16, 4), new Coords(16, 14), new Coords(17, 5), new Coords(17, 6), new Coords(17, 7), new Coords(17, 8), new Coords(17, 9), new Coords(17, 10), new Coords(17, 11), new Coords(17, 12), new Coords(17, 13)])
+SPAWN_COORDS_STRINGS = SPAWN_COORDS.map(coords => coords.toString())
 
 class Team extends Enum {
   get opposite() {

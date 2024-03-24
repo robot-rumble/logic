@@ -52,8 +52,6 @@ class Direction(enum.Enum):
             Direction.East: Direction.North,
         }[self]
 
-SPAWN_COORDS = set([(1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10), (1, 11), (1, 12), (1, 13), (2, 4), (2, 14), (3, 3), (3, 15), (4, 2), (4, 16), (5, 1), (5, 17), (6, 1), (6, 17), (7, 1), (7, 17), (8, 1), (8, 17), (9, 1), (9, 17), (10, 1), (10, 17), (11, 1), (11, 17), (12, 1), (12, 17), (13, 1), (13, 17), (14, 2), (14, 16), (15, 3), (15, 15), (16, 4), (16, 14), (17, 5), (17, 6), (17, 7), (17, 8), (17, 9), (17, 10), (17, 11), (17, 12), (17, 13)])
-
 class Coords(tuple):
     def __new__(cls, x: int, y: int) -> "Coords":
         check_instance(x, int, "Coords.__new__")
@@ -73,7 +71,7 @@ class Coords(tuple):
         return self[1]
 
     def is_spawn(self) -> int:
-        return (self.x, self.y) in SPAWN_COORDS
+        return str(self) in SPAWN_COORDS_STRINGS
 
     def distance_to(self, other: "Coords") -> float:
         import math
@@ -121,6 +119,8 @@ class Coords(tuple):
         check_instance(n, int, "Coords.__mul__")
         return Coords(self.x * n, self.y * n)
 
+SPAWN_COORDS = set([Coords(1, 5), Coords(1, 6), Coords(1, 7), Coords(1, 8), Coords(1, 9), Coords(1, 10), Coords(1, 11), Coords(1, 12), Coords(1, 13), Coords(2, 4), Coords(2, 14), Coords(3, 3), Coords(3, 15), Coords(4, 2), Coords(4, 16), Coords(5, 1), Coords(5, 17), Coords(6, 1), Coords(6, 17), Coords(7, 1), Coords(7, 17), Coords(8, 1), Coords(8, 17), Coords(9, 1), Coords(9, 17), Coords(10, 1), Coords(10, 17), Coords(11, 1), Coords(11, 17), Coords(12, 1), Coords(12, 17), Coords(13, 1), Coords(13, 17), Coords(14, 2), Coords(14, 16), Coords(15, 3), Coords(15, 15), Coords(16, 4), Coords(16, 14), Coords(17, 5), Coords(17, 6), Coords(17, 7), Coords(17, 8), Coords(17, 9), Coords(17, 10), Coords(17, 11), Coords(17, 12), Coords(17, 13)])
+SPAWN_COORDS_STRINGS = map(str, SPAWN_COORDS)
 
 class Team(enum.Enum):
     Red = "Red"
