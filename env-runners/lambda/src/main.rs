@@ -129,8 +129,8 @@ impl Lang {
             }};
         }
         match self {
-            Self::Python => load_cache!("pyrunner.wjit"),
-            Self::Javascript => load_cache!("jsrunner.wjit"),
+            Self::Python => load_cache!("pyrunner.wasmu"),
+            Self::Javascript => load_cache!("jsrunner.wasmu"),
         }
     }
 }
