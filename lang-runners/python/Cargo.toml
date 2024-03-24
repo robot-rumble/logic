@@ -12,5 +12,5 @@ logic = { path = "../../logic" }
 rustpython-vm = { git = "https://github.com/RustPython/RustPython", default-features = false, features = ["compiler", "freeze-stdlib", "serde"] }
 rustpython-stdlib = { git = "https://github.com/RustPython/RustPython" }
 rustpython-pylib = { git = "https://github.com/RustPython/RustPython", features = ["freeze-stdlib"] }
-serde = "1.0.114"
-serde_json = "1.0.55"
+serde = "1.0.197"
+serde_json = "1.0.114"
