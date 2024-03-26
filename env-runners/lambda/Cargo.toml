@@ -1,6 +1,6 @@
 [package]
 name = "lambda-runner"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Anton <antonoutkine@gmail.com>", "Noa <coolreader18@gmail.com>"]
 edition = "2018"
 
