@@ -4280,6 +4280,8 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "wasi-process2"
 version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b27336676369a4611aabb4d1a007d111dcdfeb16c86dcec449106a9285b6a0b9"
 dependencies = [
  "bytes",
  "once_cell",
