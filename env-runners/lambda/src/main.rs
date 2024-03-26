@@ -13,8 +13,8 @@ use tokio::time::{Duration, Instant};
 use tokio::{io, task};
 
 use wasi_process2::WasiProcess;
-use wasmer_wasi::{WasiState, WasiVersion, WasiEnv};
-use wasmer::{AsStoreMut, AsStoreRef, Instance, FunctionEnv};
+use wasmer_wasi::{WasiState, WasiVersion};
+use wasmer::Instance;
 use base64::engine::general_purpose::STANDARD;
 use serde_with::serde_as;
 use serde_with::json::JsonString;
@@ -104,8 +104,8 @@ enum Lang {
     Javascript,
 }
 
-static mut STORE: Lazy<wasmer::Store> = Lazy::new(|| {
-    let engine = wasmer::Engine::headless();
+static STORE: Lazy<wasmer::Store> = Lazy::new(|| {
+    let engine = wasmer::UniversalEngine::headless();
     // let seed = rand::random();
     // engine.set_deterministic_prefixer(move |bytes| {
     //     let mut hasher = crc32fast::Hasher::new_with_initial(seed);
@@ -122,7 +122,7 @@ impl Lang {
                 static MODULE: Lazy<(wasmer::Module, WasiVersion)> = Lazy::new(|| {
                     let artifact_path = concat!("/opt/wasmer-cache/", $name);
                     let module = unsafe {
-                        wasmer::Module::deserialize_from_file(&STORE.as_store_ref(), artifact_path) .expect("couldn't load module from cache")
+                        wasmer::Module::deserialize_from_file(&STORE, artifact_path) .expect("couldn't load module from cache")
                     };
                     let version = wasmer_wasi::get_wasi_version(&module, false)
                         .unwrap_or(WasiVersion::Latest);
@@ -181,12 +181,10 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
     let make_runner = |code, lang: Lang| {
         let (module, version) = lang.get_wasm();
         let (state, sourcedir) = make_state(code);
-        let mut proc = unsafe {
-            let env = FunctionEnv::new(&mut STORE.as_store_mut(), WasiEnv::new(state));
-            let imports = wasmer_wasi::generate_import_object_from_env(&mut STORE.as_store_mut(), &env, version);
-            let instance = Instance::new(&mut STORE.as_store_mut(), &module, &imports).unwrap();
-            WasiProcess::new(&mut STORE, &instance, Default::default()).expect("modules have start")
-        };
+        let env = wasmer_wasi::WasiEnv::new(state);
+        let imports = wasmer_wasi::generate_import_object_from_env(&STORE, env, version);
+        let instance = Instance::new(&module, &imports).unwrap();
+        let mut proc = WasiProcess::new(&instance, Default::default()).expect("modules have start");
         let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
         let stdout = io::BufReader::new(proc.stdout.take().unwrap());
         proc.stdout.take();

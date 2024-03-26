@@ -7,5 +7,3 @@ members = [
     "env-runners/native", "env-runners/browser", "env-runners/lambda", "env-runners/lambda-cache",
     "lang-runners/python"
 ]
-# https://github.com/wasmerio/wasmer/issues/3377
-resolver = "2"
