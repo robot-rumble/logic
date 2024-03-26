@@ -11,14 +11,6 @@ edition = "2018"
 # wasmer-compiler-llvm = "4.0"
 # llvm-sys-150 = { package = "llvm-sys", version = "150.1.3", features = ["prefer-static"] }
 
-wasmer = { version = "2.0", default-features = false, features=["llvm"] }
-wasmer-engine = "2.0"
-wasmer-engine-universal = { version = "2.0", features = ["compiler"] }
-wasmer-compiler-llvm = "2.0"
+wasmer = { version = "3", default-features = false, features=["llvm"] }
+wasmer-compiler = "3"
 llvm-sys-120 = { package = "llvm-sys", version = "120.3.2", features = ["prefer-static"] }
-
-[dependencies.inkwell]
-package = "inkwell"
-version = "=0.1.0-beta.4"
-default-features = false
-features = ["llvm12-0"]
