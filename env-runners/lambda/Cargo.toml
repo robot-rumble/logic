@@ -1,6 +1,6 @@
 [package]
 name = "lambda-runner"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Anton <antonoutkine@gmail.com>", "Noa <coolreader18@gmail.com>"]
 edition = "2018"
 
@@ -20,10 +20,10 @@ tokio = "1.36"
 once_cell = "1.19.0"
 maplit = "1.0"
 
-wasmer = { version = "2.0", default-features = false, features = ["universal"] }
-wasmer-engine = "2.0"
+wasmer = { version = "3", default-features = false }
+#wasi-process2 = { path = "../../../wasi-process" }
 wasi-process2 = "0.3"
-wasmer-wasi = "2.0"
+wasmer-wasi = "3"
 native-runner = { path = "../native" }
 # crc32fast = "1.2"
 # rand = "0.8"

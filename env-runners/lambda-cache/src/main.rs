@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::path::PathBuf;
-use wasmer_engine::ArtifactCreate;
+use wasmer::{Artifact, EngineBuilder, LLVM};
+use wasmer_compiler::ArtifactCreate;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args_os().map(PathBuf::from).skip(1);
@@ -12,18 +13,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         "x86_64-unknown-linux-musl".parse().unwrap(),
         Default::default(),
     );
-    let ext = wasmer_engine_universal::UniversalArtifact::get_default_extension(target.triple());
-    assert_eq!(ext, "wasmu");
     let tunables = wasmer::BaseTunables::for_target(&target);
-    let compiler_config = wasmer_compiler_llvm::LLVM::new();
-    let engine = wasmer_engine_universal::Universal::new(compiler_config)
-        .target(target)
-        .engine();
+    let engine = EngineBuilder::new(LLVM::default()).engine();
     for path in args {
         let bytes = std::fs::read(&path)?;
-        let artifact = wasmer_engine_universal::UniversalArtifact::new(&engine, &bytes, &tunables)?;
+        let artifact = Artifact::new(&engine, &bytes, &tunables)?;
         let mut artifact_path = cache_dir.join(path.file_name().unwrap());
-        artifact_path.set_extension(ext);
+        artifact_path.set_extension("wasmu");
         std::fs::write(artifact_path, artifact.serialize()?)?
     }
 
