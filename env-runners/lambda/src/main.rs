@@ -13,8 +13,8 @@ use tokio::time::{Duration, Instant};
 use tokio::{io, task};
 
 use wasi_process2::WasiProcess;
-use wasmer_wasi::{WasiState, WasiVersion, WasiEnv};
-use wasmer::{AsStoreMut, AsStoreRef, Instance, FunctionEnv};
+use wasmer_wasi::{WasiState, WasiVersion, WasiEnv, WasiFunctionEnv};
+use wasmer::{AsStoreMut, AsStoreRef, Instance};
 use base64::engine::general_purpose::STANDARD;
 use serde_with::serde_as;
 use serde_with::json::JsonString;
@@ -182,9 +182,10 @@ async fn run(data: LambdaInput, _ctx: lambda::Context) -> Result<(), Error> {
         let (module, version) = lang.get_wasm();
         let (state, sourcedir) = make_state(code);
         let mut proc = unsafe {
-            let env = FunctionEnv::new(&mut STORE.as_store_mut(), WasiEnv::new(state));
-            let imports = wasmer_wasi::generate_import_object_from_env(&mut STORE.as_store_mut(), &env, version);
+            let mut env = WasiFunctionEnv::new(&mut STORE.as_store_mut(), WasiEnv::new(state));
+            let imports = wasmer_wasi::generate_import_object_from_env(&mut STORE.as_store_mut(), &env.env, version);
             let instance = Instance::new(&mut STORE.as_store_mut(), &module, &imports).unwrap();
+            env.initialize(&mut STORE.as_store_mut(), &instance).unwrap();
             WasiProcess::new(&mut STORE, &instance, Default::default()).expect("modules have start")
         };
         let stdin = io::BufWriter::new(proc.stdin.take().unwrap());
