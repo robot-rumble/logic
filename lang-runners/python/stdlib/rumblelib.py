@@ -73,6 +73,9 @@ class Coords(tuple):
     def is_spawn(self) -> int:
         return str(self) in SPAWN_COORDS_STRINGS
 
+    def is_hill(self) -> int:
+        return str(self) in HILL_COORDS_STRINGS
+
     def distance_to(self, other: "Coords") -> float:
         import math
         check_instance(other, Coords, "Coords.distance_to")
@@ -121,6 +124,9 @@ class Coords(tuple):
 
 SPAWN_COORDS = set([Coords(1, 5), Coords(1, 6), Coords(1, 7), Coords(1, 8), Coords(1, 9), Coords(1, 10), Coords(1, 11), Coords(1, 12), Coords(1, 13), Coords(2, 4), Coords(2, 14), Coords(3, 3), Coords(3, 15), Coords(4, 2), Coords(4, 16), Coords(5, 1), Coords(5, 17), Coords(6, 1), Coords(6, 17), Coords(7, 1), Coords(7, 17), Coords(8, 1), Coords(8, 17), Coords(9, 1), Coords(9, 17), Coords(10, 1), Coords(10, 17), Coords(11, 1), Coords(11, 17), Coords(12, 1), Coords(12, 17), Coords(13, 1), Coords(13, 17), Coords(14, 2), Coords(14, 16), Coords(15, 3), Coords(15, 15), Coords(16, 4), Coords(16, 14), Coords(17, 5), Coords(17, 6), Coords(17, 7), Coords(17, 8), Coords(17, 9), Coords(17, 10), Coords(17, 11), Coords(17, 12), Coords(17, 13)])
 SPAWN_COORDS_STRINGS = map(str, SPAWN_COORDS)
+
+HILL_COORDS = set([Coords(9, 9), Coords(8, 9), Coords(8, 8), Coords(9, 8), Coords(10, 8), Coords(10, 9), Coords(10, 10), Coords(9, 10), Coords(8, 10)])
+HILL_COORDS_STRINGS = map(str, SPAWN_COORDS)
 
 class Team(enum.Enum):
     Red = "Red"

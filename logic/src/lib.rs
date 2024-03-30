@@ -177,8 +177,7 @@ impl State {
             grid,
             objs,
             spawn_points,
-            settings: _settings,
-            rng: _rng,
+            ..
         } = self;
         for coords in spawn_points.iter() {
             if let Some(id) = grid.get(coords) {
@@ -196,7 +195,7 @@ impl State {
             grid,
             objs,
             settings,
-            rng: _rng,
+            ..
         } = self;
         if let Some(spawn_settings) = &settings.spawn_settings {
             let mut available_points = spawn_points
@@ -249,29 +248,56 @@ impl State {
         }
         map
     }
+}
 
-    fn determine_winner(self) -> Option<Team> {
-        let mut units_count = BTreeMap::new();
-        // the highest score any of the teams have
-        let mut max = 0;
-        for (_, obj) in self.objs {
-            if let ObjDetails::Unit(unit) = obj.details() {
-                let count = units_count.entry(unit.team).or_insert(0);
-                *count += 1;
-                if *count > max {
-                    max = *count
-                }
-            }
-        }
-        // find the team that has the high score
-        let mut winners = units_count.into_iter().filter(|(_, c)| *c == max);
+fn determine_winner_from_units_count(units_count: BTreeMap<Team, i32>) -> Option<Team> {
+    // find the team that has the high score
+    units_count.values().max().and_then(|&max| {
+        let mut winners = units_count.clone().into_iter().filter(|(_, c)| *c == max);
         let mut winner = winners.next();
         // if there are multiple teams tied for `max` score, no-one wins
         if winners.next().is_some() {
             winner = None
         }
         winner.map(|(team, _)| team)
+    })
+}
+
+
+fn determine_winner_normal(state: &StateForOutput) -> Option<Team> {
+    let mut units_count = BTreeMap::new();
+    for (_, obj) in state.objs.iter() {
+        if let ObjDetails::Unit(unit) = obj.details() {
+            let count = units_count.entry(unit.team).or_insert(0);
+            *count += 1;
+        }
     }
+    determine_winner_from_units_count(units_count)
+}
+
+const HILL_COORDS: [(usize, usize); 9] = [(9, 9), (8, 9), (8, 8), (9, 8), (10, 8), (10, 9), (10, 10), (9, 10), (8, 10)];
+
+fn determine_winner_hill(turns: &Vec<CallbackInput>, grids: &Vec<GridMap>) -> Option<Team> {
+    let mut units_count = BTreeMap::new();
+    // the highest score any of the teams have
+    let mut max = 0;
+    for (turn, grid) in turns.iter().zip(grids.iter()) {
+        let objs = &turn.state.objs;
+        for (x, y) in HILL_COORDS {
+            if let Some(id) = grid.get(&Coords(x, y)) {
+                let obj = objs.get(id).unwrap();
+                if let ObjDetails::Unit(unit) = obj.details() {
+                    let count = units_count.entry(unit.team).or_insert(0);
+                    *count += 1;
+                    if *count > max {
+                        max = *count
+                    }
+                }
+            }
+        }
+    }
+
+    determine_winner_from_units_count(units_count)
 }
 
 impl<'a> ProgramInput<'a> {
@@ -407,6 +433,7 @@ where
     }
 
     let mut turns = Vec::with_capacity(max_turn);
+    let mut grids = Vec::with_capacity(max_turn);
 
     let mut turn_state = TurnState {
         turn: 1,
@@ -429,6 +456,10 @@ where
             Ok(t) => t,
             Err(errors) => return handle_program_errors(errors, all_teams, turns),
         };
+
+        if game_mode == GameMode::Hill {
+            grids.push(turn_state.state.grid.clone());
+        }
 
         // update turn_state
         run_turn(&turn.robot_actions, &mut turn_state.state, game_mode);
@@ -457,8 +488,15 @@ where
     // add the final turn after the last robot actions
     turn_cb(&final_turn);
     turns.push(final_turn);
+    if game_mode == GameMode::Hill {
+        grids.push(turn_state.state.grid.clone());
+    }
 
-    let winner = turn_state.state.determine_winner();
+    use GameMode::*;
+    let winner = match game_mode {
+        Normal | NormalHeal => determine_winner_normal(&turns.last().unwrap().state),
+        Hill => determine_winner_hill(&turns, &grids)
+    };
     MainOutput {
         winner,
         errors: BTreeMap::new(),

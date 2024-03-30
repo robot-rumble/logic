@@ -14,6 +14,7 @@ use thiserror::Error;
 pub enum GameMode {
     Normal,
     NormalHeal,
+    Hill,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
