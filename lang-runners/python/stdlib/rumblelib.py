@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import enum
 import typing
+import traceback
 
 
 def check_instance(val: typing.Any, cls: typing.Any, func_name: str):
@@ -271,7 +272,6 @@ class Action:
 
 MAP_SIZE = 19
 
-
 def __format_err(exc):
     loc = None
     tb = exc.__traceback__
@@ -282,13 +282,13 @@ def __format_err(exc):
                 "end": None,
             }
         tb = tb.tb_next
-    import traceback
+
     tb_lines = list(traceback.TracebackException.from_exception(exc).format())
     # from docs: "The message indicating which exception occurred is always the last string in the output."
     return {
         "summary": tb_lines.pop().strip(),
         "details": "".join(tb_lines),
-        "loc": loc,
+        "loc": loc
     }
 
 

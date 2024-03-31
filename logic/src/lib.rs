@@ -292,7 +292,6 @@ fn determine_winner_hill(turns: &Vec<CallbackInput>, grids: &Vec<GridMap>) -> Op
             if let Some(id) = grid.get(&Coords(x, y)) {
                 let obj = objs.get(id).unwrap();
                 let action = turn.robot_actions.get(id).unwrap();
-                println!("{:?}", (obj.details(), action));
                 if let (ObjDetails::Unit(unit), Ok(None)) = (obj.details(), action) {
                     let count = units_count.entry(unit.team).or_insert(0);
                     *count += 1;
