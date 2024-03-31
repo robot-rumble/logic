@@ -31,8 +31,6 @@ fn __init(code: &str) -> ProgramResult<impl FnMut(serde_json::Value) -> ProgramR
     });
 
     let main = interp.enter(|vm| {
-        let mut code = code.to_owned();
-        code.insert_str(0, include_str!("../stdlib/rumblelib.py"));
         let code = vm
             .compile(
                 &*code,
@@ -52,11 +50,20 @@ fn __init(code: &str) -> ProgramResult<impl FnMut(serde_json::Value) -> ProgramR
 
         let scope = vm.new_scope_with_builtins();
         let make_main = || {
-            scope.globals.set_item("__name__", vm.ctx.new_str("<robot>".to_owned()).into(), vm)?;
-            vm.run_code_obj(code, scope.clone())?;
+            let rumblelib_code = vm
+                .compile(
+                    include_str!("../stdlib/rumblelib.py"),
+                    rustpython_vm::compiler::Mode::Exec,
+                    "<robot>".to_owned(),
+                ).unwrap();
+            vm.run_code_obj(rumblelib_code, scope.clone())?;
+            let rumblelib = vm.new_module("rumblelib", scope.globals.clone(), None);
+            rumblelib.dict().set_item("__name__", vm.ctx.new_str("<robot>".to_owned()).into(), vm)?;
             let sys_modules = vm.sys_module.get_attr("modules", vm)?;
-            sys_modules.set_item("rumblelib", scope.globals.clone().into(), vm)?;
-            scope.globals.get_item("__main", &vm).map_err(|_| {
+            sys_modules.set_item("rumblelib", rumblelib.clone().into(), vm)?;
+
+            vm.run_code_obj(code, scope.clone())?;
+            rumblelib.dict().get_item("__main", &vm).map_err(|_| {
                 vm.new_type_error(
                     "you must **not** delete the `__main` function, c'mon, dude".to_owned(),
                 )
