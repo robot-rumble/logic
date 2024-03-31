@@ -281,12 +281,19 @@ fn determine_winner_hill(turns: &Vec<CallbackInput>, grids: &Vec<GridMap>) -> Op
     let mut units_count = BTreeMap::new();
     // the highest score any of the teams have
     let mut max = 0;
-    for (turn, grid) in turns.iter().zip(grids.iter()) {
+    for (i, (turn, grid)) in turns.iter().zip(grids.iter()).enumerate() {
+        // We don't count the last turn since everyone automatically passes there
+        if i == turns.len() - 1 {
+            break
+        }
+
         let objs = &turn.state.objs;
         for (x, y) in HILL_COORDS {
             if let Some(id) = grid.get(&Coords(x, y)) {
                 let obj = objs.get(id).unwrap();
-                if let ObjDetails::Unit(unit) = obj.details() {
+                let action = turn.robot_actions.get(id).unwrap();
+                println!("{:?}", (obj.details(), action));
+                if let (ObjDetails::Unit(unit), Ok(None)) = (obj.details(), action) {
                     let count = units_count.entry(unit.team).or_insert(0);
                     *count += 1;
                     if *count > max {
