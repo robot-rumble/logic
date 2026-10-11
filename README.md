@@ -1,6 +1,6 @@
 # robot rumble - logic backend
 
-> https://robotrumble.org
+> https://rr-docs.readthedocs.io/en/latest/#
 
 ![](https://d3kx2398yo1gg8.cloudfront.net/images/demo.gif)
 
